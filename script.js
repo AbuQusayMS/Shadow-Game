@@ -230,40 +230,40 @@ class QuizGame {
         document.getElementById('questionCounter').textContent = `السؤال ${this.gameState.currentQuestion + 1} / ${this.QUESTIONS.length}`;
         this.domElements.optionsGrid.innerHTML = '';
 
-        // --- (The Fix) Logic to shuffle answers ---
-        const correctAnswerText = questionData.options[questionData.correct];
-        
-        // Create an array of answer objects to track them after shuffling
+        // إنشاء مصفوفة من الأجوبة لتتبعها بعد الخلط
         let answers = questionData.options.map((optionText, index) => ({
             text: optionText,
             isCorrect: index === questionData.correct
         }));
 
-        // Shuffle the answers array
+        // خلط (بعثرة) مصفوفة الأجوبة
         for (let i = answers.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [answers[i], answers[j]] = [answers[j], answers[i]];
         }
-        // --- End of shuffling logic ---
-
-        answers.forEach((answer, shuffledIndex) => {
+        
+        // عرض الأجوبة المخلوطة
+        answers.forEach(answer => {
             const button = document.createElement('button');
             button.className = 'option-btn';
             button.textContent = answer.text;
             
-            // We use the original correctness, not the new index
-            button.addEventListener('click', () => this.checkAnswer(answer.isCorrect ? questionData.correct : -1, button));
+            // (تصحيح مهم) نضيف علامة على الزر الصحيح
+            if (answer.isCorrect) {
+                button.dataset.correct = 'true';
+            }
+            
+            // (تصحيح مهم) نرسل قيمة منطقية (true/false) فقط
+            button.addEventListener('click', () => this.checkAnswer(answer.isCorrect, button));
             
             this.domElements.optionsGrid.appendChild(button);
         });
 
-        // This is a small adjustment to checkAnswer logic. Let's simplify checkAnswer now.
-        // The original checkAnswer compared indices. We will change it to compare correctness directly.
-
         this.updateUI();
         this.startTimer();
     }
-checkAnswer(isCorrect, selectedButton) { // Note the changed parameters
+
+checkAnswer(isCorrect, selectedButton) {
         if (this.answerSubmitted) return;
         this.answerSubmitted = true;
         
@@ -276,9 +276,12 @@ checkAnswer(isCorrect, selectedButton) { // Note the changed parameters
             this.updateScore(this.currentScoreValue + pointsEarned);
         } else {
             selectedButton.classList.add('wrong');
-            // This part is tricky now. We need to find the correct button to highlight.
-            // For simplicity in this fix, we will just mark the wrong one.
-            // A more advanced version would require iterating through the buttons to find the right one.
+            
+            // (تصحيح مهم) الآن يمكننا إيجاد الزر الصحيح وتظليله
+            const correctButton = this.domElements.optionsGrid.querySelector('[data-correct="true"]');
+            if (correctButton) {
+                correctButton.classList.add('correct');
+            }
             this.gameState.wrongAnswers++;
         }
 
