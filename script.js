@@ -41,9 +41,9 @@ class QuizGame {
         ];
         
         this.HELPER_COSTS = {
-           fiftyFifty: 64000,
-           freezeTime: 16000,
-           changeQuestion: 125000
+           fiftyFifty: 100,
+           freezeTime: 100,
+           changeQuestion: 100
         };
 
         // --- (هذا هو التصحيح) ---
