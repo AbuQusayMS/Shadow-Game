@@ -30,14 +30,14 @@ class QuizGame {
         this.QUESTIONS = allQuestions;
 
         this.PRIZES = [
-            { points: 100, title: "مشارك واعد" }, { points: 200, title: "مستكشف المعرفة" },
-            { points: 300, title: "باحث مجتهد" }, { points: 500, title: "مثقف مبتدئ" },
-            { points: 1000, title: "نجم المعرفة البرونزي" }, { points: 2000, title: "صاحب الفضول" },
-            { points: 4000, title: "متعمق بالحقائق" }, { points: 8000, title: "خبير المعلومات" },
-            { points: 16000, title: "نجم المعرفة الفضي" }, { points: 32000, title: "سيد الأسئلة" },
-            { points: 64000, title: "عقل متقد" }, { points: 125000, title: "عبقري عصره" },
-            { points: 250000, title: "حكيم المعرفة" }, { points: 500000, title: "نجم المسابقة" },
-            { points: 1000000, title: "أسطورة المعرفة" }
+            { points: 100, title: "وحش" }, { points: 200, title: "مسخ" },
+            { points: 300, title: "شيطان" }, { points: 500, title: "طاغوت" },
+            { points: 1000, title: "طاغية" }, { points: 2000, title: "رعب" },
+            { points: 4000, title: "عملاق" }, { points: 8000, title: "وحش  نائم" },
+            { points: 16000, title: "مسخ مستيقظ" }, { points: 32000, title: "شيطان ساقط" },
+            { points: 64000, title: "طاغوت فاسد" }, { points: 125000, title: "طاغية عظيم" },
+            { points: 250000, title: "رعب ملعون" }, { points: 500000, title: "عملاق غير مقدس" },
+            { points: 1000000, title: "الضائع من النور" }
         ];
         
         this.HELPER_COSTS = {
