@@ -37,7 +37,7 @@ class QuizGame {
             { points: 16000, title: "مسخ مستيقظ" }, { points: 32000, title: "شيطان ساقط" },
             { points: 64000, title: "طاغوت فاسد" }, { points: 125000, title: "طاغية عظيم" },
             { points: 250000, title: "رعب ملعون" }, { points: 500000, title: "عملاق غير مقدس" },
-            { points: 1000000, title: "الضائع من النور" }
+            { points: 1000000, title: "شيطان المصير ويڤر" }
         ];
         
         this.HELPER_COSTS = {
