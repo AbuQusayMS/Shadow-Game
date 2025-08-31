@@ -1,7 +1,7 @@
 class QuizGame {
     constructor() {
         this.API_URL = "https://script.google.com/macros/s/AKfycbySuefLGlL2v1m5OJ2XpAL53sNJbg42JX3WqDIB9kNdS8SJpGlBVG4shZqOUEP31wV3/exec";
-        this.QUESTION_TIME = 60;
+        this.QUESTION_TIME = 70;
         this.TOTAL_AVATARS = 16;
         this.LIMIT_PER_DAY = 5;
         this.MAX_WRONG_ANSWERS = 3;
