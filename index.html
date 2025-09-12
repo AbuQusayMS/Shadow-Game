@@ -1,170 +1,9 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <meta name="description" content="لعبة مسابقة من سيربح اللقب - اختبر معلوماتك واربح الجوائز">
-    <title>من سيربح اللقب؟ - لعبة المسابقة التفاعلية</title>
-    
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
-    
-    <link rel="preload" as="style" href="style.css">
-    <link rel="preload" as="script" href="script.js">
-    
-    <link rel="stylesheet" href="style.css">
-    
-    <script type="application/ld+json">
-    {
-        "@context": "https://schema.org",
-        "@type": "VideoGame",
-        "name": "من سيربح اللقب؟",
-        "description": "لعبة مسابقة تفاعلية لاختبار المعلومات العامة والفوز بالجوائز",
-        "applicationCategory": "GameApplication",
-        "operatingSystem": "Web Browser",
-        "author": {
-            "@type": "Organization",
-            "name": "مسابقة المعرفة"
-        }
-    }
-    </script>
-</head>
 <body data-theme="dark" aria-live="polite">
-    <div id="toast-container" class="toast-container" aria-live="assertive"></div>
-
-    <div id="loader" class="screen active" role="status" aria-label="جاري التحميل">
-        <div class="spinner" aria-hidden="true"></div>
-        <span class="sr-only">جاري تحميل اللعبة، الرجاء الانتظار...</span>
-    </div>
-
-    <div id="startScreen" class="screen" aria-hidden="true">
-        <div class="content-box">
-            <header class="screen-header">
-                <h1 class="game-title">
-                    <span aria-hidden="true">👑</span>
-                    من سيربح اللقب؟
-                    <span class="sr-only">لعبة مسابقة المعلومات</span>
-                </h1>
-            </header>
-            
-            <div class="button-group">
-                <button id="startPlayBtn" class="btn-main">
-                    ابدأ اللعب
-                </button>
-                <button id="showLeaderboardBtn" class="btn-secondary">
-                    لوحة الصدارة
-                </button>
-            </div>
-        </div>
-    </div>
-    
-    <div id="avatarScreen" class="screen" aria-hidden="true">
-        <div class="content-box">
-            <header class="screen-header">
-                <h2>اختر صورة رمزية</h2>
-            </header>
-            
-            <div class="avatar-grid" role="group" aria-label="خيارات الصور الرمزية">
-                </div>
-            
-            <div class="button-group">
-                <button id="confirmAvatarBtn" class="btn-main" disabled>
-                    التالي
-                    <span class="sr-only">اختيار الصورة الرمزية المحددة</span>
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <div id="nameEntry" class="screen" aria-hidden="true">
-        <div class="content-box">
-            <header class="screen-header">
-                <h2>أدخل اسمك للمتابعة</h2>
-            </header>
-            
-            <div class="input-group">
-                <label for="nameInput" class="sr-only">اسم اللاعب</label>
-                <input  
-                    type="text"  
-                    id="nameInput"  
-                    placeholder="اكتب اسمك هنا"  
-                    maxlength="25"  
-                    autocomplete="name"
-                    aria-required="true"
-                >
-                <div id="nameError" class="error-message" aria-live="polite"></div>
-            </div>
-            
-            <div class="button-group">
-                <button id="confirmNameBtn" class="btn-main">
-                    تأكيد الإسم
-                </button>
-            </div>
-        </div>
-    </div>
-    
-    <div id="welcomeScreen" class="screen" aria-hidden="true">
-        <div class="content-box">
-            <header class="screen-header">
-                <h2 id="welcomeMessage"></h2> 
-            </header>
-            
-            <div class="welcome-content">
-                <p>📌 قبل أن تبدأ رحلتك، تذكّر:</p>
-                <ul>
-                    <li>اكتب اسمك المعروف على منصة إكس أو إنستغرام.</li>
-                    <li>لديك فقط محاولة واحدة يومياً، فاستغلها بحكمة.</li>
-                    <li>لا تتسرع في الإجابة… فالوقت بين يديك.</li>
-                    <li>في حال واجهت أي مشكلة، راسل المسؤول القارئ الوحيد على <a href="https://x.com/_MS_AbuQusay?t=OcQrklIZ9itdajVI5YuKuw&s=09" target="_blank" rel="noopener noreferrer">إكس</a> أو <a href="https://www.instagram.com/ms_abuqusay?igsh=MXc2ZWptd2FkamN0" target="_blank" rel="noopener noreferrer">إنستغرام</a>.</li>
-                </ul>
-            </div>
-            
-            <div class="button-group">
-                <button id="welcomeConfirmBtn" class="btn-main">حسنا، قرأت وفهمت</button>
-            </div>
-        </div>
-    </div>
-
-    <aside class="sidebar" id="prizesSidebar" aria-hidden="true" aria-label="قائمة الألقاب">
-        <div class="sidebar-header">
-            <h3>الألقاب</h3>
-            <button class="close-sidebar-btn" aria-label="إغلاق قائمة الألقاب">
-                &times;
-            </button>
-        </div>
-        
-        <div class="sidebar-content">
-            <ul class="prizes-list" aria-label="قائمة مستويات الألقاب"></ul>
-        </div>
-    </aside>
-    
-    <div class="sidebar-overlay" aria-hidden="true"></div>
-
     <main id="gameContainer" class="screen" aria-hidden="true">
         <div class="top-bar">
-            <button class="theme-toggle-btn" aria-label="تبديل وضع السطوع والظلام">
-                <span aria-hidden="true">☀️</span>
-            </button>
-            <button class="open-sidebar-btn" aria-expanded="false" aria-controls="prizesSidebar">
-                <span aria-hidden="true">🏆</span>
-                الألقاب
-            </button>
-        </div>
+            </div>
         
         <header class="game-header">
-            <div class="player-info">
-                <div class="player-main">
-                    <img id="playerAvatar" src="" alt="" aria-hidden="true">
-                    <span id="playerName" aria-label="اسم اللاعب"></span>
-                </div>
-                <div class="player-stats">
-                    <div class="stat-item">اللقب: <strong id="currentTitle" aria-live="polite">لا يوجد</strong></div>
-                    <div class="stat-item">النقاط: <strong id="currentScore" aria-live="polite">0</strong></div>
-                    <div class="stat-item">الأخطاء: <strong id="wrongAnswersCount" aria-live="assertive">0 / 3</strong></div>
-                </div>
-            </div>
-
             <div class="helpers" aria-label="خيارات المساعدة">
                 <button class="helper-btn" data-type="fiftyFifty" disabled aria-describedby="fiftyFiftyDesc">
                     50:50
@@ -178,34 +17,32 @@
                 </button>
                 <div id="freezeTimeDesc" class="sr-only">يوقف المؤقت لمدة 10 ثوان</div>
 
-                <button class="helper-btn" data-type="changeQuestion" disabled aria-describedby="changeQuestionDesc">
-                   🔄 تغيير
-                <span class="helper-cost"></span>
+                <button class="helper-btn" data-type="nextQuestion" disabled aria-describedby="nextQuestionDesc">
+                   التالي ⏭️
+                   <span class="helper-cost"></span>
                 </button>
-                <div id="changeQuestionDesc" class="sr-only">يغير السؤال الحالي</div>
+                <div id="nextQuestionDesc" class="sr-only">ينتقل إلى السؤال التالي</div>
             </div>
         </header>
 
-        <div class="timer-container" aria-label="مؤقت السؤال">
-            <div class="timer-bar" role="progressbar" aria-valuemin="0" aria-valuemax="60" aria-valuenow="60"></div>
-            <span id="timer" class="timer-text">60</span>
+        </main>
+    
+    <div id="preEndScreen" class="screen" aria-hidden="true">
+        <div class="content-box">
+            <header class="screen-header">
+                <h2>تنبيه: فرصتك الأخيرة!</h2>
+            </header>
+            <div class="welcome-content" style="text-align: center;">
+                <p>هذه فرصتك لتعويض خسارتك والوصول مباشرة إلى المركز الأول.</p>
+                <p>إذا كنت واثقًا من نفسك، حاول الإجابة على <strong>السؤال المستحيل</strong> وحقق الفوز!</p>
+            </div>
+            <div class="button-group">
+                <button id="tryImpossibleBtn" class="btn-main">خوض تحدي السؤال المستحيل</button>
+                <button id="showResultsBtn" class="btn-secondary">عرض نتائجي مباشرة</button>
+            </div>
         </div>
+    </div>
 
-        <div class="main-content">
-            <section class="question-box" aria-labelledby="questionCounter">
-                <h3 id="questionCounter"></h3>
-                <p id="questionText" aria-live="polite"></p>
-                <div class="spinner-container" aria-hidden="true">
-                    <div class="spinner"></div>
-                    <span class="sr-only">جاري تحميل السؤال التالي</span>
-                </div>
-            </section>
-            
-            <section class="options-container" aria-labelledby="questionText">
-                <div class="options-grid" role="group" aria-label="خيارات الإجابة"></div>
-            </section>
-        </div>
-    </main>
 
     <div id="endScreen" class="screen" aria-hidden="true">
         <div class="content-box">
@@ -217,21 +54,15 @@
                 <h3 id="finalStatsHeading" class="sr-only">الإحصائيات النهائية</h3>
                 <p>✍️ الاسم: <strong id="finalName"></strong></p>
                 <p>🏅 اللقب: <strong id="finalTitle"></strong></p>
-                <p>⭐ النقاط: <strong id="finalScore"></strong></p>
                 <p>⏱️ المدة: <strong id="totalTime"></strong></p>
+                <p>🤯 السؤال المستحيل: <strong id="finalImpossibleStatus"></strong></p>
+                <p id="finalImpossibleRankContainer" style="display: none;">
+                    🎖️ ترتيبك: <strong id="finalImpossibleRank"></strong>
+                </p>
             </div>
             
             <section class="share-section" aria-labelledby="shareHeading">
-                <h3 id="shareHeading">📢 مشاركة النتائج</h3>
-                <div class="share-buttons">
-                    <button id="shareXBtn" class="share-btn x" aria-label="مشاركة النتيجة على X">
-                        X
-                    </button>
-                    <button id="shareInstagramBtn" class="share-btn instagram" aria-label="مشاركة النتيجة على Instagram">
-                        Instagram
-                    </button>
-                </div>
-            </section>
+                </section>
             
             <div class="button-group">
              <button id="statsBtn" class="btn-main">
@@ -241,29 +72,5 @@
         </div>
     </div>
     
-    <div id="leaderboardScreen" class="screen" aria-hidden="true">
-        <div class="content-box">
-            <header class="screen-header">
-                <h2>
-                    <span aria-hidden="true">🏆</span>
-                    لوحة الصدارة
-                    <span aria-hidden="true">🏆</span>
-                </h2>
-            </header>
-            
-            <div id="leaderboardContent" aria-live="polite">
-                </div>
-            
-            <div class="button-group">
-                <button id="backToStartBtn" class="btn-secondary">
-                    العودة
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <script src="script.js" defer></script>
-    
-    <div class="sr-only" aria-live="polite" id="liveAnnouncements"></div>
-</body>
+    </body>
 </html>
