@@ -1,20 +1,18 @@
 class QuizGame {
     constructor() {
-        this.API_URL = "https://script.google.com/macros/s/AKfycbzB9cru35ndWmWYsEqe46NlrvZgj64HhCIZJ0j7SLln3VDSl2S7rAOMDGxLwEzR_ClS/exec";
+        this.API_URL = "https://script.google.com/macros/s/AKfycbxswUSDuszaAyDlNBCi3ugsu11NQW6g0vu1BQI0XM58xbTk8G5eE5gV8PNSbSshCmkBDw/exec";
         this.QUESTION_TIME = 60;
         this.TOTAL_AVATARS = 16;
-        
-        // إزالة الحد اليومي للمحاولات
-        this.MAX_WRONG_ANSWERS = 3;
         this.STARTING_POINTS = 100;
         this.QUESTION_POINTS = 100;
+        this.WRONG_ANSWER_PENALTY = 100;
 
         // إعدادات مساعدة السؤال التالي
         this.NEXT_QUESTION_BASE_COST = 100;
         this.NEXT_QUESTION_COST_INCREMENT = 50;
-        this.nextQuestionUsageCount = 0;
 
-        const allQuestions = [
+        // الأسئلة - يمكن تعديل العدد بسهولة
+        this.QUESTIONS = [
             { q: "ماذا قال آرثر عن ليليا (صديقة إيلي) عندما سأله جارود ريدنر عنها في الحفلة؟", options: ["إنها جميلة جدًا ولكنها ليست من نوعه", "إنها فتاة جيدة، وآمل أن تعاملها بشكل جيد", "إنها تذكره بطفولته", "إنه لا يعرفها جيداً"], correct: 1 },
             { q: "ما هي الصفة التي وصف بها آرثر صديقه إيلايجا؟", options: ["شخص عاطفي ولكنه يملك مبادئ وجديراً بالثقة", "شخص بارد ومنغلق على نفسه", "شخص عاطفي وضعيف وهش من الداخل", "شخص قاسي وعديم الخبرة"], correct: 0 },
             { q: "ما هي المشكلة التي يواجهها إيلايجا في استخدام قواه؟", options: ["لا يستطيع السيطرة على عنصر الأرض", "لا يستطيع السيطرة على كمية المانا في قواه", "يفتقر إلى المهارة في القتال القريب", "لا يمكنه تعلم أي عنصر آخر غير الأرض"], correct: 1 },
@@ -24,18 +22,11 @@ class QuizGame {
             { q: "ما هي المرحلة التي وصل إليها رينولدز ليوين في نواة المانا بعد أن استخدم نواة وحش الفئة S؟", options: ["المرحلة الحمراء الصلبة", "المرحلة البرتقالية الصلبة", "المرحلة الصفراء الصلبة", "المرحلة الصفراء الداكنة"], correct: 1 },
             { q: "ماذا كان اسم المعهد الذي كانت تذهب إليه إيلي لتتعلم الآداب والمهارات؟", options: ["أكاديمية زيروس", "مدرسة السيدات", "مدرسة النبلاء", "مدرسة زيث"], correct: 1 },
             { q: "كم كان عمر آرثر عندما بدأ رحلته كمغامر في الرواية؟", options: ["8 سنوات.", "9 سنوات", "10 سنوات", "11 سنة"], correct: 1 },
-            { q: "بماذا وصف آرثر نظرة الملك بلاين غلايدر في المزاد؟", options: ["نظرة مليئة بالقوة والكاريزما", "نظرة حادة ومسيطرة", "نظرة باردة وبعيدة", "نظرة مليئة بالحقد"], correct: 0 },
-            { q: "ما هو الشيء الذي صدم آرثر عندما رآه في المزاد، وجعله يشعر بالاشمئزاز؟", options: ["بيع الوحوش المتعاقدة", "بيع العبيد", "بيع السيوف القديمة", "وجود السحرة المغرورين"], correct: 1 },
-            { q: "لماذا كان فينسنت هيلستيا ضد توظيف السحرة في مزاد هيلستيا؟", options: ["لأن السحرة مغرورون وقد يؤثر ذلك على معنويات الفريق", "لأنهم مكلفون جدًا", "لأنهم ضعفاء في القتال المباشر", "لأنه لديه عدد كافٍ من المعززين بالفعل"], correct: 0 },
-            { q: "ما هي الصفة التي تميز المحرك البخاري الذي صممه آرثر، والذي جعله قادراً على الإبحار لمسافات طويلة؟", options: ["يستخدم البخار الناتج عن المانا لإنتاج الطاقة", "يعتمد على الرياح لتشغيله", "يتم التحكم به عن طريق السحرة", "يستعمل حجر نواة الوحش كوقود"], correct: 0 },
-            { q: "ما هو اسم الوحش العملاق الذي قاتله آرثر وفريقه في 'المقابر الملوثة'؟", options: ["حارس الخشب الحكيم", "وحش الكرومات", "ملك الرعب والأوهام", "وحش الخشب"], correct: 0 },
-            { q: "ما هو اسم الطائر الذي صنعت منه قلادة العنقاء التي قدمها آرثر لأخته؟", options: ["طائر الفينيق", "طائر الرعد", "طائر العنقاء", "طائر الفجر"], correct: 2 },
-            { q: "ما هي قدرة قلادة طائر العنقاء التي اشتراها آرثر كهدية لوالدته وأخته؟", options: ["إعطاء القوة الجسدية", "حماية المستخدم ونقله إلى مكان آمن", "زيادة قوة السحر", "زيادة الحظ"], correct: 1 }
+            { q: "بماذا وصف آرثر نظرة الملك بلاين غلايدر في المزاد؟", options: ["نظرة مليئة بالقوة والكاريزما", "نظرة حادة ومسيطرة", "نظرة باردة وبعيدة", "نظرة مليئة بالحقد"], correct: 0 }
         ];
 
-        // سؤال إضافي للاحتياط
-        this.backupQuestion = allQuestions.pop();
-        
+        this.TOTAL_QUESTIONS = this.QUESTIONS.length;
+
         // سؤال مستحيل
         this.challengeQuestion = {
             q: "ما هو الاسم الكامل لوالدة آرثر؟",
@@ -43,15 +34,8 @@ class QuizGame {
             correct: 1
         };
 
-        // جعل الأسئلة قابلة للتعديل بسهولة
-        this.QUESTIONS = allQuestions;
-        this.TOTAL_QUESTIONS = this.QUESTIONS.length;
-
-        // إزالة نظام الألقاب
         this.HELPER_COSTS = {
-            fiftyFifty: 50,
-            freezeTime: 75,
-            changeQuestion: 100,
+            fiftyFifty: 100,
             nextQuestion: this.NEXT_QUESTION_BASE_COST
         };
 
@@ -63,13 +47,11 @@ class QuizGame {
         this.domElements = {};
         this.challengeAttempted = false;
         this.challengeResult = null;
-        
-        // إحصائيات جديدة
-        this.correctAnswersCount = 0;
-        this.wrongAnswersCount = 0;
-        this.skippedCount = 0;
-        this.totalTimeSpent = 0;
-        this.questionStartTime = 0;
+        this.nextQuestionUsageCount = 0;
+
+        this.correctAnswers = 0;
+        this.wrongAnswers = 0;
+        this.skippedQuestions = 0;
 
         this.init();
     }
@@ -91,71 +73,81 @@ class QuizGame {
                 start: document.getElementById('startScreen'),
                 avatar: document.getElementById('avatarScreen'),
                 nameEntry: document.getElementById('nameEntry'),
-                welcome: document.getElementById('welcomeScreen'),
                 game: document.getElementById('gameContainer'),
+                challenge: document.getElementById('challengeScreen'),
                 challengeQuestion: document.getElementById('challengeQuestionScreen'),
                 end: document.getElementById('endScreen'),
-                leaderboard: document.getElementById('leaderboardScreen'),
+                stats: document.getElementById('statsScreen')
             },
             questionText: document.getElementById('questionText'),
             optionsGrid: document.querySelector('.options-grid'),
             scoreDisplay: document.getElementById('currentScore'),
-            helperBtns: document.querySelectorAll('.helper-btn'),
             nameInput: document.getElementById('nameInput'),
             nameError: document.getElementById('nameError'),
             confirmAvatarBtn: document.getElementById('confirmAvatarBtn'),
             themeToggleBtn: document.querySelector('.theme-toggle-btn'),
-            welcomeMessage: document.getElementById('welcomeMessage'),
+            endQuizBtn: document.getElementById('endQuizBtn'),
             nextQuestionCost: document.getElementById('nextQuestionCost'),
+            acceptChallengeBtn: document.getElementById('acceptChallengeBtn'),
+            showResultsBtn: document.getElementById('showResultsBtn'),
             challengeQuestionText: document.getElementById('challengeQuestionText'),
             challengeOptionsGrid: document.getElementById('challengeOptionsGrid'),
             challengePlayerAvatar: document.getElementById('challengePlayerAvatar'),
             challengePlayerName: document.getElementById('challengePlayerName'),
             challengeCurrentScore: document.getElementById('challengeCurrentScore'),
-            correctAnswersCount: document.getElementById('correctAnswersCount'),
-            wrongAnswersCount: document.getElementById('wrongAnswersCount'),
-            skippedCount: document.getElementById('skippedCount'),
-            finalScore: document.getElementById('finalScore'),
-            challengeResult: document.getElementById('challengeResult'),
-            endGameBtn: document.getElementById('endGameBtn'),
-            confirmEndBtn: document.getElementById('confirmEndBtn'),
-            cancelEndBtn: document.getElementById('cancelEndBtn'),
-            confirmEndGame: document.getElementById('confirmEndGame'),
+            progressFill: document.getElementById('progressFill'),
             progressText: document.getElementById('progressText'),
-            progressFill: document.querySelector('.progress-fill'),
-            performanceChart: document.getElementById('performanceChart')
+            correctAnswers: document.getElementById('correctAnswers'),
+            skippedQuestions: document.getElementById('skippedQuestions'),
+            finalName: document.getElementById('finalName'),
+            finalCorrect: document.getElementById('finalCorrect'),
+            finalWrong: document.getElementById('finalWrong'),
+            finalSkipped: document.getElementById('finalSkipped'),
+            finalScore: document.getElementById('finalScore'),
+            totalTime: document.getElementById('totalTime'),
+            challengeResult: document.getElementById('challengeResult'),
+            totalPointsEarned: document.getElementById('totalPointsEarned'),
+            correctBar: document.getElementById('correctBar'),
+            wrongBar: document.getElementById('wrongBar'),
+            skippedBar: document.getElementById('skippedBar'),
+            playAgainBtn: document.getElementById('playAgainBtn'),
+            backToStartBtn: document.getElementById('backToStartBtn'),
+            showStatsBtn: document.getElementById('showStatsBtn'),
+            backToStartFromStatsBtn: document.getElementById('backToStartFromStatsBtn'),
+            statsContent: document.getElementById('statsContent'),
+            dialogOverlay: document.getElementById('confirmDialog'),
+            dialogTitle: document.getElementById('dialogTitle'),
+            dialogMessage: document.getElementById('dialogMessage'),
+            dialogCancel: document.getElementById('dialogCancel'),
+            dialogConfirm: document.getElementById('dialogConfirm')
         };
+
+        this.domElements.helperBtns = document.querySelectorAll('.helper-btn');
     }
 
     bindEventListeners() {
         document.getElementById('startPlayBtn').addEventListener('click', () => this.showScreen('avatar'));
         this.domElements.confirmAvatarBtn.addEventListener('click', () => this.showScreen('nameEntry'));
-        document.getElementById('confirmNameBtn').addEventListener('click', () => this.showWelcomeScreen());
-        document.getElementById('welcomeConfirmBtn').addEventListener('click', () => this.startGame());
-        document.getElementById('showLeaderboardBtn').addEventListener('click', () => this.displayLeaderboard());
-        document.getElementById('backToStartBtn').addEventListener('click', () => this.showScreen('start'));
+        document.getElementById('confirmNameBtn').addEventListener('click', () => this.validateAndStartGame());
+        this.domElements.endQuizBtn.addEventListener('click', () => this.confirmEndQuiz());
         this.domElements.themeToggleBtn.addEventListener('click', () => this.toggleTheme());
-        document.getElementById('statsBtn').addEventListener('click', () => this.displayLeaderboard());
-        this.domElements.nameInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') this.showWelcomeScreen(); });
-        
-        // مستمعي الأحداث للزر الجديد "إنهاء المسابقة"
-        this.domElements.endGameBtn.addEventListener('click', () => this.showEndGameConfirmation());
-        this.domElements.confirmEndBtn.addEventListener('click', () => this.endGame());
-        this.domElements.cancelEndBtn.addEventListener('click', () => this.hideEndGameConfirmation());
-        
-        // مستمعي الأحداث للمساعدات
-        this.domElements.helperBtns.forEach(btn => btn.addEventListener('click', (e) => this.useHelper(e)));
-        
-        // مستمعي الأحداث للمشاركة
-        document.getElementById('shareXBtn').addEventListener('click', () => this.shareOnX());
-        document.getElementById('shareInstagramBtn').addEventListener('click', () => this.shareOnInstagram());
-        document.getElementById('copyResultsBtn').addEventListener('click', () => this.copyResults());
-        document.getElementById('playAgainBtn').addEventListener('click', () => this.showScreen('start'));
-        
-        // مستمعي أحداث التصفية
-        document.querySelectorAll('.filter-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => this.filterLeaderboard(e));
+        this.domElements.showStatsBtn.addEventListener('click', () => this.showStatsScreen());
+        this.domElements.playAgainBtn.addEventListener('click', () => this.startGame());
+        this.domElements.backToStartBtn.addEventListener('click', () => this.showScreen('start'));
+        this.domElements.backToStartFromStatsBtn.addEventListener('click', () => this.showScreen('start'));
+        this.domElements.acceptChallengeBtn.addEventListener('click', () => this.startChallengeQuestion());
+        this.domElements.showResultsBtn.addEventListener('click', () => this.showFinalResults());
+        this.domElements.nameInput.addEventListener('keypress', (e) => { 
+            if (e.key === 'Enter') this.validateAndStartGame(); 
         });
+        
+        this.domElements.helperBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => this.useHelper(e));
+        });
+
+        // مستمعي أحداث الحوار
+        this.domElements.dialogCancel.addEventListener('click', () => this.hideDialog());
+        this.domElements.dialogConfirm.addEventListener('click', () => this.executeDialogAction());
     }
     
     populateAvatarGrid() {
@@ -176,7 +168,7 @@ class QuizGame {
         }
     }
     
-    showWelcomeScreen() {
+    validateAndStartGame() {
         const name = this.domElements.nameInput.value.trim();
         if (name.length < 2) {
             this.domElements.nameError.textContent = "الرجاء إدخال اسم صحيح (حرفين على الأقل).";
@@ -185,22 +177,30 @@ class QuizGame {
         }
         this.domElements.nameError.classList.remove('show');
         this.gameState.name = name;
-        this.domElements.welcomeMessage.innerHTML = `🌟 مرحبا بك يا ${name}! 🌟`;
-
-        this.showScreen('welcome');
+        this.startGame();
     }
 
     async startGame() {
         this.showScreen('loader');
         try {
-            // إزالة التحقق من الحد اليومي
-            this.resetGameState();
-            this.setupGameUI();
-            this.showScreen('game');
-            this.fetchQuestion();
+            const response = await this.apiCall({
+                action: 'start',
+                deviceId: this.getDeviceId(),
+                name: this.gameState.name,
+            });
+
+            if (response && response.success) {
+                this.resetGameState(response.attemptId);
+                this.setupGameUI();
+                this.showScreen('game');
+                this.fetchQuestion();
+            } else {
+                this.showToast("حدث خطأ عند بدء اللعبة.", 'error');
+                this.showScreen('start');
+            }
         } catch (error) {
             console.error("Error starting game:", error);
-            this.showToast("حدث خطأ في بدء اللعبة.", "error");
+            this.showToast("حدث خطأ في الاتصال بالخادم.", "error");
             this.showScreen('start');
         }
     }
@@ -218,7 +218,12 @@ class QuizGame {
         if (this.gameState.shuffledQuestions.length === 0) {
             this.gameState.shuffledQuestions = this.shuffleQuestions();
         }
-        this.questionStartTime = Date.now();
+        
+        if (this.gameState.currentQuestion >= this.TOTAL_QUESTIONS) {
+            this.showChallengeScreen();
+            return;
+        }
+        
         const currentQuestionData = this.gameState.shuffledQuestions[this.gameState.currentQuestion];
         this.displayQuestion(currentQuestionData);
     }
@@ -226,11 +231,10 @@ class QuizGame {
     displayQuestion(questionData) {
         this.answerSubmitted = false;
         this.domElements.questionText.textContent = questionData.q;
-        document.getElementById('questionCounter').textContent = `السؤال ${this.gameState.currentQuestion + 1} / ${this.TOTAL_QUESTIONS}`;
         
         // تحديث شريط التقدم
-        const progress = ((this.gameState.currentQuestion) / this.TOTAL_QUESTIONS) * 100;
-        this.domElements.progressFill.style.width = `${progress}%`;
+        const progressPercentage = ((this.gameState.currentQuestion + 1) / this.TOTAL_QUESTIONS) * 100;
+        this.domElements.progressFill.style.width = `${progressPercentage}%`;
         this.domElements.progressText.textContent = `السؤال ${this.gameState.currentQuestion + 1} من ${this.TOTAL_QUESTIONS}`;
         
         this.domElements.optionsGrid.innerHTML = '';
@@ -267,50 +271,44 @@ class QuizGame {
         if (this.answerSubmitted) return;
         this.answerSubmitted = true;
         
-        // حساب الوقت المستغرق للإجابة
-        const timeSpent = Math.floor((Date.now() - this.questionStartTime) / 1000);
-        this.totalTimeSpent += timeSpent;
-        
         clearInterval(this.timerInterval);
         document.querySelectorAll('.option-btn').forEach(b => b.classList.add('disabled'));
 
         if (isCorrect) {
             selectedButton.classList.add('correct');
             this.updateScore(this.currentScoreValue + this.QUESTION_POINTS);
-            this.correctAnswersCount++;
+            this.correctAnswers++;
+            this.domElements.correctAnswers.textContent = this.correctAnswers;
+            this.showToast("إجابة صحيحة! +100 نقطة", "success");
         } else {
             selectedButton.classList.add('wrong');
-            this.updateScore(this.currentScoreValue - this.QUESTION_POINTS);
-            this.wrongAnswersCount++;
             
             const correctButton = this.domElements.optionsGrid.querySelector('[data-correct="true"]');
             if (correctButton) {
                 correctButton.classList.add('correct');
             }
+            
+            this.updateScore(this.currentScoreValue - this.WRONG_ANSWER_PENALTY);
+            this.wrongAnswers++;
+            this.showToast("إجابة خاطئة! -100 نقطة", "error");
         }
 
         this.gameState.currentQuestion++;
         this.updateUI();
 
-        const isGameOver = this.gameState.currentQuestion >= this.TOTAL_QUESTIONS;
-        
         setTimeout(() => {
-            if (isGameOver) {
-                this.showFinalResults();
-            } else {
-                this.fetchQuestion();
-            }
+            this.fetchQuestion();
         }, 2000);
+    }
+    
+    showChallengeScreen() {
+        clearInterval(this.timerInterval);
+        this.showScreen('challenge');
     }
     
     startChallengeQuestion() {
         this.challengeAttempted = true;
         this.showScreen('challengeQuestion');
-        
-        // تعطيل جميع المساعدات في السؤال المستحيل
-        document.querySelectorAll('.helper-btn').forEach(btn => {
-            btn.disabled = true;
-        });
         
         // إعداد واجهة السؤال المستحيل
         this.domElements.challengePlayerAvatar.src = this.gameState.avatar;
@@ -344,7 +342,8 @@ class QuizGame {
         if (isCorrect) {
             selectedButton.classList.add('correct');
             this.challengeResult = true;
-            this.showToast("🎉 إجابة صحيحة! لقد فزت بالتحدي.", "success");
+            this.updateScore(this.currentScoreValue + 500); // مكافأة السؤال المستحيل
+            this.showToast("🎉 إجابة صحيحة! لقد فزت بالتحدي. +500 نقطة", "success");
         } else {
             selectedButton.classList.add('wrong');
             
@@ -367,98 +366,97 @@ class QuizGame {
         const timerBar = document.querySelector('#challengeQuestionScreen .timer-bar');
         const timerDisplay = document.querySelector('#challengeQuestionScreen .timer-text');
 
-        if (timerBar && timerDisplay) {
-            timerBar.style.display = 'block';
-            timerDisplay.style.display = 'block';
-            
-            this.timerInterval = setInterval(() => {
-                this.gameState.timeLeft--;
-                timerDisplay.textContent = this.gameState.timeLeft;
-                timerBar.style.width = `${(this.gameState.timeLeft / this.QUESTION_TIME) * 100}%`;
+        this.timerInterval = setInterval(() => {
+            this.gameState.timeLeft--;
+            timerDisplay.textContent = this.gameState.timeLeft;
+            timerBar.style.width = `${(this.gameState.timeLeft / this.QUESTION_TIME) * 100}%`;
 
-                if (this.gameState.timeLeft <= 0) {
-                    clearInterval(this.timerInterval);
-                    this.showToast("انتهى الوقت!", "error");
-                    this.challengeResult = false;
-                    document.querySelectorAll('#challengeOptionsGrid .option-btn').forEach(b => b.classList.add('disabled'));
-                    
-                    const correctButton = this.domElements.challengeOptionsGrid.querySelector('[data-correct="true"]');
-                    if (correctButton) {
-                        correctButton.classList.add('correct');
-                    }
-                    
-                    setTimeout(() => {
-                        this.showFinalResults();
-                    }, 2000);
+            if (this.gameState.timeLeft <= 0) {
+                clearInterval(this.timerInterval);
+                this.showToast("انتهى الوقت!", "error");
+                this.challengeResult = false;
+                document.querySelectorAll('#challengeOptionsGrid .option-btn').forEach(b => b.classList.add('disabled'));
+                
+                const correctButton = this.domElements.challengeOptionsGrid.querySelector('[data-correct="true"]');
+                if (correctButton) {
+                    correctButton.classList.add('correct');
                 }
-            }, 1000);
-        }
+                
+                setTimeout(() => {
+                    this.showFinalResults();
+                }, 2000);
+            }
+        }, 1000);
     }
     
     showFinalResults() {
+        const totalTimeSeconds = (new Date() - new Date(this.gameState.startTime)) / 1000;
+
+        this.gameState.finalStats = {
+            name: this.gameState.name,
+            correct: this.correctAnswers,
+            wrong: this.wrongAnswers,
+            skipped: this.skippedQuestions,
+            score: this.currentScoreValue,
+            time: this.formatTime(totalTimeSeconds),
+            challengeResult: this.challengeResult
+        };
+        
         // تحديث واجهة النتائج
-        this.domElements.correctAnswersCount.textContent = this.correctAnswersCount;
-        this.domElements.wrongAnswersCount.textContent = this.wrongAnswersCount;
-        this.domElements.skippedCount.textContent = this.skippedCount;
-        this.domElements.finalScore.textContent = this.formatNumber(this.currentScoreValue);
+        this.domElements.finalName.textContent = this.gameState.finalStats.name;
+        this.domElements.finalCorrect.textContent = this.gameState.finalStats.correct;
+        this.domElements.finalWrong.textContent = this.gameState.finalStats.wrong;
+        this.domElements.finalSkipped.textContent = this.gameState.finalStats.skipped;
+        this.domElements.finalScore.textContent = this.formatNumber(this.gameState.finalStats.score);
+        this.domElements.totalTime.textContent = this.gameState.finalStats.time;
+        this.domElements.totalPointsEarned.textContent = this.formatNumber(this.gameState.finalStats.score);
         
         // تحديث نتيجة السؤال المستحيل
         if (this.challengeAttempted) {
             const resultText = this.challengeResult ? "نجح بالإجابة" : "فشل بالإجابة";
             this.domElements.challengeResult.textContent = resultText;
-            document.getElementById('challengeResultRow').style.display = 'flex';
         } else {
-            document.getElementById('challengeResultRow').style.display = 'none';
+            this.domElements.challengeResult.textContent = "لم يُستخدم";
         }
         
-        // تحديث الرسم البياني للأداء
-        this.updatePerformanceChart();
+        // تحديث الرسم البياني
+        this.updateChart();
         
         this.showScreen('end');
+        
+        // إرسال البيانات إلى الخادم
+        this.apiCall({
+            action: 'end',
+            attemptId: this.gameState.attemptId,
+            deviceId: this.gameState.deviceId,
+            name: this.gameState.name,
+            score: this.currentScoreValue,
+            totalTime: totalTimeSeconds,
+            correctAnswers: this.correctAnswers,
+            wrongAnswers: this.wrongAnswers,
+            skippedQuestions: this.skippedQuestions,
+            challengeAttempted: this.challengeAttempted,
+            challengeResult: this.challengeResult,
+            helpersUsed: this.nextQuestionUsageCount
+        }).catch(error => console.error("Failed to save score:", error));
     }
     
-    updatePerformanceChart() {
-        // إنشاء رسم بياني مبسط للأداء
-        const ctx = this.domElements.performanceChart.getContext('2d');
-        const data = {
-            labels: ['صحيح', 'خاطئ', 'مُتخطى'],
-            datasets: [{
-                data: [this.correctAnswersCount, this.wrongAnswersCount, this.skippedCount],
-                backgroundColor: ['#10b981', '#ef4444', '#f59e0b'],
-                borderWidth: 0
-            }]
-        };
+    updateChart() {
+        const total = this.correctAnswers + this.wrongAnswers + this.skippedQuestions;
         
-        // رسم مخطط دائري بسيط (بدون استخدام مكتبات خارجية)
-        const total = this.correctAnswersCount + this.wrongAnswersCount + this.skippedCount;
-        let startAngle = 0;
-        
-        // مسح الرسم الحالي
-        ctx.clearRect(0, 0, this.domElements.performanceChart.width, this.domElements.performanceChart.height);
-        
-        // رسم القطاعات
-        [this.correctAnswersCount, this.wrongAnswersCount, this.skippedCount].forEach((value, i) => {
-            if (value === 0) return;
+        if (total > 0) {
+            const correctPercent = (this.correctAnswers / total) * 100;
+            const wrongPercent = (this.wrongAnswers / total) * 100;
+            const skippedPercent = (this.skippedQuestions / total) * 100;
             
-            const sliceAngle = 2 * Math.PI * value / total;
-            const colors = ['#10b981', '#ef4444', '#f59e0b'];
+            this.domElements.correctBar.style.width = `${correctPercent}%`;
+            this.domElements.wrongBar.style.width = `${wrongPercent}%`;
+            this.domElements.skippedBar.style.width = `${skippedPercent}%`;
             
-            ctx.beginPath();
-            ctx.moveTo(100, 100);
-            ctx.arc(100, 100, 80, startAngle, startAngle + sliceAngle);
-            ctx.closePath();
-            ctx.fillStyle = colors[i];
-            ctx.fill();
-            
-            startAngle += sliceAngle;
-        });
-        
-        // إضافة نص في المركز
-        ctx.fillStyle = '#1a1a2e';
-        ctx.font = 'bold 16px Cairo';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('أداؤك', 100, 100);
+            this.domElements.correctBar.querySelector('.chart-label').textContent = `${Math.round(correctPercent)}%`;
+            this.domElements.wrongBar.querySelector('.chart-label').textContent = `${Math.round(wrongPercent)}%`;
+            this.domElements.skippedBar.querySelector('.chart-label').textContent = `${Math.round(skippedPercent)}%`;
+        }
     }
     
     useHelper(event) {
@@ -478,17 +476,19 @@ class QuizGame {
 
         this.updateScore(this.currentScoreValue - cost);
         
-        // زيادة عداد استخدام مساعدة السؤال التالي
         if (type === 'nextQuestion') {
             this.nextQuestionUsageCount++;
-            this.skippedCount++;
+            this.skippedQuestions++;
+            this.domElements.skippedQuestions.textContent = this.skippedQuestions;
             this.updateNextQuestionCost();
-        }
-        
-        btn.disabled = true;
-        this.showToast(`تم استخدام المساعدة!`, "success");
-
-        if (type === 'fiftyFifty') {
+            
+            this.gameState.currentQuestion++;
+            this.showToast(`تم تخطي السؤال! -${cost} نقطة`, "info");
+            
+            setTimeout(() => {
+                this.fetchQuestion();
+            }, 1000);
+        } else if (type === 'fiftyFifty') {
             const options = Array.from(this.domElements.optionsGrid.querySelectorAll('.option-btn'));
             let wrongOptions = options.filter(btn => btn.dataset.correct !== 'true');
             
@@ -497,31 +497,17 @@ class QuizGame {
                 wrongOptions[0].classList.add('hidden');
                 wrongOptions[1].classList.add('hidden');
             }
-        } else if (type === 'freezeTime') {
-            this.isTimeFrozen = true;
-            document.querySelector('.timer-bar').classList.add('frozen');
-            setTimeout(() => {
-                this.isTimeFrozen = false;
-                document.querySelector('.timer-bar').classList.remove('frozen');
-            }, 10000);
-        } else if (type === 'changeQuestion') {
-            this.gameState.shuffledQuestions[this.gameState.currentQuestion] = this.backupQuestion;
-            this.fetchQuestion();
-        } else if (type === 'nextQuestion') {
-            // التخطي إلى السؤال التالي
-            this.gameState.currentQuestion++;
-            if (this.gameState.currentQuestion >= this.TOTAL_QUESTIONS) {
-                this.showFinalResults();
-            } else {
-                this.fetchQuestion();
-            }
+            
+            btn.disabled = true;
+            this.showToast(`تم استخدام المساعدة! -${cost} نقطة`, "success");
         }
+        
         this.updateUI();
     }
     
     updateNextQuestionCost() {
         const nextCost = this.NEXT_QUESTION_BASE_COST + (this.nextQuestionUsageCount * this.NEXT_QUESTION_COST_INCREMENT);
-        this.domElements.nextQuestionCost.textContent = nextCost;
+        this.domElements.nextQuestionCost.textContent = `(${nextCost})`;
     }
 
     startTimer() {
@@ -540,8 +526,8 @@ class QuizGame {
             if (this.gameState.timeLeft <= 0) {
                 clearInterval(this.timerInterval);
                 this.showToast("انتهى الوقت!", "error");
-                this.updateScore(this.currentScoreValue - this.QUESTION_POINTS);
-                this.wrongAnswersCount++;
+                this.wrongAnswers++;
+                this.updateScore(this.currentScoreValue - this.WRONG_ANSWER_PENALTY);
                 document.querySelectorAll('.option-btn').forEach(b => b.classList.add('disabled'));
                 
                 const correctButton = this.domElements.optionsGrid.querySelector('[data-correct="true"]');
@@ -553,11 +539,7 @@ class QuizGame {
                 
                 setTimeout(() => {
                     this.gameState.currentQuestion++;
-                    if (this.gameState.currentQuestion >= this.TOTAL_QUESTIONS) {
-                        this.showFinalResults();
-                    } else {
-                        this.fetchQuestion();
-                    }
+                    this.fetchQuestion();
                 }, 2000);
             }
         }, 1000);
@@ -570,15 +552,6 @@ class QuizGame {
     }
 
     updateUI() {
-        // تحديث عدد المحاولات إلى "غير محدود"
-        if (this.domElements.attemptsLeft) {
-            this.domElements.attemptsLeft.textContent = "غير محدود";
-        }
-
-        // تحديث تكلفة السؤال التالي
-        this.updateNextQuestionCost();
-
-        // تحديث حالة أزرار المساعدة
         this.domElements.helperBtns.forEach(btn => {
             const type = btn.dataset.type;
             
@@ -592,110 +565,96 @@ class QuizGame {
         });
     }
 
-    async displayLeaderboard() {
-        this.showScreen('leaderboard');
-        const contentDiv = document.getElementById('leaderboardContent');
-        contentDiv.innerHTML = '<div class="spinner"></div>';
-
+    confirmEndQuiz() {
+        this.showDialog(
+            "إنهاء المسابقة",
+            "سيتم احتساب النقاط التي جمعتها حتى الآن. هل تريد إنهاء المسابقة؟",
+            () => this.showFinalResults()
+        );
+    }
+    
+    showStatsScreen() {
+        this.showScreen('stats');
+        this.loadStats();
+    }
+    
+    async loadStats() {
         try {
             const response = await this.apiCall({ action: 'getLeaderboard' });
             if (response && response.success && response.leaderboard) {
-                let tableHTML = '<p>لوحة الصدارة فارغة حاليًا!</p>';
+                let statsHTML = '';
+                
                 if (response.leaderboard.length > 0) {
-                    tableHTML = `<table class="leaderboard-table">
-                        <tr><th>الترتيب</th><th>الاسم</th><th>النقاط</th><th>الإجابات الصحيحة</th></tr>
-                        ${response.leaderboard.map(row => `
-                            <tr>
-                                <td>${['🥇', '🥈', '🥉'][row[0] - 1] || row[0]}</td>
-                                <td>${row[1]}</td>
-                                <td>${this.formatNumber(row[2])}</td>
-                                <td>${row[3] || 0}</td>
-                            </tr>`).join('')}
-                    </table>`;
+                    statsHTML = `
+                        <div class="stats-section">
+                            <h3>أفضل 5 لاعبين</h3>
+                            <div class="stats-list">
+                                ${response.leaderboard.slice(0, 5).map((row, index) => `
+                                    <div class="stats-item">
+                                        <span class="stats-rank">${index + 1}</span>
+                                        <span class="stats-name">${row[1]}</span>
+                                        <span class="stats-score">${this.formatNumber(row[2])} نقطة</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    statsHTML = '<p>لا توجد إحصائيات متاحة حتى الآن.</p>';
                 }
-                contentDiv.innerHTML = tableHTML;
+                
+                this.domElements.statsContent.innerHTML = statsHTML;
             } else {
-                contentDiv.innerHTML = '<p>حدث خطأ في تحميل لوحة الصدارة.</p>';
+                this.domElements.statsContent.innerHTML = '<p>حدث خطأ في تحميل الإحصائيات.</p>';
             }
         } catch (error) {
-            console.error("Error loading leaderboard:", error);
-            contentDiv.innerHTML = '<p>حدث خطأ في تحميل لوحة الصدارة.</p>';
+            console.error("Error loading stats:", error);
+            this.domElements.statsContent.innerHTML = '<p>حدث خطأ في تحميل الإحصائيات.</p>';
         }
     }
     
-    filterLeaderboard(event) {
-        const filter = event.target.dataset.filter;
-        
-        // إزالة النشط من جميع الأزرار
-        document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-        
-        // إضافة النشط للزر المحدد
-        event.target.classList.add('active');
-        
-        // تطبيق التصفية
-        this.displayLeaderboardWithFilter(filter);
+    showDialog(title, message, confirmCallback) {
+        this.domElements.dialogTitle.textContent = title;
+        this.domElements.dialogMessage.textContent = message;
+        this.domElements.dialogOverlay.classList.add('active');
+        this.dialogConfirmCallback = confirmCallback;
     }
     
-    async displayLeaderboardWithFilter(filter) {
-        // في التطبيق الحقيقي، سيتم إرسال طلب إلى الخادم مع معامل التصفية
-        console.log(`Filtering leaderboard by: ${filter}`);
-        this.displayLeaderboard();
+    hideDialog() {
+        this.domElements.dialogOverlay.classList.remove('active');
+        this.dialogConfirmCallback = null;
     }
     
-    getShareText() {
-        let challengeText = "";
-        
-        if (this.challengeAttempted) {
-            challengeText = this.challengeResult ? 
-                `🎯 السؤال المستحيل: نجح بالإجابة` : 
-                `🎯 السؤال المستحيل: فشل بالإجابة`;
-        } else {
-            challengeText = "🎯 السؤال المستحيل: لم يُستخدم";
+    executeDialogAction() {
+        if (this.dialogConfirmCallback) {
+            this.dialogConfirmCallback();
         }
-        
-        return `✨ نتائجي في مسابقة المعرفة ✨\n` +
-               `الإجابات الصحيحة: ${this.correctAnswersCount}\n` +
-               `الإجابات الخاطئة: ${this.wrongAnswersCount}\n` +
-               `مرات التخطي: ${this.skippedCount}\n` +
-               `النقاط الكلية: ${this.formatNumber(this.currentScoreValue)}\n` +
-               `${challengeText}\n` +
-               `🔗 جرب حظك أنت أيضاً: ${window.location.href}`;
-    }
-    
-    shareOnX() {
-        const text = encodeURIComponent(this.getShareText());
-        window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
+        this.hideDialog();
     }
 
-    shareOnInstagram() {
-        navigator.clipboard.writeText(this.getShareText())
-            .then(() => this.showToast("تم نسخ النتيجة! الصقها في قصتك أو رسائلك على إنستغرام.", "success"))
-            .catch(() => this.showToast("فشل نسخ النتيجة.", "error"));
-    }
-    
-    copyResults() {
-        navigator.clipboard.writeText(this.getShareText())
-            .then(() => this.showToast("تم نسخ النتيجة إلى الحافظة!", "success"))
-            .catch(() => this.showToast("فشل نسخ النتيجة.", "error"));
-    }
-
-    resetGameState() {
+    resetGameState(attemptId) {
         this.gameState = {
+            deviceId: this.getDeviceId(),
+            attemptId: attemptId,
             name: this.gameState.name,
             avatar: this.gameState.avatar,
             currentQuestion: 0,
             startTime: new Date().toISOString(),
             shuffledQuestions: [],
         };
+        
+        this.correctAnswers = 0;
+        this.wrongAnswers = 0;
+        this.skippedQuestions = 0;
         this.nextQuestionUsageCount = 0;
         this.challengeAttempted = false;
         this.challengeResult = null;
-        this.correctAnswersCount = 0;
-        this.wrongAnswersCount = 0;
-        this.skippedCount = 0;
-        this.totalTimeSpent = 0;
+        
         this.updateScore(this.STARTING_POINTS);
         this.updateNextQuestionCost();
+        
+        this.domElements.correctAnswers.textContent = "0";
+        this.domElements.skippedQuestions.textContent = "0";
     }
 
     setupGameUI() {
@@ -716,19 +675,6 @@ class QuizGame {
         this.domElements.themeToggleBtn.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
     }
     
-    showEndGameConfirmation() {
-        this.domElements.confirmEndGame.classList.add('active');
-    }
-    
-    hideEndGameConfirmation() {
-        this.domElements.confirmEndGame.classList.remove('active');
-    }
-    
-    endGame() {
-        this.hideEndGameConfirmation();
-        this.showFinalResults();
-    }
-    
     showScreen(screenName) {
         if (document.activeElement) document.activeElement.blur();
         
@@ -746,9 +692,6 @@ class QuizGame {
             const firstFocusable = activeScreen.querySelector('button, [href], input, select, textarea');
             if(firstFocusable) firstFocusable.focus();
         }
-        
-        // إخفاء نافذة التأكيد عند تغيير الشاشة
-        this.hideEndGameConfirmation();
     }
 
     hideLoader() {
@@ -815,7 +758,7 @@ class QuizGame {
             if (cost) {
                 const costEl = btn.querySelector('.helper-cost');
                 if (costEl) {
-                    costEl.textContent = cost;
+                    costEl.textContent = `(${cost})`;
                 }
             }
         });
