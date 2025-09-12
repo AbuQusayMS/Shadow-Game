@@ -9,6 +9,7 @@
   --color-dark-gold: #ffd700;
   --color-dark-success: #10b981;
   --color-dark-error: #ef4444;
+  --color-dark-warning: #f59e0b;
 
   /* Light Theme Colors */
   --color-light-bg: #f8fafc;
@@ -20,6 +21,7 @@
   --color-light-gold: #ca8a04;
   --color-light-success: #059669;
   --color-light-error: #dc2626;
+  --color-light-warning: #d97706;
 
   /* Neutral Colors */
   --color-white: #ffffff;
@@ -70,6 +72,7 @@ body[data-theme='dark'] {
   --gold-color: var(--color-dark-gold);
   --success-color: var(--color-dark-success);
   --error-color: var(--color-dark-error);
+  --warning-color: var(--color-dark-warning);
 }
 
 body[data-theme='light'] {
@@ -82,8 +85,227 @@ body[data-theme='light'] {
   --gold-color: var(--color-light-gold);
   --success-color: var(--color-light-success);
   --error-color: var(--color-light-error);
+  --warning-color: var(--color-light-warning);
 }
 
+/* إضافة أنماط للعناصر الجديدة */
+
+/* شاشة السؤال المستحيل */
+.challenge-warning {
+  background-color: var(--warning-color);
+  color: var(--color-white);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  margin: var(--space-6) 0;
+  text-align: center;
+  font-weight: 600;
+}
+
+/* مؤشرات الأداء في شاشة النتائج */
+.performance-indicators {
+  margin: var(--space-6) 0;
+  width: 100%;
+}
+
+.performance-bar {
+  width: 100%;
+  height: 1.5rem;
+  background-color: var(--secondary-color);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  margin-bottom: var(--space-2);
+}
+
+.performance-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--error-color), var(--warning-color), var(--success-color));
+  border-radius: var(--radius-full);
+  transition: width var(--transition-normal);
+}
+
+.performance-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--text-color);
+  opacity: 0.7;
+}
+
+/* شارة التحدي */
+.challenge-badge {
+  background: linear-gradient(135deg, var(--gold-color), #ff9d00);
+  color: var(--color-black);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  font-weight: 700;
+  text-align: center;
+  margin: var(--space-4) 0;
+  box-shadow: var(--shadow-md);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+/* أزرار التصفية في لوحة الصدارة */
+.leaderboard-filters {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.filter-btn {
+  padding: var(--space-2) var(--space-4);
+  background-color: var(--secondary-color);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: all var(--transition-fast);
+}
+
+.filter-btn.active,
+.filter-btn:hover {
+  background-color: var(--accent-color);
+  color: var(--color-white);
+}
+
+/* زر نسخ النتائج */
+.share-btn.copy {
+  background-color: var(--secondary-color);
+  color: var(--text-color);
+}
+
+.share-btn.copy:hover {
+  background-color: var(--accent-color);
+  color: var(--color-white);
+}
+
+/* تحسينات للأجهزة المحمولة */
+@media (max-width: 768px) {
+  .helpers {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  
+  .player-stats {
+    flex-direction: column !important;
+    gap: var(--space-2) !important;
+  }
+  
+  .leaderboard-filters {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .filter-btn {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+/* تحسينات للأجهزة اللوحية */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .helpers {
+    grid-template-columns: repeat(4, 1fr) !important;
+  }
+}
+
+/* تحسينات للأجهزة الكبيرة */
+@media (min-width: 1025px) {
+  .content-box {
+    max-width: 42rem;
+  }
+}
+
+/* تحسينات للأداء والرسوم المتحركة */
+.option-btn {
+  will-change: transform, background-color, border-color;
+}
+
+.helper-btn {
+  will-change: transform, background-color;
+}
+
+.timer-bar {
+  will-change: width;
+}
+
+/* تحسين إمكانية الوصول للعناصر الجديدة */
+.helper-btn[data-type="nextQuestion"]:focus {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+.filter-btn:focus {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+/* تأثيرات hover للعناصر الجديدة */
+#acceptChallengeBtn:hover {
+  background-color: var(--warning-color);
+  border-color: var(--warning-color);
+  color: var(--color-white);
+}
+
+#showResultsBtn:hover {
+  background-color: var(--secondary-color);
+  border-color: var(--border-color);
+}
+
+/* تعديلات لتحسين الأداء */
+.screen {
+  backface-visibility: hidden;
+  perspective: 1000;
+}
+
+.content-box {
+  transform: translateZ(0);
+}
+
+/* تحسينات للرسوم البيانية الصغيرة */
+.leaderboard-table tr.highlight {
+  background-color: rgba(255, 215, 0, 0.1) !important;
+  position: relative;
+}
+
+.leaderboard-table tr.highlight::before {
+  content: "⭐";
+  position: absolute;
+  right: -1.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* تحسينات للشاشات المختلفة */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* تحسينات للوضع الداكن والفاتح */
+body[data-theme='dark'] .challenge-warning {
+  background-color: var(--warning-color);
+  color: var(--color-black);
+}
+
+body[data-theme='light'] .challenge-warning {
+  background-color: var(--warning-color);
+  color: var(--color-white);
+}
+
+/* بقية الأنماط الموجودة مسبقًا تبقى كما هي */
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -361,18 +583,14 @@ input[type="text"]:focus {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  transition: all var(--transition-fast);
 }
 .prizes-list li.current {
   background-color: var(--gold-color);
   color: var(--color-black);
   font-weight: 700;
-  transform: scale(1.05);
 }
 .prizes-list li.past {
   opacity: 0.6;
-  background-color: var(--success-color);
-  color: var(--color-white);
 }
 
 #gameContainer {
@@ -651,11 +869,6 @@ input[type="text"]:focus {
 }
 .leaderboard-table th {
   background-color: var(--secondary-color);
-}
-
-/* ADDED: Style to highlight impossible question winners on the leaderboard */
-.leaderboard-table tr.impossible-winner td {
-    background-color: rgba(255, 215, 0, 0.1); /* Transparent gold highlight */
 }
 
 .toast-container {
