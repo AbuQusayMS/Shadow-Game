@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <meta name="description" content="لعبة مسابقة من سيربح اللقب - اختبر معلوماتك واربح الجوائز">
-    <title>من سيربح اللقب؟ - لعبة المسابقة التفاعلية</title>
+    <meta name="description" content="لعبة مسابقة - اختبر معلوماتك واربح النقاط">
+    <title>مسابقة المعرفة - لعبة المسابقة التفاعلية</title>
 
     <link rel="icon" type="image/png" href="/images/my-icon.png">
     
@@ -21,8 +21,8 @@
     {
         "@context": "https://schema.org",
         "@type": "VideoGame",
-        "name": "من سيربح اللقب؟",
-        "description": "لعبة مسابقة تفاعلية لاختبار المعلومات العامة والفوز بالجوائز",
+        "name": "مسابقة المعرفة",
+        "description": "لعبة مسابقة تفاعلية لاختبار المعلومات العامة",
         "applicationCategory": "GameApplication",
         "operatingSystem": "Web Browser",
         "author": {
@@ -44,8 +44,8 @@
         <div class="content-box">
             <header class="screen-header">
                 <h1 class="game-title">
-                    <span aria-hidden="true">👑</span>
-                    من سيربح اللقب؟
+                    <span aria-hidden="true">🧠</span>
+                    مسابقة المعرفة
                     <span class="sr-only">لعبة مسابقة المعلومات</span>
                 </h1>
             </header>
@@ -121,10 +121,10 @@
             <div class="welcome-content">
                 <p>📌 قبل أن تبدأ رحلتك، تذكّر:</p>
                 <ul>
-                    <li>اكتب اسمك المعروف على منصة إكس أو إنستغرام.</li>
-                    <li>لديك <strong id="attemptsCount" style="color: var(--gold-color);"></strong> محاولات يوميًا، فاستغلها بحكمة.</li>
+                    <li>لديك محاولات <strong style="color: var(--accent-color);">غير محدودة</strong>، فاستغلها بحكمة.</li>
                     <li>لا تتسرع في الإجابة… فالوقت بين يديك.</li>
-                    <li>في حال واجهت أي مشكلة، راسل المسؤول القارئ الوحيد على <a href="https://x.com/_MS_AbuQusay?t=OcQrklIZ9itdajVI5YuKuw&s=09" target="_blank" rel="noopener noreferrer">إكس</a> أو <a href="https://www.instagram.com/ms_abuqusay?igsh=MXc2ZWptd2FkamN0" target="_blank" rel="noopener noreferrer">إنستغرام</a>.</li>
+                    <li>يمكنك استخدام زر "السؤال التالي" بتكلفة تزداد مع كل استخدام.</li>
+                    <li>في حال واجهت أي مشكلة، راسل المسؤول.</li>
                 </ul>
             </div>
             
@@ -134,32 +134,23 @@
         </div>
     </div>
 
-    <aside class="sidebar" id="prizesSidebar" aria-hidden="true" aria-label="قائمة الألقاب">
-        <div class="sidebar-header">
-            <h3>الألقاب</h3>
-            <button class="close-sidebar-btn" aria-label="إغلاق قائمة الألقاب">
-                &times;
-            </button>
-        </div>
-        
-        <div class="sidebar-content">
-            <ul class="prizes-list" aria-label="قائمة مستويات الألقاب"></ul>
-        </div>
-    </aside>
-    
-    <div class="sidebar-overlay" aria-hidden="true"></div>
-
     <main id="gameContainer" class="screen" aria-hidden="true">
         <div class="top-bar">
             <button class="theme-toggle-btn" aria-label="تبديل وضع السطوع والظلام">
                 <span aria-hidden="true">☀️</span>
             </button>
-            <button class="open-sidebar-btn" aria-expanded="false" aria-controls="prizesSidebar">
-                <span aria-hidden="true">🏆</span>
-                الألقاب
+            <button id="endGameBtn" class="end-game-btn" aria-label="إنهاء المسابقة">
+                إنهاء المسابقة
             </button>
         </div>
         
+        <div class="progress-container">
+            <div class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                <div class="progress-fill"></div>
+            </div>
+            <span class="progress-text" id="progressText">السؤال 1 من 10</span>
+        </div>
+
         <header class="game-header">
             <div class="player-info">
                 <div class="player-main">
@@ -167,34 +158,31 @@
                     <span id="playerName" aria-label="اسم اللاعب"></span>
                 </div>
                 <div class="player-stats">
-                    <div class="stat-item">اللقب: <strong id="currentTitle" aria-live="polite">لا يوجد</strong></div>
-                    <div class="stat-item">النقاط: <strong id="currentScore" aria-live="polite">100</strong></div>
-                    <div class="stat-item">الأخطاء: <strong id="wrongAnswersCount" aria-live="assertive">0 / 3</strong></div>
-                    <div class="stat-item">المحاولات: <strong id="attemptsLeft" aria-live="polite"></strong></div>
+                    <div class="stat-item">النقاط: <strong id="currentScore" aria-live="polite">0</strong></div>
+                    <div class="stat-item">المحاولات: <strong id="attemptsLeft" aria-live="polite">غير محدود</strong></div>
                 </div>
             </div>
 
             <div class="helpers" aria-label="خيارات المساعدة">
                 <button class="helper-btn" data-type="fiftyFifty" disabled aria-describedby="fiftyFiftyDesc">
                     50:50
-                    <span class="helper-cost"></span>
+                    <span class="helper-cost">50</span>
                 </button>
                 <div id="fiftyFiftyDesc" class="sr-only">يزيل خيارين خاطئين</div>
     
                 <button class="helper-btn" data-type="freezeTime" disabled aria-describedby="freezeTimeDesc">
                    ❄️ 10ث
-                    <span class="helper-cost"></span>
+                    <span class="helper-cost">75</span>
                 </button>
                 <div id="freezeTimeDesc" class="sr-only">يوقف المؤقت لمدة 10 ثوان</div>
 
                 <button class="helper-btn" data-type="changeQuestion" disabled aria-describedby="changeQuestionDesc">
                    🔄 تغيير
-                <span class="helper-cost"></span>
+                    <span class="helper-cost">100</span>
                 </button>
                 <div id="changeQuestionDesc" class="sr-only">يغير السؤال الحالي</div>
                 
-                <!-- إضافة مساعدة السؤال التالي -->
-                <button class="helper-btn" data-type="nextQuestion" disabled aria-describedby="nextQuestionDesc">
+                <button class="helper-btn" data-type="nextQuestion" id="nextQuestionBtn" aria-describedby="nextQuestionDesc">
                    ⏭️ التالي
                     <span class="helper-cost" id="nextQuestionCost">100</span>
                 </button>
@@ -224,29 +212,7 @@
     </main>
 
     <!-- شاشة السؤال المستحيل -->
-    <div id="challengeScreen" class="screen" aria-hidden="true">
-        <div class="content-box">
-            <header class="screen-header">
-                <h2>⚠️ السؤال المستحيل ⚠️</h2>
-            </header>
-            
-            <div class="challenge-warning">
-                <p>تنبيه: هذه فرصتك لتعويض خسارتك والوصول مباشرة إلى المركز الأول. إذا كنت واثقًا من نفسك، حاول الإجابة على السؤال المستحيل وحقق الفوز بالمركز الأول!</p>
-            </div>
-            
-            <div class="button-group">
-                <button id="showResultsBtn" class="btn-secondary">
-                    عرض النتائج
-                </button>
-                <button id="acceptChallengeBtn" class="btn-main">
-                    قبول التحدي
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- شاشة السؤال المستحيل أثناء اللعب -->
-    <div id="challengeQuestionScreen" class="screen" aria-hidden="true">
+    <div id="challengeQuestionScreen" class="screen challenge-screen" aria-hidden="true">
         <div class="top-bar">
             <button class="theme-toggle-btn" aria-label="تبديل وضع السطوع والظلام">
                 <span aria-hidden="true">☀️</span>
@@ -266,7 +232,7 @@
             </div>
         </header>
 
-        <div class="timer-container" aria-label="مؤقت السؤال المستحيل" style="display: none;">
+        <div class="timer-container" aria-label="مؤقت السؤال المستحيل">
             <div class="timer-bar" role="progressbar" aria-valuemin="0" aria-valuemax="60" aria-valuenow="60"></div>
             <span id="challengeTimer" class="timer-text">60</span>
         </div>
@@ -281,43 +247,62 @@
                 <div class="options-grid" id="challengeOptionsGrid" role="group" aria-label="خيارات الإجابة للسؤال المستحيل"></div>
             </section>
         </div>
+        
+        <div class="helpers-disabled-notice">
+            <p>غير متاح في السؤال المستحيل</p>
+        </div>
+    </div>
+
+    <!-- نافذة تأكيد إنهاء المسابقة -->
+    <div id="confirmEndGame" class="modal" aria-hidden="true" role="dialog" aria-labelledby="confirmEndGameTitle">
+        <div class="modal-content">
+            <h3 id="confirmEndGameTitle">إنهاء المسابقة</h3>
+            <p>هل تريد إنهاء المسابقة الآن؟ سيتم عرض صفحة النتائج.</p>
+            <div class="modal-actions">
+                <button id="confirmEndBtn" class="btn-main">تأكيد</button>
+                <button id="cancelEndBtn" class="btn-secondary">إلغاء</button>
+            </div>
+        </div>
     </div>
 
     <div id="endScreen" class="screen" aria-hidden="true">
         <div class="content-box">
             <header class="screen-header">
-                <h2>🏆 النتائج النهائية 🏆</h2>
+                <h2>📊 النتائج النهائية</h2>
             </header>
             
             <div class="final-stats" aria-labelledby="finalStatsHeading">
                 <h3 id="finalStatsHeading" class="sr-only">الإحصائيات النهائية</h3>
-                <p>✍️ الاسم: <strong id="finalName"></strong></p>
-                <p>🏅 اللقب: <strong id="finalTitle"></strong></p>
-                <p>⭐ النقاط: <strong id="finalScore"></strong></p>
-                <p>⏱️ المدة: <strong id="totalTime"></strong></p>
-                <p>🎯 السؤال المستحيل: <strong id="challengeResult">لم يُستخدم</strong></p>
-                <p>📊 الترتيب: <strong id="finalRank"></strong></p>
+                <div class="stat-row">
+                    <span class="stat-label">الإجابات الصحيحة:</span>
+                    <span class="stat-value" id="correctAnswersCount">0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">الإجابات الخاطئة:</span>
+                    <span class="stat-value" id="wrongAnswersCount">0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">مرات التخطي:</span>
+                    <span class="stat-value" id="skippedCount">0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">النقاط الكلية:</span>
+                    <span class="stat-value" id="finalScore">0</span>
+                </div>
+                <div class="stat-row" id="challengeResultRow" style="display: none;">
+                    <span class="stat-label">السؤال المستحيل:</span>
+                    <span class="stat-value" id="challengeResult"></span>
+                </div>
             </div>
             
-            <!-- مؤشرات بصرية للأداء -->
-            <div class="performance-indicators">
-                <div class="performance-bar">
-                    <div class="performance-fill" id="performanceFill"></div>
-                </div>
-                <div class="performance-labels">
-                    <span>منخفض</span>
-                    <span>متوسط</span>
-                    <span>مرتفع</span>
-                </div>
-            </div>
-            
-            <!-- رمز التمييز إذا استخدم السؤال المستحيل بنجاح -->
-            <div id="challengeBadge" class="challenge-badge" style="display: none;">
-                ⭐ إنجاز: تخطى السؤال المستحيل!
+            <!-- مخطط أداء اللاعب -->
+            <div class="performance-chart">
+                <h3>أداؤك في المسابقة</h3>
+                <canvas id="performanceChart" width="400" height="200"></canvas>
             </div>
             
             <section class="share-section" aria-labelledby="shareHeading">
-                <h3 id="shareHeading">📢 مشاركة النتائج</h3>
+                <h3 id="shareHeading">مشاركة النتائج</h3>
                 <div class="share-buttons">
                     <button id="shareXBtn" class="share-btn x" aria-label="مشاركة النتيجة على X">
                         X
@@ -354,7 +339,6 @@
             
             <div class="leaderboard-filters">
                 <button class="filter-btn active" data-filter="all">الكل</button>
-                <button class="filter-btn" data-filter="challenge">تحدي المستحيل</button>
                 <button class="filter-btn" data-filter="today">اليوم</button>
             </div>
             
