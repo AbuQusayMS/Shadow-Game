@@ -1,12 +1,13 @@
 class QuizGame {
     constructor() {
         this.API_URL = "https://script.google.com/macros/s/AKfycbzB9cru35ndWmWYsEqe46NlrvZgj64HhCIZJ0j7SLln3VDSl2S7rAOMDGxLwEzR_ClS/exec";
-        this.QUESTION_TIME = 80;
+        this.QUESTION_TIME = 60;
         this.TOTAL_AVATARS = 16;
-        this.LIMIT_PER_DAY = 2; // Set the number of daily attempts here
+        
+        // إزالة الحد اليومي للمحاولات
         this.MAX_WRONG_ANSWERS = 3;
-        this.STARTING_POINTS = 100; // رصيد البداية 100 نقطة
-        this.QUESTION_POINTS = 100; // 100 نقطة لكل سؤال
+        this.STARTING_POINTS = 100;
+        this.QUESTION_POINTS = 100;
 
         // إعدادات مساعدة السؤال التالي
         this.NEXT_QUESTION_BASE_COST = 100;
@@ -44,35 +45,31 @@ class QuizGame {
 
         // جعل الأسئلة قابلة للتعديل بسهولة
         this.QUESTIONS = allQuestions;
-        this.TOTAL_QUESTIONS = this.QUESTIONS.length; // عدد الأسئلة قابل للتعديل
+        this.TOTAL_QUESTIONS = this.QUESTIONS.length;
 
-        this.PRIZES = [
-            { points: 100, title: "كاديل" }, { points: 200, title: "سيريس" },
-            { points: 300, title: "اوتو" }, { points: 500, title: "ميكا" },
-            { points: 1000, title: "غراي" }, { points: 2000, title: "بايرون" },
-            { points: 4000, title: "سيلفي" }, { points: 8000, title: "فاراي" },
-            { points: 16000, title: "شول" }, { points: 32000, title: "الدير" },
-            { points: 64000, title: "ويندسوم" }, { points: 125000, title: "مورداين" },
-            { points: 250000, title: "كيزيس" }, { points: 500000, title: "أغرونا" },
-            { points: 1000000, title: "أرثر" }
-        ];
-        
+        // إزالة نظام الألقاب
         this.HELPER_COSTS = {
-            fiftyFifty: 100,
-            freezeTime: 100,
+            fiftyFifty: 50,
+            freezeTime: 75,
             changeQuestion: 100,
             nextQuestion: this.NEXT_QUESTION_BASE_COST
         };
 
         this.isTimeFrozen = false;
         this.gameState = {};
-        this.currentScoreValue = this.STARTING_POINTS; // بدء اللاعب بـ 100 نقطة
+        this.currentScoreValue = this.STARTING_POINTS;
         this.timerInterval = null;
         this.answerSubmitted = false;
         this.domElements = {};
         this.challengeAttempted = false;
         this.challengeResult = null;
-        this.challengeRank = null;
+        
+        // إحصائيات جديدة
+        this.correctAnswersCount = 0;
+        this.wrongAnswersCount = 0;
+        this.skippedCount = 0;
+        this.totalTimeSpent = 0;
+        this.questionStartTime = 0;
 
         this.init();
     }
@@ -81,7 +78,6 @@ class QuizGame {
         this.cacheDomElements();
         this.bindEventListeners();
         this.populateAvatarGrid();
-        this.generatePrizesList();
         this.displayHelperCosts();
         this.loadTheme();
         this.showScreen('start');
@@ -97,42 +93,37 @@ class QuizGame {
                 nameEntry: document.getElementById('nameEntry'),
                 welcome: document.getElementById('welcomeScreen'),
                 game: document.getElementById('gameContainer'),
-                challenge: document.getElementById('challengeScreen'),
                 challengeQuestion: document.getElementById('challengeQuestionScreen'),
                 end: document.getElementById('endScreen'),
                 leaderboard: document.getElementById('leaderboardScreen'),
             },
-            sidebar: document.querySelector('.sidebar'),
-            sidebarOverlay: document.querySelector('.sidebar-overlay'),
             questionText: document.getElementById('questionText'),
             optionsGrid: document.querySelector('.options-grid'),
             scoreDisplay: document.getElementById('currentScore'),
-            prizesList: document.querySelector('.prizes-list'),
             helperBtns: document.querySelectorAll('.helper-btn'),
             nameInput: document.getElementById('nameInput'),
             nameError: document.getElementById('nameError'),
             confirmAvatarBtn: document.getElementById('confirmAvatarBtn'),
             themeToggleBtn: document.querySelector('.theme-toggle-btn'),
             welcomeMessage: document.getElementById('welcomeMessage'),
-            cooldownContainer: document.getElementById('cooldownContainer'),
-            cooldownTimer: document.getElementById('cooldownTimer'),
-            attemptsCount: document.getElementById('attemptsCount'),
-            attemptsLeft: document.getElementById('attemptsLeft'),
             nextQuestionCost: document.getElementById('nextQuestionCost'),
-            acceptChallengeBtn: document.getElementById('acceptChallengeBtn'),
-            showResultsBtn: document.getElementById('showResultsBtn'),
             challengeQuestionText: document.getElementById('challengeQuestionText'),
             challengeOptionsGrid: document.getElementById('challengeOptionsGrid'),
             challengePlayerAvatar: document.getElementById('challengePlayerAvatar'),
             challengePlayerName: document.getElementById('challengePlayerName'),
             challengeCurrentScore: document.getElementById('challengeCurrentScore'),
+            correctAnswersCount: document.getElementById('correctAnswersCount'),
+            wrongAnswersCount: document.getElementById('wrongAnswersCount'),
+            skippedCount: document.getElementById('skippedCount'),
+            finalScore: document.getElementById('finalScore'),
             challengeResult: document.getElementById('challengeResult'),
-            finalRank: document.getElementById('finalRank'),
-            performanceFill: document.getElementById('performanceFill'),
-            challengeBadge: document.getElementById('challengeBadge'),
-            copyResultsBtn: document.getElementById('copyResultsBtn'),
-            playAgainBtn: document.getElementById('playAgainBtn'),
-            filterBtns: document.querySelectorAll('.filter-btn')
+            endGameBtn: document.getElementById('endGameBtn'),
+            confirmEndBtn: document.getElementById('confirmEndBtn'),
+            cancelEndBtn: document.getElementById('cancelEndBtn'),
+            confirmEndGame: document.getElementById('confirmEndGame'),
+            progressText: document.getElementById('progressText'),
+            progressFill: document.querySelector('.progress-fill'),
+            performanceChart: document.getElementById('performanceChart')
         };
     }
 
@@ -145,22 +136,24 @@ class QuizGame {
         document.getElementById('backToStartBtn').addEventListener('click', () => this.showScreen('start'));
         this.domElements.themeToggleBtn.addEventListener('click', () => this.toggleTheme());
         document.getElementById('statsBtn').addEventListener('click', () => this.displayLeaderboard());
-        document.querySelector('.open-sidebar-btn').addEventListener('click', () => this.toggleSidebar(true));
-        document.querySelector('.close-sidebar-btn').addEventListener('click', () => this.toggleSidebar(false));
-        this.domElements.sidebarOverlay.addEventListener('click', () => this.toggleSidebar(false));
-        this.domElements.helperBtns.forEach(btn => btn.addEventListener('click', (e) => this.useHelper(e)));
-        document.getElementById('shareXBtn').addEventListener('click', () => this.shareOnX());
-        document.getElementById('shareInstagramBtn').addEventListener('click', () => this.shareOnInstagram());
         this.domElements.nameInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') this.showWelcomeScreen(); });
         
-        // إضافة مستمعي الأحداث الجديدة
-        this.domElements.acceptChallengeBtn.addEventListener('click', () => this.startChallengeQuestion());
-        this.domElements.showResultsBtn.addEventListener('click', () => this.showFinalResults());
-        this.domElements.copyResultsBtn.addEventListener('click', () => this.copyResults());
-        this.domElements.playAgainBtn.addEventListener('click', () => this.showScreen('start'));
+        // مستمعي الأحداث للزر الجديد "إنهاء المسابقة"
+        this.domElements.endGameBtn.addEventListener('click', () => this.showEndGameConfirmation());
+        this.domElements.confirmEndBtn.addEventListener('click', () => this.endGame());
+        this.domElements.cancelEndBtn.addEventListener('click', () => this.hideEndGameConfirmation());
+        
+        // مستمعي الأحداث للمساعدات
+        this.domElements.helperBtns.forEach(btn => btn.addEventListener('click', (e) => this.useHelper(e)));
+        
+        // مستمعي الأحداث للمشاركة
+        document.getElementById('shareXBtn').addEventListener('click', () => this.shareOnX());
+        document.getElementById('shareInstagramBtn').addEventListener('click', () => this.shareOnInstagram());
+        document.getElementById('copyResultsBtn').addEventListener('click', () => this.copyResults());
+        document.getElementById('playAgainBtn').addEventListener('click', () => this.showScreen('start'));
         
         // مستمعي أحداث التصفية
-        this.domElements.filterBtns.forEach(btn => {
+        document.querySelectorAll('.filter-btn').forEach(btn => {
             btn.addEventListener('click', (e) => this.filterLeaderboard(e));
         });
     }
@@ -193,10 +186,6 @@ class QuizGame {
         this.domElements.nameError.classList.remove('show');
         this.gameState.name = name;
         this.domElements.welcomeMessage.innerHTML = `🌟 مرحبا بك يا ${name}! 🌟`;
-        
-        if (this.domElements.attemptsCount) {
-            this.domElements.attemptsCount.textContent = this.LIMIT_PER_DAY;
-        }
 
         this.showScreen('welcome');
     }
@@ -204,31 +193,14 @@ class QuizGame {
     async startGame() {
         this.showScreen('loader');
         try {
-            const response = await this.apiCall({
-                action: 'start',
-                deviceId: this.getDeviceId(),
-                name: this.gameState.name,
-            });
-
-            if (response && response.success) {
-                document.getElementById('startPlayBtn').disabled = false;
-                this.domElements.cooldownContainer.style.display = 'none';
-
-                this.resetGameState(response.attemptId);
-                this.gameState.attemptsLeft = response.attemptsLeft;
-                this.setupGameUI();
-                this.showScreen('game');
-                this.fetchQuestion();
-            } else if (response && response.error === 'limit_reached') {
-                this.showScreen('start');
-                this.startCooldownTimer(response.cooldownEnd);
-            } else {
-                this.showToast("حدث خطأ عند بدء اللعبة.", 'error');
-                this.showScreen('start');
-            }
+            // إزالة التحقق من الحد اليومي
+            this.resetGameState();
+            this.setupGameUI();
+            this.showScreen('game');
+            this.fetchQuestion();
         } catch (error) {
             console.error("Error starting game:", error);
-            this.showToast("حدث خطأ في الاتصال بالخادم.", "error");
+            this.showToast("حدث خطأ في بدء اللعبة.", "error");
             this.showScreen('start');
         }
     }
@@ -246,6 +218,7 @@ class QuizGame {
         if (this.gameState.shuffledQuestions.length === 0) {
             this.gameState.shuffledQuestions = this.shuffleQuestions();
         }
+        this.questionStartTime = Date.now();
         const currentQuestionData = this.gameState.shuffledQuestions[this.gameState.currentQuestion];
         this.displayQuestion(currentQuestionData);
     }
@@ -254,6 +227,12 @@ class QuizGame {
         this.answerSubmitted = false;
         this.domElements.questionText.textContent = questionData.q;
         document.getElementById('questionCounter').textContent = `السؤال ${this.gameState.currentQuestion + 1} / ${this.TOTAL_QUESTIONS}`;
+        
+        // تحديث شريط التقدم
+        const progress = ((this.gameState.currentQuestion) / this.TOTAL_QUESTIONS) * 100;
+        this.domElements.progressFill.style.width = `${progress}%`;
+        this.domElements.progressText.textContent = `السؤال ${this.gameState.currentQuestion + 1} من ${this.TOTAL_QUESTIONS}`;
+        
         this.domElements.optionsGrid.innerHTML = '';
 
         let answers = questionData.options.map((optionText, index) => ({
@@ -288,40 +267,40 @@ class QuizGame {
         if (this.answerSubmitted) return;
         this.answerSubmitted = true;
         
+        // حساب الوقت المستغرق للإجابة
+        const timeSpent = Math.floor((Date.now() - this.questionStartTime) / 1000);
+        this.totalTimeSpent += timeSpent;
+        
         clearInterval(this.timerInterval);
         document.querySelectorAll('.option-btn').forEach(b => b.classList.add('disabled'));
 
         if (isCorrect) {
             selectedButton.classList.add('correct');
-            const pointsEarned = this.QUESTION_POINTS; // 100 نقطة لكل سؤال
-            this.updateScore(this.currentScoreValue + pointsEarned);
+            this.updateScore(this.currentScoreValue + this.QUESTION_POINTS);
+            this.correctAnswersCount++;
         } else {
             selectedButton.classList.add('wrong');
+            this.updateScore(this.currentScoreValue - this.QUESTION_POINTS);
+            this.wrongAnswersCount++;
             
             const correctButton = this.domElements.optionsGrid.querySelector('[data-correct="true"]');
             if (correctButton) {
                 correctButton.classList.add('correct');
             }
-            this.gameState.wrongAnswers++;
         }
 
         this.gameState.currentQuestion++;
         this.updateUI();
 
-        const isGameOver = this.gameState.wrongAnswers >= this.MAX_WRONG_ANSWERS || this.gameState.currentQuestion >= this.TOTAL_QUESTIONS;
+        const isGameOver = this.gameState.currentQuestion >= this.TOTAL_QUESTIONS;
         
         setTimeout(() => {
             if (isGameOver) {
-                this.showChallengeScreen();
+                this.showFinalResults();
             } else {
                 this.fetchQuestion();
             }
         }, 2000);
-    }
-    
-    showChallengeScreen() {
-        clearInterval(this.timerInterval);
-        this.showScreen('challenge');
     }
     
     startChallengeQuestion() {
@@ -366,9 +345,6 @@ class QuizGame {
             selectedButton.classList.add('correct');
             this.challengeResult = true;
             this.showToast("🎉 إجابة صحيحة! لقد فزت بالتحدي.", "success");
-            
-            // تحديث الترتيب بناءً على وقت الإجابة
-            this.determineChallengeRank();
         } else {
             selectedButton.classList.add('wrong');
             
@@ -383,13 +359,6 @@ class QuizGame {
         setTimeout(() => {
             this.showFinalResults();
         }, 2000);
-    }
-    
-    determineChallengeRank() {
-        // في الواقع، يجب أن يتم هذا على الخادم لتحديد من أجاب أولاً
-        // هنا سنقوم بمحاكاة بسيطة
-        const randomRank = Math.floor(Math.random() * 3) + 1; // محاكاة للحصول على ترتيب
-        this.challengeRank = randomRank;
     }
     
     startChallengeTimer() {
@@ -427,84 +396,69 @@ class QuizGame {
     }
     
     showFinalResults() {
-        const totalTimeSeconds = (new Date() - new Date(this.gameState.startTime)) / 1000;
-        const finalTitle = this.gameState.currentQuestion > 0 ? this.PRIZES[this.gameState.currentQuestion - 1].title : "لا يوجد";
-
-        this.gameState.finalStats = {
-            name: this.gameState.name,
-            title: finalTitle,
-            score: this.currentScoreValue,
-            time: this.formatTime(totalTimeSeconds),
-            challengeResult: this.challengeResult,
-            challengeRank: this.challengeRank
-        };
-        
         // تحديث واجهة النتائج
-        document.getElementById('finalName').textContent = this.gameState.finalStats.name;
-        document.getElementById('finalTitle').textContent = this.gameState.finalStats.title;
-        document.getElementById('finalScore').textContent = this.formatNumber(this.gameState.finalStats.score);
-        document.getElementById('totalTime').textContent = this.gameState.finalStats.time;
+        this.domElements.correctAnswersCount.textContent = this.correctAnswersCount;
+        this.domElements.wrongAnswersCount.textContent = this.wrongAnswersCount;
+        this.domElements.skippedCount.textContent = this.skippedCount;
+        this.domElements.finalScore.textContent = this.formatNumber(this.currentScoreValue);
         
         // تحديث نتيجة السؤال المستحيل
         if (this.challengeAttempted) {
-            const resultText = this.challengeResult ? 
-                `نجح بالإجابة (الترتيب: ${this.getRankText(this.challengeRank)})` : 
-                "فشل بالإجابة";
+            const resultText = this.challengeResult ? "نجح بالإجابة" : "فشل بالإجابة";
             this.domElements.challengeResult.textContent = resultText;
-            
-            // عرض شارة التمييز إذا نجح
-            if (this.challengeResult) {
-                this.domElements.challengeBadge.style.display = 'block';
-            }
+            document.getElementById('challengeResultRow').style.display = 'flex';
         } else {
-            this.domElements.challengeResult.textContent = "لم يُستخدم";
+            document.getElementById('challengeResultRow').style.display = 'none';
         }
         
-        // تحديث الترتيب النهائي
-        this.domElements.finalRank.textContent = this.calculateFinalRank();
-        
-        // تحديث مؤشر الأداء
-        this.updatePerformanceIndicator();
+        // تحديث الرسم البياني للأداء
+        this.updatePerformanceChart();
         
         this.showScreen('end');
-        
-        // إرسال البيانات إلى الخادم
-        this.apiCall({
-            action: 'end',
-            attemptId: this.gameState.attemptId,
-            deviceId: this.gameState.deviceId,
-            name: this.gameState.name,
-            score: this.currentScoreValue,
-            finalTitle: finalTitle,
-            totalTime: totalTimeSeconds,
-            challengeAttempted: this.challengeAttempted,
-            challengeResult: this.challengeResult,
-            challengeRank: this.challengeRank,
-            helpersUsed: Object.keys(this.gameState.helpersUsed).filter(key => this.gameState.helpersUsed[key]).length
-        }).catch(error => console.error("Failed to save score:", error));
     }
     
-    getRankText(rank) {
-        const ranks = {
-            1: "الأول 🏅",
-            2: "الثاني 🏅", 
-            3: "الثالث 🏅"
+    updatePerformanceChart() {
+        // إنشاء رسم بياني مبسط للأداء
+        const ctx = this.domElements.performanceChart.getContext('2d');
+        const data = {
+            labels: ['صحيح', 'خاطئ', 'مُتخطى'],
+            datasets: [{
+                data: [this.correctAnswersCount, this.wrongAnswersCount, this.skippedCount],
+                backgroundColor: ['#10b981', '#ef4444', '#f59e0b'],
+                borderWidth: 0
+            }]
         };
-        return ranks[rank] || `المركز ${rank}`;
-    }
-    
-    calculateFinalRank() {
-        // محاكاة بسيطة لحساب الترتيب
-        // في التطبيق الحقيقي، يجب أن يستند هذا إلى بيانات الخادم
-        const randomRank = Math.floor(Math.random() * 10) + 1;
-        return this.getRankText(randomRank);
-    }
-    
-    updatePerformanceIndicator() {
-        // حساب مؤشر الأداء بناءً على النقاط
-        const maxPossibleScore = this.TOTAL_QUESTIONS * this.QUESTION_POINTS;
-        const performancePercentage = (this.currentScoreValue / maxPossibleScore) * 100;
-        this.domElements.performanceFill.style.width = `${performancePercentage}%`;
+        
+        // رسم مخطط دائري بسيط (بدون استخدام مكتبات خارجية)
+        const total = this.correctAnswersCount + this.wrongAnswersCount + this.skippedCount;
+        let startAngle = 0;
+        
+        // مسح الرسم الحالي
+        ctx.clearRect(0, 0, this.domElements.performanceChart.width, this.domElements.performanceChart.height);
+        
+        // رسم القطاعات
+        [this.correctAnswersCount, this.wrongAnswersCount, this.skippedCount].forEach((value, i) => {
+            if (value === 0) return;
+            
+            const sliceAngle = 2 * Math.PI * value / total;
+            const colors = ['#10b981', '#ef4444', '#f59e0b'];
+            
+            ctx.beginPath();
+            ctx.moveTo(100, 100);
+            ctx.arc(100, 100, 80, startAngle, startAngle + sliceAngle);
+            ctx.closePath();
+            ctx.fillStyle = colors[i];
+            ctx.fill();
+            
+            startAngle += sliceAngle;
+        });
+        
+        // إضافة نص في المركز
+        ctx.fillStyle = '#1a1a2e';
+        ctx.font = 'bold 16px Cairo';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('أداؤك', 100, 100);
     }
     
     useHelper(event) {
@@ -523,11 +477,11 @@ class QuizGame {
         }
 
         this.updateScore(this.currentScoreValue - cost);
-        this.gameState.helpersUsed[type] = true;
         
         // زيادة عداد استخدام مساعدة السؤال التالي
         if (type === 'nextQuestion') {
             this.nextQuestionUsageCount++;
+            this.skippedCount++;
             this.updateNextQuestionCost();
         }
         
@@ -557,7 +511,7 @@ class QuizGame {
             // التخطي إلى السؤال التالي
             this.gameState.currentQuestion++;
             if (this.gameState.currentQuestion >= this.TOTAL_QUESTIONS) {
-                this.showChallengeScreen();
+                this.showFinalResults();
             } else {
                 this.fetchQuestion();
             }
@@ -586,7 +540,8 @@ class QuizGame {
             if (this.gameState.timeLeft <= 0) {
                 clearInterval(this.timerInterval);
                 this.showToast("انتهى الوقت!", "error");
-                this.gameState.wrongAnswers++;
+                this.updateScore(this.currentScoreValue - this.QUESTION_POINTS);
+                this.wrongAnswersCount++;
                 document.querySelectorAll('.option-btn').forEach(b => b.classList.add('disabled'));
                 
                 const correctButton = this.domElements.optionsGrid.querySelector('[data-correct="true"]');
@@ -597,10 +552,10 @@ class QuizGame {
                 this.updateUI();
                 
                 setTimeout(() => {
-                    if (this.gameState.wrongAnswers >= this.MAX_WRONG_ANSWERS) {
-                        this.showChallengeScreen();
+                    this.gameState.currentQuestion++;
+                    if (this.gameState.currentQuestion >= this.TOTAL_QUESTIONS) {
+                        this.showFinalResults();
                     } else {
-                        this.gameState.currentQuestion++;
                         this.fetchQuestion();
                     }
                 }, 2000);
@@ -615,19 +570,17 @@ class QuizGame {
     }
 
     updateUI() {
-        document.getElementById('wrongAnswersCount').textContent = `${this.gameState.wrongAnswers} / ${this.MAX_WRONG_ANSWERS}`;
-        const currentTitle = this.gameState.currentQuestion > 0 ? this.PRIZES[this.gameState.currentQuestion - 1].title : "لا يوجد";
-        document.getElementById('currentTitle').textContent = currentTitle;
-
+        // تحديث عدد المحاولات إلى "غير محدود"
         if (this.domElements.attemptsLeft) {
-            this.domElements.attemptsLeft.textContent = `${this.gameState.attemptsLeft || this.LIMIT_PER_DAY} / ${this.LIMIT_PER_DAY}`;
+            this.domElements.attemptsLeft.textContent = "غير محدود";
         }
 
-        this.updatePrizesList();
+        // تحديث تكلفة السؤال التالي
+        this.updateNextQuestionCost();
 
+        // تحديث حالة أزرار المساعدة
         this.domElements.helperBtns.forEach(btn => {
             const type = btn.dataset.type;
-            const helperIsUsed = this.gameState.helpersUsed && this.gameState.helpersUsed[type];
             
             // حساب التكلفة الخاصة بمساعدة السؤال التالي
             let cost = this.HELPER_COSTS[type];
@@ -635,29 +588,7 @@ class QuizGame {
                 cost = this.NEXT_QUESTION_BASE_COST + (this.nextQuestionUsageCount * this.NEXT_QUESTION_COST_INCREMENT);
             }
             
-            btn.disabled = helperIsUsed || this.currentScoreValue < cost;
-        });
-    }
-
-    generatePrizesList() {
-        this.domElements.prizesList.innerHTML = '';
-        [...this.PRIZES].reverse().forEach((prize, index) => {
-            const li = document.createElement('li');
-            li.innerHTML = `<span>${this.PRIZES.length - index}. ${prize.title}</span> <strong>${this.formatNumber(prize.points)}</strong>`;
-            this.domElements.prizesList.appendChild(li);
-        });
-    }
-
-    updatePrizesList() {
-        const items = this.domElements.prizesList.querySelectorAll('li');
-        items.forEach((item, index) => {
-            item.classList.remove('current', 'past');
-            const prizeIndex = this.PRIZES.length - 1 - index;
-            if (prizeIndex === this.gameState.currentQuestion) {
-                item.classList.add('current');
-            } else if (prizeIndex < this.gameState.currentQuestion) {
-                item.classList.add('past');
-            }
+            btn.disabled = this.currentScoreValue < cost;
         });
     }
 
@@ -672,14 +603,13 @@ class QuizGame {
                 let tableHTML = '<p>لوحة الصدارة فارغة حاليًا!</p>';
                 if (response.leaderboard.length > 0) {
                     tableHTML = `<table class="leaderboard-table">
-                        <tr><th>الترتيب</th><th>الاسم</th><th>النقاط</th><th>اللقب</th><th>التحدي</th></tr>
+                        <tr><th>الترتيب</th><th>الاسم</th><th>النقاط</th><th>الإجابات الصحيحة</th></tr>
                         ${response.leaderboard.map(row => `
                             <tr>
                                 <td>${['🥇', '🥈', '🥉'][row[0] - 1] || row[0]}</td>
                                 <td>${row[1]}</td>
                                 <td>${this.formatNumber(row[2])}</td>
-                                <td>${row[3]}</td>
-                                <td>${row[4] || 'لم يُستخدم'}</td>
+                                <td>${row[3] || 0}</td>
                             </tr>`).join('')}
                     </table>`;
                 }
@@ -697,40 +627,39 @@ class QuizGame {
         const filter = event.target.dataset.filter;
         
         // إزالة النشط من جميع الأزرار
-        this.domElements.filterBtns.forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
         
         // إضافة النشط للزر المحدد
         event.target.classList.add('active');
         
-        // تطبيق التصفية (سيتم تنفيذها على الخادم في التطبيق الحقيقي)
+        // تطبيق التصفية
         this.displayLeaderboardWithFilter(filter);
     }
     
     async displayLeaderboardWithFilter(filter) {
         // في التطبيق الحقيقي، سيتم إرسال طلب إلى الخادم مع معامل التصفية
         console.log(`Filtering leaderboard by: ${filter}`);
-        this.displayLeaderboard(); // حالياً نعرض كل البيانات
+        this.displayLeaderboard();
     }
     
     getShareText() {
-        const { name, title, score, time } = this.gameState.finalStats;
         let challengeText = "";
         
         if (this.challengeAttempted) {
             challengeText = this.challengeResult ? 
-                `🎯 السؤال المستحيل: نجح بالإجابة (${this.getRankText(this.challengeRank)})` : 
+                `🎯 السؤال المستحيل: نجح بالإجابة` : 
                 `🎯 السؤال المستحيل: فشل بالإجابة`;
         } else {
             challengeText = "🎯 السؤال المستحيل: لم يُستخدم";
         }
         
-        return `✨ نتائجي في مسابقة "من سيربح اللقب" ✨\n` +
-               `الاسم: ${name}\n` +
-               `اللقب: ${title}\n` +
-               `النقاط: ${this.formatNumber(score)}\n` +
-               `المدة: ${time}\n` +
+        return `✨ نتائجي في مسابقة المعرفة ✨\n` +
+               `الإجابات الصحيحة: ${this.correctAnswersCount}\n` +
+               `الإجابات الخاطئة: ${this.wrongAnswersCount}\n` +
+               `مرات التخطي: ${this.skippedCount}\n` +
+               `النقاط الكلية: ${this.formatNumber(this.currentScoreValue)}\n` +
                `${challengeText}\n` +
-               `🔗 جرب حظك أنت أيضاً: https://abuqusayms.github.io/Tbate-Game/`;
+               `🔗 جرب حظك أنت أيضاً: ${window.location.href}`;
     }
     
     shareOnX() {
@@ -750,34 +679,23 @@ class QuizGame {
             .catch(() => this.showToast("فشل نسخ النتيجة.", "error"));
     }
 
-    resetGameState(attemptId) {
+    resetGameState() {
         this.gameState = {
-            deviceId: this.getDeviceId(),
-            attemptId: attemptId,
             name: this.gameState.name,
             avatar: this.gameState.avatar,
             currentQuestion: 0,
-            wrongAnswers: 0,
             startTime: new Date().toISOString(),
-            helpersUsed: { 
-                fiftyFifty: false, 
-                freezeTime: false, 
-                changeQuestion: false,
-                nextQuestion: false 
-            },
             shuffledQuestions: [],
         };
         this.nextQuestionUsageCount = 0;
         this.challengeAttempted = false;
         this.challengeResult = null;
-        this.challengeRank = null;
+        this.correctAnswersCount = 0;
+        this.wrongAnswersCount = 0;
+        this.skippedCount = 0;
+        this.totalTimeSpent = 0;
         this.updateScore(this.STARTING_POINTS);
         this.updateNextQuestionCost();
-        
-        // إخفاء شارة التحدي
-        if (this.domElements.challengeBadge) {
-            this.domElements.challengeBadge.style.display = 'none';
-        }
     }
 
     setupGameUI() {
@@ -797,27 +715,18 @@ class QuizGame {
         document.body.dataset.theme = savedTheme;
         this.domElements.themeToggleBtn.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
     }
-
-    toggleSidebar(open) {
-        const openBtn = document.querySelector('.open-sidebar-btn');
-        if (open) {
-            this.domElements.sidebar.classList.add('open');
-            this.domElements.sidebarOverlay.classList.add('active');
-            openBtn.setAttribute('aria-expanded', 'true');
-            setTimeout(() => {
-                const closeBtn = this.domElements.sidebar.querySelector('.close-sidebar-btn');
-                if (closeBtn) {
-                    closeBtn.focus();
-                }
-            }, 100);
-        } else {
-            this.domElements.sidebar.classList.remove('open');
-            this.domElements.sidebarOverlay.classList.remove('active');
-            openBtn.setAttribute('aria-expanded', 'false');
-            if (openBtn) {
-                openBtn.focus();
-            }
-        }
+    
+    showEndGameConfirmation() {
+        this.domElements.confirmEndGame.classList.add('active');
+    }
+    
+    hideEndGameConfirmation() {
+        this.domElements.confirmEndGame.classList.remove('active');
+    }
+    
+    endGame() {
+        this.hideEndGameConfirmation();
+        this.showFinalResults();
     }
     
     showScreen(screenName) {
@@ -837,6 +746,9 @@ class QuizGame {
             const firstFocusable = activeScreen.querySelector('button, [href], input, select, textarea');
             if(firstFocusable) firstFocusable.focus();
         }
+        
+        // إخفاء نافذة التأكيد عند تغيير الشاشة
+        this.hideEndGameConfirmation();
     }
 
     hideLoader() {
@@ -903,37 +815,10 @@ class QuizGame {
             if (cost) {
                 const costEl = btn.querySelector('.helper-cost');
                 if (costEl) {
-                    costEl.textContent = `(${cost})`;
+                    costEl.textContent = cost;
                 }
             }
         });
-    }
-
-    startCooldownTimer(cooldownEndTimeISO) {
-        const cooldownEndTime = new Date(cooldownEndTimeISO);
-        
-        this.domElements.cooldownContainer.style.display = 'block';
-        document.getElementById('startPlayBtn').disabled = true;
-
-        const timerInterval = setInterval(() => {
-            const now = new Date();
-            const remainingTime = cooldownEndTime - now;
-
-            if (remainingTime <= 0) {
-                clearInterval(timerInterval);
-                this.domElements.cooldownContainer.style.display = 'none';
-                document.getElementById('startPlayBtn').disabled = false;
-                return;
-            }
-
-            const hours = Math.floor((remainingTime / (1000 * 60 * 60)));
-            const minutes = Math.floor((remainingTime / 1000 / 60) % 60);
-            const seconds = Math.floor((remainingTime / 1000) % 60);
-
-            this.domElements.cooldownTimer.textContent = 
-                `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-
-        }, 1000);
     }
 }
 
