@@ -1,188 +1,208 @@
-/* --- المتغيرات العامة والأساسيات --- */
-:root {
-    --bg-color-light: #f4f6f8;
-    --fg-color-light: #ffffff;
-    --text-color-light: #333333;
-    --primary-color-light: #007bff;
-    --secondary-color-light: #6c757d;
-    --accent-color-light: #ff6b8b;
-    --border-color-light: #dee2e6;
-    --shadow-light: 0 4px 15px rgba(0, 0, 0, 0.08);
-
-    --bg-color-dark: #121212;
-    --fg-color-dark: #1e1e1e;
-    --text-color-dark: #e0e0e0;
-    --primary-color-dark: #0084ff;
-    --secondary-color-dark: #888888;
-    --accent-color-dark: #ff7f9d;
-    --border-color-dark: #333333;
-    --shadow-dark: 0 4px 20px rgba(0, 0, 0, 0.25);
-}
-
-[data-theme="light"] {
-    --bg-color: var(--bg-color-light);
-    --fg-color: var(--fg-color-light);
-    --text-color: var(--text-color-light);
-    --primary-color: var(--primary-color-light);
-    --secondary-color: var(--secondary-color-light);
-    --accent-color: var(--accent-color-light);
-    --border-color: var(--border-color-light);
-    --shadow: var(--shadow-light);
-}
-
-[data-theme="dark"] {
-    --bg-color: var(--bg-color-dark);
-    --fg-color: var(--fg-color-dark);
-    --text-color: var(--text-color-dark);
-    --primary-color: var(--primary-color-dark);
-    --secondary-color: var(--secondary-color-dark);
-    --accent-color: var(--accent-color-dark);
-    --border-color: var(--border-color-dark);
-    --shadow: var(--shadow-dark);
-}
-
+/* Reset أساسي */
 * {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Cairo", sans-serif;
 }
 
 body {
-    font-family: 'Cairo', sans-serif;
-    background-color: var(--bg-color);
-    color: var(--text-color);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    transition: background-color 0.3s, color 0.3s;
-    padding: 1rem;
-    animation: fadeInBody 0.8s ease-in-out;
+  background: #0d0d0d;
+  color: #fff;
+  text-align: center;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  overflow-x: hidden;
 }
 
-@keyframes fadeInBody {
-    from { opacity: 0; }
-    to { opacity: 1; }
+/* ===== الهيدر ===== */
+header {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  padding: 20px;
+  background: #1a1a1a;
+  border-bottom: 2px solid #ff4fa0;
+  animation: slideDown 1s ease-out;
 }
 
-/* --- الشاشات --- */
+header i {
+  color: #ff4fa0;
+  font-size: 28px;
+  animation: pulse 2s infinite;
+}
+
+header h1 {
+  font-size: 22px;
+  color: #fff;
+  font-weight: bold;
+}
+
+/* ===== الشاشات ===== */
 .screen {
-    display: none;
-    width: 100%;
-    max-width: 800px;
-    animation: fadeIn 0.5s ease-in-out;
+  display: none;
+  padding: 20px;
+  animation: fadeIn 0.8s ease-in-out;
 }
 
-.screen.active {
-    display: block;
+.active {
+  display: block;
 }
 
+/* ===== الوصف ===== */
+.description {
+  margin: 25px auto;
+  max-width: 700px;
+  font-size: 16px;
+  line-height: 1.6;
+  color: #ddd;
+}
+
+/* ===== المميزات ===== */
+.features {
+  margin: 20px auto;
+  max-width: 800px;
+  display: grid;
+  gap: 15px;
+}
+
+.features .feature {
+  background: #1a1a1a;
+  padding: 15px;
+  border-radius: 12px;
+  border-left: 4px solid #ff4fa0;
+  transition: transform 0.3s ease;
+}
+
+.features .feature:hover {
+  transform: translateX(-5px);
+}
+
+/* ===== الأزرار ===== */
+.btn {
+  background: linear-gradient(45deg, #ff4fa0, #4fa3ff);
+  color: #fff;
+  padding: 12px 22px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  margin: 10px;
+  transition: transform 0.3s ease, opacity 0.3s;
+}
+
+.btn:hover {
+  transform: scale(1.08);
+  opacity: 0.9;
+}
+
+/* ===== صورة رمزية ===== */
+.avatar-selection {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin: 20px 0;
+}
+
+.avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: 3px solid #ff4fa0;
+  cursor: pointer;
+  transition: transform 0.3s;
+}
+
+.avatar:hover {
+  transform: scale(1.2);
+  border-color: #4fa3ff;
+}
+
+/* ===== نافذة النتيجة ===== */
+.result-box {
+  background: #1a1a1a;
+  padding: 25px;
+  border-radius: 15px;
+  box-shadow: 0 0 20px rgba(255, 79, 160, 0.4);
+  animation: popIn 0.6s ease-in-out;
+}
+
+/* ===== لوحة الصدارة ===== */
+.leaderboard {
+  max-width: 500px;
+  margin: 30px auto;
+  padding: 20px;
+  background: #1a1a1a;
+  border-radius: 12px;
+  border: 2px solid #4fa3ff;
+}
+
+.leaderboard h2 {
+  margin-bottom: 15px;
+  color: #ff4fa0;
+}
+
+.leaderboard ul {
+  list-style: none;
+}
+
+.leaderboard li {
+  padding: 10px;
+  border-bottom: 1px solid #333;
+  font-size: 15px;
+  color: #ddd;
+}
+
+.leaderboard li span {
+  color: #4fa3ff;
+  font-weight: bold;
+}
+
+/* ===== روابط التواصل ===== */
+.social-links {
+  margin: 20px 0;
+}
+
+.social-links a {
+  margin: 0 10px;
+  font-size: 22px;
+  color: #ff4fa0;
+  transition: color 0.3s;
+}
+
+.social-links a:hover {
+  color: #4fa3ff;
+}
+
+/* ===== أنميشن ===== */
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+  from {opacity: 0; transform: translateY(20px);}
+  to {opacity: 1; transform: translateY(0);}
 }
 
-.content-box {
-    background-color: var(--fg-color);
-    border-radius: 16px;
-    padding: 2rem;
-    box-shadow: var(--shadow);
-    border: 1px solid var(--border-color);
-    animation: floatIn 0.6s ease-in-out;
+@keyframes slideDown {
+  from {transform: translateY(-100%);}
+  to {transform: translateY(0);}
 }
 
-@keyframes floatIn {
-    from { transform: scale(0.95); opacity: 0; }
-    to { transform: scale(1); opacity: 1; }
+@keyframes pulse {
+  0%, 100% { transform: scale(1);}
+  50% { transform: scale(1.2);}
 }
 
-/* --- عناوين --- */
-.screen-header {
-    text-align: center;
-    margin-bottom: 1.5rem;
+@keyframes popIn {
+  from {transform: scale(0.5); opacity: 0;}
+  to {transform: scale(1); opacity: 1;}
 }
 
-.game-title {
-    font-size: 2.5rem;
-    font-weight: 900;
-    margin-bottom: 0.5rem;
-    animation: glowText 1.5s infinite alternate;
+/* ===== Responsive ===== */
+@media (max-width: 768px) {
+  header h1 { font-size: 18px; }
+  .description { font-size: 14px; }
+  .btn { font-size: 14px; padding: 10px 18px; }
+  .avatar { width: 65px; height: 65px; }
 }
-
-@keyframes glowText {
-    from { text-shadow: 0 0 5px var(--primary-color); }
-    to { text-shadow: 0 0 15px var(--primary-color); }
-}
-
-.subtitle {
-    display: block;
-    font-size: 1rem;
-    font-weight: 400;
-    color: var(--secondary-color);
-}
-
-/* --- الأزرار --- */
-.button-group {
-    display: flex;
-    gap: 1rem;
-    justify-content: center;
-    margin-top: 2rem;
-}
-
-.btn-main, .btn-secondary {
-    padding: 0.8rem 1.6rem;
-    border-radius: 8px;
-    border: none;
-    font-family: 'Cairo', sans-serif;
-    font-size: 1rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: transform 0.25s ease, box-shadow 0.25s ease, background-color 0.3s;
-}
-
-.btn-main {
-    background-color: var(--primary-color);
-    color: white;
-}
-
-.btn-main:hover {
-    transform: translateY(-3px) scale(1.05);
-    box-shadow: 0 6px 15px rgba(0, 123, 255, 0.4);
-}
-
-.btn-main:disabled {
-    background-color: var(--secondary-color);
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
-}
-
-.btn-secondary {
-    background-color: transparent;
-    color: var(--primary-color);
-    border: 2px solid var(--primary-color);
-}
-
-.btn-secondary:hover {
-    background-color: var(--primary-color);
-    color: white;
-}
-
-.btn-icon {
-    background: none;
-    border: none;
-    color: var(--text-color);
-    font-size: 1.5rem;
-    cursor: pointer;
-    transition: color 0.2s, transform 0.2s;
-}
-
-.btn-icon:hover {
-    color: var(--primary-color);
-    transform: rotate(10deg);
-}
-
-/* --- بقية التنسيقات (features, avatar, inputs, game, modals, results, leaderboard, toast, responsive) --- */
-/* ⚡ تم الإبقاء عليها كاملة مثل الكود الأصلي مع إضافة نفس لمسات الأنيميشن على العناصر التفاعلية (hover, active, fade, slide) */
-/* ⚡ أضفت أنيميشن للأزرار + نص العنوان + محتوى النوافذ المنبثقة والـ Toast */
-/* ⚡ الألوان لم تتغير، فقط أضفت glow/shadow ديناميكي ليظهر بشكل أكثر حيوية */
