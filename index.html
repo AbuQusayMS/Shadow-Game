@@ -11,7 +11,6 @@
 <body data-theme="dark">
     <div id="toast-container" class="toast-container"></div>
 
-    <!-- شاشة البداية -->
     <div id="startScreen" class="screen active">
         <div class="content-box">
             <header class="screen-header">
@@ -60,7 +59,6 @@
         </div>
     </div>
 
-    <!-- شاشة اختيار الصورة الرمزية -->
     <div id="avatarScreen" class="screen">
         <div class="content-box">
             <header class="screen-header">
@@ -68,8 +66,7 @@
             </header>
             
             <div class="avatar-grid" role="group" aria-label="خيارات الصور الرمزية">
-                <!-- سيتم ملؤها بالصور الرمزية ديناميكيًا -->
-            </div>
+                </div>
             
             <div class="button-group">
                 <button id="confirmAvatarBtn" class="btn-main" disabled>
@@ -79,7 +76,6 @@
         </div>
     </div>
 
-    <!-- نافذة إدخال الاسم -->
     <div id="nameEntry" class="screen">
         <div class="content-box">
             <header class="screen-header">
@@ -99,7 +95,6 @@
         </div>
     </div>
 
-    <!-- شاشة اللعبة -->
     <div id="gameContainer" class="screen">
         <div class="top-bar">
             <button id="endGameBtn" class="btn-icon" aria-label="إنهاء المسابقة">
@@ -172,7 +167,6 @@
         </div>
     </div>
 
-    <!-- نافذة إنهاء المسابقة -->
     <div id="endConfirmModal" class="modal">
         <div class="modal-content">
             <h3>إنهاء المسابقة</h3>
@@ -184,7 +178,6 @@
         </div>
     </div>
 
-    <!-- نافذة السؤال المستحيل -->
     <div id="impossibleQuestionModal" class="modal">
         <div class="modal-content impossible-modal">
             <div class="impossible-header">
@@ -199,7 +192,6 @@
         </div>
     </div>
 
-    <!-- شاشة النتائج -->
     <div id="resultsScreen" class="screen">
         <div class="content-box">
             <header class="screen-header">
@@ -239,9 +231,9 @@
             
             <div class="performance-chart">
                 <div class="chart-bar">
-                    <div class="chart-fill" style="width: 60%;"></div>
+                    <div id="performanceFill" class="chart-fill" style="width: 0%;"></div>
                 </div>
-                <div class="chart-label">ممتاز</div>
+                <div id="performanceLabel" class="chart-label"></div>
             </div>
             
             <div class="share-buttons">
@@ -260,7 +252,6 @@
         </div>
     </div>
 
-    <!-- شاشة لوحة الصدارة -->
     <div id="leaderboardScreen" class="screen">
         <div class="content-box">
             <header class="screen-header">
@@ -273,13 +264,12 @@
                         <tr>
                             <th>الترتيب</th>
                             <th>الاسم</th>
-                            <th>المستوى</th>
+                            <th>النقاط</th>
                             <th>السؤال المستحيل</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        <!-- سيتم ملؤها ديناميكيًا -->
-                    </tbody>
+                    <tbody id="leaderboardBody">
+                        </tbody>
                 </table>
             </div>
             
