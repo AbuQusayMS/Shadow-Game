@@ -1,187 +1,237 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>مسابقة المعلومات</title>
+
+    <!-- Apps Script endpoint (موجود كـ data attribute في body أيضاً) -->
+    <meta name="apps-script-endpoint" content="https://script.google.com/macros/s/AKfycbzB9cru35ndWmWYsEqe46NlrvZgj64HhCIZJ0j7SLln3VDSl2S7rAOMDGxLwEzR_ClS/exec">
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
-<body data-theme="dark">
-    <div id="toast-container" class="toast-container"></div>
+<!-- أضفت data-endpoint لسهولة الوصول من الجافاسكربت -->
+<body data-theme="dark" data-endpoint="https://script.google.com/macros/s/AKfycbzB9cru35ndWmWYsEqe46NlrvZgj64HhCIZJ0j7SLln3VDSl2S7rAOMDGxLwEzR_ClS/exec">
+    <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
+    <!-- START SCREEN -->
     <div id="startScreen" class="screen active">
         <div class="content-box">
-            <header class="screen-header">
-                <h1 class="game-title">
-                    <i class="fas fa-brain" style="color: #ff6b8b;"></i>
-                    مسابقة المعلومات
-                    <small class="subtitle">اختبر معلوماتك بمجموعة تحديات قصيرة وممتعة!</small>
+            <header class="screen-header" style="text-align:left;">
+                <!-- العنوان محاذي لليسار حتى مع dir="rtl" -->
+                <h1 class="game-title" style="display:flex;align-items:center;gap:12px;justify-content:flex-start;">
+                    <i class="fas fa-brain" aria-hidden="true" style="color: #ff6b8b; font-size:1.6em;"></i>
+                    <span style="display:inline-block;">
+                        مسابقة المعلومات
+                        <br>
+                        <small class="subtitle" style="display:block;font-weight:400;font-size:0.85rem;color:var(--muted)">اختبر معلوماتك بمجموعة تحديات قصيرة وممتعة!</small>
+                    </span>
                 </h1>
             </header>
             
-            <div class="description">
+            <div class="description" role="region" aria-label="وصف اللعبة">
                 <p>اختبر معلوماتك في مسابقة تفاعلية قصيرة — جمع نقاط، استخدم أدوات المساعدة، وتنافس للوصول إلى لوح الصدارة.</p>
             </div>
             
-            <div class="features">
-                <div class="feature">
-                    <span class="feature-icon">🎯</span>
+            <div class="features" role="list" aria-label="المميزات الرئيسية">
+                <div class="feature" role="listitem">
+                    <span class="feature-icon" aria-hidden="true">🎯</span>
                     <span>اجمع النقاط بالإجابات الصحيحة — تحصل +100 نقطة لكل إجابة صحيحة.</span>
                 </div>
-                <div class="feature">
-                    <span class="feature-icon">⚡</span>
+                <div class="feature" role="listitem">
+                    <span class="feature-icon" aria-hidden="true">⚡</span>
                     <span>محاولات مرنة للإجابة — المحاولات غير محدودة.</span>
                 </div>
-                <div class="feature">
-                    <span class="feature-icon">🏆</span>
+                <div class="feature" role="listitem">
+                    <span class="feature-icon" aria-hidden="true">🏆</span>
                     <span>السؤال المستحيل — فرصة لتعويض الخسارة.</span>
                 </div>
             </div>
             
-            <div class="support-info">
+            <div class="support-info" role="note">
                 <p>في حال واجهت أي مشكلة، راسل المسؤول على 
-                    <a href="https://x.com/_MS_AbuQusay?t=xxNvSpL0aOdiKHUE6ZuM6A&s=09" target="_blank">إكس</a> 
+                    <!-- طبقنا تبديل الروابط طبقاً لما طلبته: كلمة "إكس" تشير لصفحة إنستغرام، وكلمة "إنستغرام" تشير لصفحة X -->
+                    <a href="https://www.instagram.com/ms_abuqusay?igsh=MXc2ZWptd2FkamN0" target="_blank" rel="noopener noreferrer">إكس</a> 
                     أو 
-                    <a href="https://www.instagram.com/ms_abuqusay?igsh=MXc2ZWptd2FkamN0" target="_blank">إنستغرام</a>.
+                    <a href="https://x.com/_MS_AbuQusay?t=xxNvSpL0aOdiKHUE6ZuM6A&s=09" target="_blank" rel="noopener noreferrer">إنستغرام</a>.
                 </p>
             </div>
             
-            <div class="button-group">
-                <button id="startPlayBtn" class="btn-main">
+            <div class="button-group" role="group" aria-label="أزرار البداية">
+                <button id="startPlayBtn" class="btn-main" aria-label="ابدأ اللعب الآن">
                     ابدأ اللعب الآن
                 </button>
-                <button id="showLeaderboardBtn" class="btn-secondary">
+                <button id="showLeaderboardBtn" class="btn-secondary" aria-label="عرض لوحة الصدارة">
                     الإحصائيات
                 </button>
             </div>
         </div>
     </div>
 
-    <div id="avatarScreen" class="screen">
+    <!-- AVATAR SCREEN -->
+    <div id="avatarScreen" class="screen" aria-hidden="true">
         <div class="content-box">
-            <header class="screen-header">
+            <header class="screen-header" style="text-align:left;">
                 <h2>اختر صورتك الرمزية</h2>
             </header>
+
+            <!-- معاينة أكبر عند الوقوف فوق الصورة -->
+            <div class="avatar-preview" aria-hidden="true" style="margin-bottom:12px; text-align:center;">
+                <img id="avatarPreview" src="" alt="معاينة الصورة الرمزية" style="width:120px;height:120px;border-radius:50%;object-fit:cover;display:none;">
+            </div>
             
-            <div class="avatar-grid" role="group" aria-label="خيارات الصور الرمزية">
-                </div>
+            <div class="avatar-grid" role="listbox" aria-label="خيارات الصور الرمزية" tabindex="0" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:10px;max-height:320px;overflow:auto;padding:6px;">
+                <!-- أمثلة صور رمزية قابلة للتحميل البطيء (loading="lazy") -->
+                <!-- لكل عنصر: data-avatar-id لتحديد المعرف، tabindex لتمكين لوحة المفاتيح -->
+                <button class="avatar-option" data-avatar-id="avatar_01" role="option" aria-pressed="false" tabindex="0">
+                    <img class="avatar-img" src="https://i.pravatar.cc/150?img=1" loading="lazy" alt="رمزية 1" style="width:72px;height:72px;border-radius:50%;object-fit:cover;">
+                </button>
+                <button class="avatar-option" data-avatar-id="avatar_02" role="option" aria-pressed="false" tabindex="0">
+                    <img class="avatar-img" src="https://i.pravatar.cc/150?img=2" loading="lazy" alt="رمزية 2" style="width:72px;height:72px;border-radius:50%;object-fit:cover;">
+                </button>
+                <button class="avatar-option" data-avatar-id="avatar_03" role="option" aria-pressed="false" tabindex="0">
+                    <img class="avatar-img" src="https://i.pravatar.cc/150?img=3" loading="lazy" alt="رمزية 3" style="width:72px;height:72px;border-radius:50%;object-fit:cover;">
+                </button>
+                <button class="avatar-option" data-avatar-id="avatar_04" role="option" aria-pressed="false" tabindex="0">
+                    <img class="avatar-img" src="https://i.pravatar.cc/150?img=4" loading="lazy" alt="رمزية 4" style="width:72px;height:72px;border-radius:50%;object-fit:cover;">
+                </button>
+                <button class="avatar-option" data-avatar-id="avatar_05" role="option" aria-pressed="false" tabindex="0">
+                    <img class="avatar-img" src="https://i.pravatar.cc/150?img=5" loading="lazy" alt="رمزية 5" style="width:72px;height:72px;border-radius:50%;object-fit:cover;">
+                </button>
+                <button class="avatar-option" data-avatar-id="avatar_06" role="option" aria-pressed="false" tabindex="0">
+                    <img class="avatar-img" src="https://i.pravatar.cc/150?img=6" loading="lazy" alt="رمزية 6" style="width:72px;height:72px;border-radius:50%;object-fit:cover;">
+                </button>
+                <button class="avatar-option" data-avatar-id="avatar_07" role="option" aria-pressed="false" tabindex="0">
+                    <img class="avatar-img" src="https://i.pravatar.cc/150?img=7" loading="lazy" alt="رمزية 7" style="width:72px;height:72px;border-radius:50%;object-fit:cover;">
+                </button>
+                <button class="avatar-option" data-avatar-id="avatar_08" role="option" aria-pressed="false" tabindex="0">
+                    <img class="avatar-img" src="https://i.pravatar.cc/150?img=8" loading="lazy" alt="رمزية 8" style="width:72px;height:72px;border-radius:50%;object-fit:cover;">
+                </button>
+            </div>
             
-            <div class="button-group">
-                <button id="confirmAvatarBtn" class="btn-main" disabled>
+            <div class="button-group" style="margin-top:12px;">
+                <button id="confirmAvatarBtn" class="btn-main" disabled aria-disabled="true" aria-label="التالي">
                     التالي
                 </button>
             </div>
         </div>
     </div>
 
-    <div id="nameEntry" class="screen">
+    <!-- NAME ENTRY -->
+    <div id="nameEntry" class="screen" aria-hidden="true">
         <div class="content-box">
-            <header class="screen-header">
+            <header class="screen-header" style="text-align:left;">
                 <h2>ما هو اسمك؟</h2>
             </header>
             
             <div class="input-group">
-                <input type="text" id="nameInput" placeholder="اكتب اسمك هنا" maxlength="15">
-                <div id="nameError" class="error-message"></div>
+                <!-- تحقق أساسي: minlength=3 maxlength=15 -->
+                <input type="text" id="nameInput" placeholder="اكتب اسمك هنا" maxlength="15" minlength="3" required aria-required="true" aria-describedby="nameError">
+                <div id="nameError" class="error-message" role="alert" aria-live="polite"></div>
             </div>
             
             <div class="button-group">
-                <button id="confirmNameBtn" class="btn-main">
+                <button id="confirmNameBtn" class="btn-main" aria-label="موافق" disabled>
                     موافق
                 </button>
             </div>
         </div>
     </div>
 
-    <div id="gameContainer" class="screen">
-        <div class="top-bar">
-            <button id="endGameBtn" class="btn-icon" aria-label="إنهاء المسابقة">
-                <i class="fas fa-times"></i>
-            </button>
-            <button id="impossibleQuestionBtn" class="btn-icon" aria-label="السؤال المستحيل">
-                <i class="fas fa-crown"></i>
-            </button>
+    <!-- GAME CONTAINER -->
+    <div id="gameContainer" class="screen" aria-hidden="true">
+        <div class="top-bar" role="toolbar" aria-label="شريط الأدوات العلوي" style="display:flex;align-items:center;gap:8px;justify-content:space-between;">
+            <div style="display:flex;gap:6px;align-items:center;">
+                <button id="endGameBtn" class="btn-icon" aria-label="إنهاء المسابقة" title="إنهاء المسابقة">
+                    <i class="fas fa-times" aria-hidden="true"></i>
+                </button>
+                <button id="impossibleQuestionBtn" class="btn-icon" aria-label="السؤال المستحيل" title="السؤال المستحيل">
+                    <i class="fas fa-crown" aria-hidden="true"></i>
+                </button>
+            </div>
             
-            <div class="progress-container">
-                <h3 id="questionCounter">السؤال 1 من 15</h3>
-                <div class="progress-bar">
-                    <div class="progress-fill"></div>
+            <div class="progress-container" style="flex:1;margin:0 12px;">
+                <h3 id="questionCounter" style="text-align:center;margin:0;">السؤال 1 من 15</h3>
+                <div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" style="height:8px;background:#eee;border-radius:6px;overflow:hidden;">
+                    <div class="progress-fill" style="width:0%;height:100%;"></div>
                 </div>
             </div>
             
-            <button id="themeToggleBtn" class="btn-icon" aria-label="تبديل الوضع">
-                <i class="fas fa-moon"></i>
+            <button id="themeToggleBtn" class="btn-icon" aria-label="تبديل الوضع" title="تبديل الوضع">
+                <i class="fas fa-moon" aria-hidden="true"></i>
             </button>
         </div>
         
-        <div class="player-card">
-            <img id="playerAvatar" src="" alt="الصورة الرمزية">
+        <div class="player-card" style="display:flex;align-items:center;gap:12px;margin:12px 0;">
+            <img id="playerAvatar" src="" alt="الصورة الرمزية" style="width:72px;height:72px;border-radius:50%;object-fit:cover;">
             <div class="player-info">
                 <div id="playerName">اللاعب</div>
-                <div class="player-stats">
+                <div class="player-stats" style="font-size:0.95rem;color:var(--muted)">
                     <div>النقاط: <span id="currentScore">100</span></div>
-                    <div>التخطي: <span id="skipCount">0</span> (التكلفة: <span id="skipCost">100</span>)</div>
+                    <div>مرات التخطي المستخدمة: <span id="skipCount">0</span> — التكلفة الحالية: <span id="skipCost">100</span> نقطة</div>
                 </div>
             </div>
         </div>
 
-        <div class="helpers-container">
-            <button class="helper-btn" data-type="fiftyFifty">
+        <div class="helpers-container" role="group" aria-label="أدوات المساعدة" style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="helper-btn" data-type="fiftyFifty" aria-label="٥٠:٥٠ - تكلفة 100 نقطة">
                 <div class="helper-icon">50:50</div>
                 <div class="helper-cost">100 نقطة</div>
             </button>
             
-            <button class="helper-btn" data-type="freezeTime">
+            <button class="helper-btn" data-type="freezeTime" aria-label="تجميد الوقت - تكلفة 100 نقطة">
                 <div class="helper-icon">⏱️</div>
                 <div class="helper-cost">100 نقطة</div>
             </button>
             
-            <button class="helper-btn" data-type="changeQuestion">
+            <button class="helper-btn" data-type="changeQuestion" aria-label="تغيير السؤال - تكلفة 100 نقطة">
                 <div class="helper-icon">🔄</div>
                 <div class="helper-cost">100 نقطة</div>
             </button>
             
-            <button class="helper-btn" data-type="skipQuestion">
+            <button class="helper-btn" data-type="skipQuestion" aria-label="السؤال التالي - تكلفة متغيرة">
                 <div class="helper-icon">⏭️</div>
                 <div class="helper-cost">100 نقطة</div>
             </button>
         </div>
 
-        <div class="timer-container">
-            <div class="timer-bar">
-                <div class="timer-fill"></div>
+        <div class="timer-container" style="margin-top:12px;display:flex;align-items:center;gap:8px;">
+            <div class="timer-bar" style="flex:1;height:10px;background:#eee;border-radius:6px;overflow:hidden;">
+                <div class="timer-fill" style="width:100%;height:100%;"></div>
             </div>
-            <span id="timer" class="timer-text">80</span>
+            <span id="timer" class="timer-text" aria-live="polite" style="min-width:40px;text-align:center;">80</span>
         </div>
 
-        <div class="question-container">
-            <div id="questionText">ما هي عاصمة فرنسا؟</div>
-            <div class="options-grid">
-                <button class="option-btn">باريس</button>
-                <button class="option-btn">لندن</button>
-                <button class="option-btn">برلين</button>
-                <button class="option-btn">مدريد</button>
+        <div class="question-container" style="margin-top:14px;">
+            <div id="questionText" style="font-size:1.1rem;font-weight:600;">ما هي عاصمة فرنسا؟</div>
+            <div class="options-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
+                <button class="option-btn" aria-label="خيار 1">باريس</button>
+                <button class="option-btn" aria-label="خيار 2">لندن</button>
+                <button class="option-btn" aria-label="خيار 3">برلين</button>
+                <button class="option-btn" aria-label="خيار 4">مدريد</button>
             </div>
         </div>
     </div>
 
-    <div id="endConfirmModal" class="modal">
-        <div class="modal-content">
+    <!-- END CONFIRM MODAL -->
+    <div id="endConfirmModal" class="modal" role="dialog" aria-modal="true" aria-hidden="true">
+        <div class="modal-content" role="document">
             <h3>إنهاء المسابقة</h3>
             <p>سيتم احتساب النقاط التي جمعتها حتى الآن. هل تريد إنهاء المسابقة؟</p>
             <div class="modal-actions">
-                <button id="confirmEndBtn" class="btn-main">تأكيد</button>
-                <button id="cancelEndBtn" class="btn-secondary">إلغاء</button>
+                <button id="confirmEndBtn" class="btn-main" aria-label="تأكيد إنهاء المسابقة">تأكيد</button>
+                <button id="cancelEndBtn" class="btn-secondary" aria-label="إلغاء">إلغاء</button>
             </div>
         </div>
     </div>
 
-    <div id="impossibleQuestionModal" class="modal">
-        <div class="modal-content impossible-modal">
-            <div class="impossible-header">
-                <i class="fas fa-exclamation-triangle"></i>
+    <!-- IMPOSSIBLE QUESTION MODAL -->
+    <div id="impossibleQuestionModal" class="modal" role="dialog" aria-modal="true" aria-hidden="true">
+        <div class="modal-content impossible-modal" role="document">
+            <div class="impossible-header" style="display:flex;gap:8px;align-items:center;">
+                <i class="fas fa-exclamation-triangle" aria-hidden="true" style="color:#d97706;"></i>
                 <h3>السؤال المستحيل</h3>
             </div>
             <p>فرصتك لتعويض الخسارة! او للإرتقاء لمركز أعلى. لا يمكن استخدام أي مساعدات في هذا السؤال.</p>
@@ -192,88 +242,71 @@
         </div>
     </div>
 
-    <div id="resultsScreen" class="screen">
+    <!-- RESULTS SCREEN -->
+    <div id="resultsScreen" class="screen" aria-hidden="true">
         <div class="content-box">
-            <header class="screen-header">
-                <h2><i class="fas fa-trophy"></i> النتائج</h2>
+            <header class="screen-header" style="text-align:left;">
+                <h2><i class="fas fa-trophy" aria-hidden="true"></i> النتائج</h2>
             </header>
             
-            <div class="results-summary">
-                <div class="result-item">
-                    <span>الاسم:</span>
-                    <span id="resultName">AbuQusay</span>
-                </div>
-                <div class="result-item">
-                    <span>الإجابات الصحيحة:</span>
-                    <span id="resultCorrect">0</span>
-                </div>
-                <div class="result-item">
-                    <span>الإجابات الخاطئة:</span>
-                    <span id="resultWrong">0</span>
-                </div>
-                <div class="result-item">
-                    <span>مرات التخطي:</span>
-                    <span id="resultSkips">0</span>
-                </div>
-                <div class="result-item">
-                    <span>النقاط الكلية:</span>
-                    <span id="resultScore">0</span>
-                </div>
-                <div class="result-item">
-                    <span>المدة:</span>
-                    <span id="resultTime">0 دقائق و 0 ثواني</span>
-                </div>
-                <div class="result-item">
-                    <span>السؤال المستحيل:</span>
-                    <span id="resultImpossible">لم يُستخدم</span>
-                </div>
+            <div class="results-summary" role="table" aria-label="ملخص النتائج" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                <div class="result-item"><span>الاسم:</span><span id="resultName">AbuQusay</span></div>
+                <div class="result-item"><span>الإجابات الصحيحة:</span><span id="resultCorrect">0</span></div>
+                <div class="result-item"><span>الإجابات الخاطئة:</span><span id="resultWrong">0</span></div>
+                <div class="result-item"><span>مرات التخطي:</span><span id="resultSkips">0</span></div>
+                <div class="result-item"><span>النقاط الكلية:</span><span id="resultScore">0</span></div>
+                <div class="result-item"><span>المدة:</span><span id="resultTime">0 دقائق و 0 ثواني</span></div>
+                <div class="result-item"><span>السؤال المستحيل:</span><span id="resultImpossible">لم يُستخدم</span></div>
             </div>
             
-            <div class="performance-chart">
-                <div class="chart-bar">
-                    <div id="performanceFill" class="chart-fill" style="width: 0%;"></div>
+            <div class="performance-chart" style="margin-top:12px;">
+                <div class="chart-bar" style="height:12px;background:#eee;border-radius:8px;overflow:hidden;">
+                    <div id="performanceFill" class="chart-fill" style="width: 0%; height:100%;"></div>
                 </div>
-                <div id="performanceLabel" class="chart-label"></div>
+                <div id="performanceLabel" class="chart-label" style="margin-top:6px;"></div>
             </div>
             
-            <div class="share-buttons">
-                <button class="share-btn x-share">
-                    <i class="fab fa-x-twitter"></i> مشاركة على X
+            <div class="share-buttons" style="display:flex;gap:8px;margin-top:12px;">
+                <!-- نترك الأزرار كبوتونات؛ الجافاسكربت سيبني روابط المشاركة -->
+                <button class="share-btn x-share" data-share-text="" aria-label="مشاركة على X">
+                    <i class="fab fa-x-twitter" aria-hidden="true"></i> مشاركة على X
                 </button>
-                <button class="share-btn instagram-share">
-                    <i class="fab fa-instagram"></i> مشاركة على إنستغرام
+                <button class="share-btn instagram-share" data-share-text="" aria-label="مشاركة على إنستغرام">
+                    <i class="fab fa-instagram" aria-hidden="true"></i> مشاركة على إنستغرام
                 </button>
             </div>
             
-            <div class="button-group">
+            <div class="button-group" style="margin-top:12px;">
                 <button id="playAgainBtn" class="btn-main">لعب مرة أخرى</button>
                 <button id="backToHomeBtn" class="btn-secondary">العودة للبداية</button>
             </div>
         </div>
     </div>
 
-    <div id="leaderboardScreen" class="screen">
+    <!-- LEADERBOARD SCREEN -->
+    <div id="leaderboardScreen" class="screen" aria-hidden="true">
         <div class="content-box">
-            <header class="screen-header">
-                <h2><i class="fas fa-trophy"></i> لوحة الصدارة / الإحصائيات</h2>
+            <header class="screen-header" style="text-align:left;">
+                <h2><i class="fas fa-trophy" aria-hidden="true"></i> لوحة الصدارة / الإحصائيات</h2>
             </header>
             
-            <div class="leaderboard-table-container">
-                <table class="leaderboard-table">
+            <div class="leaderboard-table-container" style="overflow:auto;">
+                <table class="leaderboard-table" role="table" aria-label="لوحة الصدارة">
                     <thead>
                         <tr>
-                            <th>الترتيب</th>
-                            <th>الاسم</th>
-                            <th>النقاط</th>
-                            <th>السؤال المستحيل</th>
+                            <th scope="col">الترتيب</th>
+                            <th scope="col">الاسم</th>
+                            <th scope="col">النقاط</th>
+                            <th scope="col">السؤال المستحيل</th>
                         </tr>
                     </thead>
-                    <tbody id="leaderboardBody">
-                        </tbody>
+                    <tbody id="leaderboardBody" role="rowgroup">
+                        <!-- يتم ملؤها ديناميكياً -->
+                    </tbody>
                 </table>
             </div>
             
-            <div class="button-group">
+            <div class="button-group" style="margin-top:12px;">
                 <button id="backToStartBtn" class="btn-secondary">العودة</button>
             </div>
         </div>
