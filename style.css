@@ -1,208 +1,122 @@
-/* Reset أساسي */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  font-family: "Cairo", sans-serif;
-}
-
+/* Google Font */
 body {
-  background: #0d0d0d;
-  color: #fff;
-  text-align: center;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  overflow-x: hidden;
+    font-family: 'Cairo', sans-serif;
 }
 
-/* ===== الهيدر ===== */
-header {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 10px;
-  padding: 20px;
-  background: #1a1a1a;
-  border-bottom: 2px solid #ff4fa0;
-  animation: slideDown 1s ease-out;
+/* --- Dark Mode Variables --- */
+:root {
+    --bg-light: #f3f4f6;
+    --text-light: #1f2937;
+    --card-bg-light: #ffffff;
+    --border-light: #d1d5db;
+
+    --bg-dark: #111827;
+    --text-dark: #f9fafb;
+    --card-bg-dark: #1f2937;
+    --border-dark: #4b5563;
 }
 
-header i {
-  color: #ff4fa0;
-  font-size: 28px;
-  animation: pulse 2s infinite;
+html.dark {
+    --bg-color: var(--bg-dark);
+    --text-color: var(--text-dark);
+    --card-bg-color: var(--card-bg-dark);
+    --border-color: var(--border-dark);
 }
 
-header h1 {
-  font-size: 22px;
-  color: #fff;
-  font-weight: bold;
+/* General Styles */
+.help-btn {
+    @apply text-white font-bold py-3 px-2 rounded-lg hover:opacity-90 transition-opacity flex flex-col items-center justify-center;
+}
+.help-btn .cost {
+    @apply text-xs opacity-80 mt-1;
+}
+.help-btn:disabled {
+    @apply bg-gray-400 cursor-not-allowed;
 }
 
-/* ===== الشاشات ===== */
-.screen {
-  display: none;
-  padding: 20px;
-  animation: fadeIn 0.8s ease-in-out;
+.answer-btn {
+    @apply w-full p-4 rounded-lg text-lg font-semibold border-2 transition-all duration-200;
+    @apply border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-700;
+    @apply hover:bg-teal-100 hover:border-teal-500 dark:hover:bg-gray-600;
+}
+.answer-btn.selected {
+    @apply bg-teal-500 border-teal-500 text-white transform scale-105;
+}
+.answer-btn.correct {
+    @apply bg-green-500 border-green-500 text-white;
+    animation: pulse 0.5s;
+}
+.answer-btn.wrong {
+    @apply bg-red-500 border-red-500 text-white;
+    animation: shake 0.5s;
+}
+.answer-btn:disabled {
+    @apply opacity-50 cursor-not-allowed;
 }
 
-.active {
-  display: block;
+.avatar-option {
+    @apply w-full h-auto rounded-full cursor-pointer border-4 border-transparent transition-all duration-200;
+}
+.avatar-option.selected {
+    @apply border-teal-500 transform scale-110;
 }
 
-/* ===== الوصف ===== */
-.description {
-  margin: 25px auto;
-  max-width: 700px;
-  font-size: 16px;
-  line-height: 1.6;
-  color: #ddd;
+/* --- Loader Animation --- */
+.loader {
+    border: 6px solid #f3f3f3; /* Light grey */
+    border-top: 6px solid #3498db; /* Blue */
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite;
+    margin: auto;
+}
+.dark .loader {
+    border: 6px solid #4b5563;
+    border-top: 6px solid #4ade80;
 }
 
-/* ===== المميزات ===== */
-.features {
-  margin: 20px auto;
-  max-width: 800px;
-  display: grid;
-  gap: 15px;
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 
-.features .feature {
-  background: #1a1a1a;
-  padding: 15px;
-  border-radius: 12px;
-  border-left: 4px solid #ff4fa0;
-  transition: transform 0.3s ease;
-}
-
-.features .feature:hover {
-  transform: translateX(-5px);
-}
-
-/* ===== الأزرار ===== */
-.btn {
-  background: linear-gradient(45deg, #ff4fa0, #4fa3ff);
-  color: #fff;
-  padding: 12px 22px;
-  border-radius: 10px;
-  border: none;
-  cursor: pointer;
-  font-size: 16px;
-  margin: 10px;
-  transition: transform 0.3s ease, opacity 0.3s;
-}
-
-.btn:hover {
-  transform: scale(1.08);
-  opacity: 0.9;
-}
-
-/* ===== صورة رمزية ===== */
-.avatar-selection {
-  display: flex;
-  justify-content: center;
-  gap: 20px;
-  flex-wrap: wrap;
-  margin: 20px 0;
-}
-
-.avatar {
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  border: 3px solid #ff4fa0;
-  cursor: pointer;
-  transition: transform 0.3s;
-}
-
-.avatar:hover {
-  transform: scale(1.2);
-  border-color: #4fa3ff;
-}
-
-/* ===== نافذة النتيجة ===== */
-.result-box {
-  background: #1a1a1a;
-  padding: 25px;
-  border-radius: 15px;
-  box-shadow: 0 0 20px rgba(255, 79, 160, 0.4);
-  animation: popIn 0.6s ease-in-out;
-}
-
-/* ===== لوحة الصدارة ===== */
-.leaderboard {
-  max-width: 500px;
-  margin: 30px auto;
-  padding: 20px;
-  background: #1a1a1a;
-  border-radius: 12px;
-  border: 2px solid #4fa3ff;
-}
-
-.leaderboard h2 {
-  margin-bottom: 15px;
-  color: #ff4fa0;
-}
-
-.leaderboard ul {
-  list-style: none;
-}
-
-.leaderboard li {
-  padding: 10px;
-  border-bottom: 1px solid #333;
-  font-size: 15px;
-  color: #ddd;
-}
-
-.leaderboard li span {
-  color: #4fa3ff;
-  font-weight: bold;
-}
-
-/* ===== روابط التواصل ===== */
-.social-links {
-  margin: 20px 0;
-}
-
-.social-links a {
-  margin: 0 10px;
-  font-size: 22px;
-  color: #ff4fa0;
-  transition: color 0.3s;
-}
-
-.social-links a:hover {
-  color: #4fa3ff;
-}
-
-/* ===== أنميشن ===== */
-@keyframes fadeIn {
-  from {opacity: 0; transform: translateY(20px);}
-  to {opacity: 1; transform: translateY(0);}
-}
-
-@keyframes slideDown {
-  from {transform: translateY(-100%);}
-  to {transform: translateY(0);}
+/* --- Keyframe Animations --- */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+  20%, 40%, 60%, 80% { transform: translateX(5px); }
 }
 
 @keyframes pulse {
-  0%, 100% { transform: scale(1);}
-  50% { transform: scale(1.2);}
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
 }
 
-@keyframes popIn {
-  from {transform: scale(0.5); opacity: 0;}
-  to {transform: scale(1); opacity: 1;}
+@keyframes fade-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
-/* ===== Responsive ===== */
-@media (max-width: 768px) {
-  header h1 { font-size: 18px; }
-  .description { font-size: 14px; }
-  .btn { font-size: 14px; padding: 10px 18px; }
-  .avatar { width: 65px; height: 65px; }
+@keyframes fade-in-up {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
 }
+.animate-fade-in {
+    animation: fade-in 0.5s ease-out forwards;
+}
+.animate-fade-in-up {
+    animation: fade-in-up 0.4s ease-out forwards;
+}
+
+/* Level Colors */
+.level-easy { color: #22c55e; } /* green-500 */
+.level-medium { color: #3b82f6; } /* blue-500 */
+.level-hard { color: #f97316; } /* orange-500 */
+.level-impossible { color: #ef4444; } /* red-500 */
+
+.progress-bar-easy { background-color: #22c55e; }
+.progress-bar-medium { background-color: #3b82f6; }
+.progress-bar-hard { background-color: #f97316; }
+.progress-bar-impossible { background-color: #ef4444; }
