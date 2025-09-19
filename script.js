@@ -1,738 +1,565 @@
-/* script.js — كامل ومعدل للربط مع Google Apps Script + تحسينات واجهة */
-
-/* Helpers */
-const uuidv4 = () => {
-  // بسيط وموثوق لتوليد UUID (v4-like)
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-};
-
-/* script.js */
-
-const getEndpoint = () => {
-  // تم تثبيت الرابط مباشرة في الكود
-  return 'https://script.google.com/macros/s/AKfycbzB9cru35ndWmWYsEqe46NlrvZgj64HhCIZJ0j7SLln3VDSl2S7rAOMDGxLwEzR_ClS/exec';
-};
-
-const safeFetch = async (url, opts) => {
-  try {
-    const res = await fetch(url, opts);
-    return res;
-  } catch (err) {
-    console.warn('Network error:', err);
-    throw err;
-  }
-};
-
-/* DOMContentLoaded */
 document.addEventListener('DOMContentLoaded', () => {
-  // --- بنك الأسئلة (افتراضي) ---
-  const questions = [
-    { question: "ما هي عاصمة المملكة العربية السعودية؟", options: ["الرياض", "جدة", "مكة", "الدمام"], answer: "الرياض" },
-    { question: "كم عدد القارات في العالم؟", options: ["5", "6", "7", "8"], answer: "7" },
-    { question: "ما هو أكبر كوكب في نظامنا الشمسي؟", options: ["الأرض", "المريخ", "المشتري", "زحل"], answer: "المشتري" },
-    { question: "من هو مؤلف رواية '1984'؟", options: ["جورج أورويل", "ألدوس هكسلي", "جي. ك. رولينغ", "ليو تولستوي"], answer: "جورج أورويل" },
-    { question: "ما هو العنصر الكيميائي الذي رمزه 'O'؟", options: ["الذهب", "الأكسجين", "الفضة", "الهيدروجين"], answer: "الأكسجين" },
-    { question: "في أي بلد تقع ساعة بيغ بن؟", options: ["فرنسا", "إيطاليا", "الولايات المتحدة", "المملكة المتحدة"], answer: "المملكة المتحدة" },
-    { question: "ما هي العملة الرسمية لليابان؟", options: ["اليوان", "الوون", "الين", "الدولار"], answer: "الين" },
-    { question: "كم عدد أضلاع المثلث؟", options: ["3", "4", "5", "6"], answer: "3" },
-    { question: "ما هو أطول نهر في العالم؟", options: ["الأمازون", "النيل", "اليانغتسي", "المسيسيبي"], answer: "النيل" },
-    { question: "من رسم لوحة الموناليزا؟", options: ["فينسنت فان جوخ", "بابلو بيكاسو", "ليوناردو دافنشي", "كلود مونيه"], answer: "ليوناردو دافنشي" },
-    { question: "ما هو المحيط الأكبر في العالم؟", options: ["الأطلسي", "الهندي", "المتجمد الشمالي", "الهادئ"], answer: "الهادئ" },
-    { question: "ما هي الدولة الأكثر سكاناً في العالم؟", options: ["الصين", "الهند", "الولايات المتحدة", "إندونيسيا"], answer: "الهند" },
-    { question: "ما هو الغاز الذي يشكل معظم غلاف الأرض الجوي؟", options: ["الأكسجين", "ثاني أكسيد الكربون", "النيتروجين", "الأرجون"], answer: "الالنيتروجين".replace('الال','ال') }, // تصحيح طفيف إن لزم
-    { question: "كم عدد اللاعبين في فريق كرة القدم؟", options: ["9", "10", "11", "12"], answer: "11" },
-    { question: "ما هي أسرع حيوان بري؟", options: ["الأسد", "الفهد", "الحصان", "الغزال"], answer: "الفهد" },
-  ];
 
-  // سؤال مستحيل (خاص)
-  const impossibleQuestion = {
-    question: "ما هو الرقم التالي في هذه المتسلسلة: 1, 1, 2, 3, 5, 8, ...؟",
-    options: ["11", "12", "13", "14"],
-    answer: "13"
-  };
-
-  // --- حالة اللعبة ---
-  let currentQuestionIndex = 0;
-  let score = 100;
-  let skipCount = 0;
-  let skipCost = 100;
-  let timer = null;
-  let timerValue = 80;
-  let correctAnswers = 0;
-  let wrongAnswers = 0;
-  let gameStartTime = null;
-  let impossibleQuestionUsed = false;
-  let impossibleQuestionCorrect = false;
-  let usingImpossibleNow = false;
-
-  // player & device
-  const playerData = {
-    name: '',
-    avatar: ''
-  };
-
-  const deviceIdKey = 'quizDeviceId_v1';
-  let deviceId = localStorage.getItem(deviceIdKey) || uuidv4();
-  localStorage.setItem(deviceIdKey, deviceId);
-
-  const helpersUsed = {
-    fiftyFifty: false,
-    freezeTime: false,
-    changeQuestion: false,
-    skipCountTotal: 0
-  };
-
-  // --- DOM elements ---
-  const screens = document.querySelectorAll('.screen');
-  const startScreen = document.getElementById('startScreen');
-  const avatarScreen = document.getElementById('avatarScreen');
-  const nameEntryScreen = document.getElementById('nameEntry');
-  const gameContainer = document.getElementById('gameContainer');
-  const resultsScreen = document.getElementById('resultsScreen');
-  const leaderboardScreen = document.getElementById('leaderboardScreen');
-
-  const startPlayBtn = document.getElementById('startPlayBtn');
-  const showLeaderboardBtn = document.getElementById('showLeaderboardBtn');
-  const confirmAvatarBtn = document.getElementById('confirmAvatarBtn');
-  const confirmNameBtn = document.getElementById('confirmNameBtn');
-  const endGameBtn = document.getElementById('endGameBtn');
-  const impossibleQuestionBtn = document.getElementById('impossibleQuestionBtn');
-  const themeToggleBtn = document.getElementById('themeToggleBtn');
-  const playAgainBtn = document.getElementById('playAgainBtn');
-  const backToHomeBtn = document.getElementById('backToHomeBtn');
-  const backToStartBtn = document.getElementById('backToStartBtn');
-  const confirmEndBtn = document.getElementById('confirmEndBtn');
-  const cancelEndBtn = document.getElementById('cancelEndBtn');
-  const viewResultsBtn = document.getElementById('viewResultsBtn');
-  const acceptChallengeBtn = document.getElementById('acceptChallengeBtn');
-
-  const avatarGrid = document.querySelector('.avatar-grid');
-  const nameInput = document.getElementById('nameInput');
-  const nameError = document.getElementById('nameError');
-  const questionCounter = document.getElementById('questionCounter');
-  const progressFill = document.querySelector('.progress-fill');
-  const playerAvatar = document.getElementById('playerAvatar');
-  const playerNameEl = document.getElementById('playerName');
-  const currentScoreSpan = document.getElementById('currentScore');
-  const skipCountSpan = document.getElementById('skipCount');
-  const skipCostSpan = document.getElementById('skipCost');
-  const timerFill = document.querySelector('.timer-fill');
-  const timerText = document.getElementById('timer');
-  const questionText = document.getElementById('questionText');
-  const optionsGrid = document.querySelector('.options-grid');
-  const endConfirmModal = document.getElementById('endConfirmModal');
-  const impossibleQuestionModal = document.getElementById('impossibleQuestionModal');
-  const toastContainer = document.getElementById('toast-container');
-
-  const leaderboardBody = document.getElementById('leaderboardBody');
-
-  // --- utilities UI ---
-  const showScreen = (target) => {
-    screens.forEach(s => s.classList.remove('active'));
-    target.classList.add('active');
-    // accessibility focus
-    target.querySelector('h2, h1, .game-title, [tabindex]')?.focus?.();
-  };
-
-  const showToast = (text, type = 'info', timeout = 3000) => {
-    const t = document.createElement('div');
-    t.className = `toast ${type}`;
-    t.setAttribute('role', 'status');
-    t.textContent = text;
-    toastContainer.appendChild(t);
-    // auto remove
-    setTimeout(() => {
-      t.classList.add('hide');
-      t.addEventListener('animationend', () => t.remove(), { once: true });
-    }, timeout);
-  };
-
-  // --- avatars generation (if grid empty) ---
-  const generateAvatars = (count = 12) => {
-    // avoid duplicate generation
-    if (avatarGrid.querySelectorAll('.avatar-option').length > 0) return;
-    for (let i = 1; i <= count; i++) {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'avatar-option';
-      btn.setAttribute('data-avatar-id', `avatar_${i}`);
-      btn.setAttribute('role', 'option');
-      btn.setAttribute('aria-pressed', 'false');
-      btn.tabIndex = 0;
-
-      const img = document.createElement('img');
-      img.className = 'avatar-img';
-      img.loading = 'lazy';
-      img.alt = `رمزية ${i}`;
-      img.src = `https://i.pravatar.cc/150?img=${i}`;
-      img.style.width = '72px';
-      img.style.height = '72px';
-      img.style.borderRadius = '50%';
-      img.style.objectFit = 'cover';
-
-      btn.appendChild(img);
-      avatarGrid.appendChild(btn);
-    }
-  };
-
-  // select avatar
-  avatarGrid.addEventListener('click', (ev) => {
-    const btn = ev.target.closest('.avatar-option');
-    if (!btn) return;
-    document.querySelectorAll('.avatar-option').forEach(x => {
-      x.setAttribute('aria-pressed', 'false');
-      x.classList.remove('selected');
-    });
-    btn.classList.add('selected');
-    btn.setAttribute('aria-pressed', 'true');
-    const img = btn.querySelector('img');
-    playerData.avatar = img?.src || '';
-    playerAvatar.src = playerData.avatar;
-    confirmAvatarBtn.disabled = false;
-    confirmAvatarBtn.removeAttribute('aria-disabled');
-  });
-
-  // name validation live
-  nameInput.addEventListener('input', () => {
-    const value = nameInput.value.trim();
-    if (value.length < 3) {
-      nameError.textContent = 'الاسم يجب أن يكون 3 أحرف على الأقل.';
-      confirmNameBtn.disabled = true;
-    } else {
-      nameError.textContent = '';
-      confirmNameBtn.disabled = false;
-    }
-  });
-
-  // --- Game lifecycle ---
-  const initGameState = () => {
-    generateAvatars();
-    checkTheme();
-    // restore player (if any)
-    const saved = JSON.parse(localStorage.getItem('quizPlayer_v1') || '{}');
-    if (saved?.name) {
-      playerData.name = saved.name;
-      playerData.avatar = saved.avatar || '';
-      playerAvatar.src = playerData.avatar;
-      playerNameEl.textContent = playerData.name;
-    }
-    loadLeaderboard(); // try server then fallback
-    showScreen(startScreen);
-  };
-
-  const resetGame = () => {
-    currentQuestionIndex = 0;
-    score = 100;
-    skipCount = 0;
-    skipCost = 100;
-    correctAnswers = 0;
-    wrongAnswers = 0;
-    impossibleQuestionUsed = false;
-    impossibleQuestionCorrect = false;
-    usingImpossibleNow = false;
-    helpersUsed.fiftyFifty = false;
-    helpersUsed.freezeTime = false;
-    helpersUsed.changeQuestion = false;
-    helpersUsed.skipCountTotal = 0;
-    // enable helpers
-    document.querySelectorAll('.helper-btn').forEach(b => {
-      b.disabled = false;
-      b.classList.remove('disabled');
-    });
-    document.querySelector('.helpers-container').style.display = '';
-    updateGameUI();
-  };
-
-  const startTimer = (sec = 80) => {
-    clearInterval(timer);
-    timerValue = sec;
-    timerText.textContent = timerValue;
-    timerFill.style.width = '100%';
-    timer = setInterval(() => {
-      timerValue--;
-      timerText.textContent = timerValue;
-      timerFill.style.width = `${(timerValue / sec) * 100}%`;
-      if (timerValue <= 0) {
-        clearInterval(timer);
-        // treat as wrong
-        wrongAnswers++;
-        showToast('انتهى الوقت! -100 نقطة', 'error');
-        score -= 100;
-        updateGameUI();
-        setTimeout(() => {
-          nextQuestion();
-        }, 1000);
-      }
-    }, 1000);
-  };
-
-  const loadQuestion = (overrideQuestionObj = null) => {
-    // if override used (impossible question) set usingImpossibleNow flag
-    const questionObj = overrideQuestionObj || questions[currentQuestionIndex];
-    if (!questionObj) {
-      // end if no more questions
-      return endGame();
-    }
-
-    usingImpossibleNow = (overrideQuestionObj !== null);
-    questionText.textContent = questionObj.question;
-    optionsGrid.innerHTML = '';
-
-    // randomize options order
-    const opts = [...questionObj.options];
-    for (let i = opts.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [opts[i], opts[j]] = [opts[j], opts[i]];
-    }
-
-    opts.forEach(opt => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'option-btn';
-      btn.textContent = opt;
-      btn.addEventListener('click', () => handleAnswer(btn, questionObj));
-      optionsGrid.appendChild(btn);
-    });
-
-    // start timer (shorter for impossible)
-    startTimer(usingImpossibleNow ? 20 : 80);
-    updateGameUI();
-  };
-
-  const handleAnswer = (btn, questionObj) => {
-    // prevent double click
-    if (btn.classList.contains('disabled')) return;
-    // disable options
-    Array.from(document.querySelectorAll('.option-btn')).forEach(b => {
-      b.classList.add('disabled');
-      b.disabled = true;
-    });
-    clearInterval(timer);
-
-    const selected = btn.textContent;
-    const isCorrect = selected === questionObj.answer;
-
-    if (isCorrect) {
-      btn.classList.add('correct');
-      score += 100;
-      correctAnswers++;
-      showToast('إجابة صحيحة — +100 نقطة', 'success');
-    } else {
-      btn.classList.add('wrong');
-      wrongAnswers++;
-      score -= 100;
-      showToast('إجابة خاطئة — -100 نقطة', 'error');
-      // mark correct
-      Array.from(document.querySelectorAll('.option-btn')).forEach(b => {
-        if (b.textContent === questionObj.answer) {
-          b.classList.add('correct');
-        }
-      });
-    }
-    updateGameUI();
-
-    // if this was impossible question, set flag
-    if (usingImpossibleNow) {
-      impossibleQuestionUsed = true;
-      impossibleQuestionCorrect = isCorrect;
-      // after answering impossible, end game after short delay
-      setTimeout(() => endGame(), 1400);
-      return;
-    }
-
-    // else continue normal flow
-    setTimeout(() => {
-      nextQuestion();
-    }, 900);
-  };
-
-  const nextQuestion = () => {
-    currentQuestionIndex++;
-    if (currentQuestionIndex >= questions.length) {
-      endGame();
-    } else {
-      loadQuestion();
-    }
-  };
-
-  const applyFiftyFifty = () => {
-    if (helpersUsed.fiftyFifty) return;
-    const optionButtons = Array.from(document.querySelectorAll('.option-btn')).filter(b => !b.classList.contains('disabled'));
-    const correctText = questions[currentQuestionIndex].answer;
-    const wrongOpts = optionButtons.filter(b => b.textContent !== correctText);
-    // shuffle wrongOpts
-    for (let i = wrongOpts.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [wrongOpts[i], wrongOpts[j]] = [wrongOpts[j], wrongOpts[i]];
-    }
-    // hide two wrong ones (or disable)
-    wrongOpts.slice(0, 2).forEach(b => {
-      b.style.visibility = 'hidden';
-      b.disabled = true;
-    });
-    helpersUsed.fiftyFifty = true;
-  };
-
-  const applyFreezeTime = () => {
-    if (helpersUsed.freezeTime) return;
-    clearInterval(timer);
-    // freeze for 10 seconds visually: pause timer decrement for 10s then resume
-    setTimeout(() => {
-      startTimer(timerValue);
-    }, 10000);
-    helpersUsed.freezeTime = true;
-  };
-
-  const applyChangeQuestion = () => {
-    if (helpersUsed.changeQuestion) return;
-    // increment index to jump to question 16-like (here next)
-    currentQuestionIndex++;
-    helpersUsed.changeQuestion = true;
-    loadQuestion();
-  };
-
-  const applySkip = () => {
-    if (score < skipCost) {
-      showToast('لا توجد نقاط كافية لاستخدام التخطي', 'error');
-      return;
-    }
-    score -= skipCost;
-    skipCount++;
-    helpersUsed.skipCountTotal++;
-    skipCost += 50;
-    updateGameUI();
-    currentQuestionIndex++;
-    if (currentQuestionIndex >= questions.length) {
-      endGame();
-    } else {
-      loadQuestion();
-    }
-  };
-
-  const updateGameUI = () => {
-    questionCounter.textContent = `السؤال ${Math.min(currentQuestionIndex + 1, questions.length)} من ${questions.length}`;
-    progressFill.style.width = `${((currentQuestionIndex) / questions.length) * 100}%`;
-    playerAvatar.src = playerData.avatar || '';
-    playerNameEl.textContent = playerData.name || 'اللاعب';
-    currentScoreSpan.textContent = score;
-    skipCountSpan.textContent = skipCount;
-    skipCostSpan.textContent = skipCost;
-  };
-
-  // --- Theme toggle ---
-  const checkTheme = () => {
-    const saved = localStorage.getItem('quizTheme') || 'dark';
-    document.body.dataset.theme = saved;
-    themeToggleBtn.innerHTML = saved === 'dark' ? '<i class="fas fa-moon"></i>' : '<i class="fas fa-sun"></i>';
-  };
-
-  const toggleTheme = () => {
-    const cur = document.body.dataset.theme === 'dark' ? 'dark' : 'light';
-    const nxt = cur === 'dark' ? 'light' : 'dark';
-    document.body.dataset.theme = nxt;
-    themeToggleBtn.innerHTML = nxt === 'dark' ? '<i class="fas fa-moon"></i>' : '<i class="fas fa-sun"></i>';
-    localStorage.setItem('quizTheme', nxt);
-  };
-
-  // --- End game: calculate results, send to server (Apps Script) with fallback to localStorage ---
-  const calculateResults = () => {
-    const endTime = new Date();
-    const durationSeconds = Math.max(0, Math.floor((endTime - gameStartTime) / 1000));
-    const minutes = Math.floor(durationSeconds / 60);
-    const seconds = durationSeconds % 60;
-
-    document.getElementById('resultName').textContent = playerData.name;
-    document.getElementById('resultCorrect').textContent = correctAnswers;
-    document.getElementById('resultWrong').textContent = wrongAnswers;
-    document.getElementById('resultSkips').textContent = skipCount;
-    document.getElementById('resultScore').textContent = score;
-    document.getElementById('resultTime').textContent = `${minutes} دقائق و ${seconds} ثواني`;
-    document.getElementById('resultImpossible').textContent = impossibleQuestionUsed ? (impossibleQuestionCorrect ? 'مستخدم — إجابة صحيحة' : 'مستخدم — إجابة خاطئة') : 'لم يُستخدم';
-
-    // performance chart
-    const perfPercent = Math.round((correctAnswers / questions.length) * 100);
-    const perfFill = document.getElementById('performanceFill');
-    const perfLabel = document.getElementById('performanceLabel');
-    perfFill.style.width = `${perfPercent}%`;
-    perfLabel.textContent = perfPercent >= 80 ? 'ممتاز' : (perfPercent >= 50 ? 'جيد' : 'بحاجة للتحسين');
-
-    return {
-      deviceId,
-      playerName: playerData.name,
-      avatarId: playerData.avatar || '',
-      startTime: gameStartTime ? new Date(gameStartTime).toISOString() : '',
-      endTime: endTime.toISOString(),
-      durationSeconds,
-      status: 'finished',
-      numQuestions: questions.length,
-      correctAnswers,
-      wrongAnswers,
-      skips: skipCount,
-      usedFiftyFifty: helpersUsed.fiftyFifty ? 1 : 0,
-      usedFreeze: helpersUsed.freezeTime ? 1 : 0,
-      usedSwap: helpersUsed.changeQuestion ? 1 : 0,
-      impossibleUsed: impossibleQuestionUsed ? 1 : 0,
-      impossibleCorrect: impossibleQuestionCorrect ? 1 : 0,
-      scoreBeforeImpossible: 0, // optional — you can compute if needed
-      finalScore: score,
-      roundDifficulty: 'normal',
-      attemptsSummary: JSON.stringify({ correctAnswers, wrongAnswers, skips, helpersUsed }),
-      userAgent: navigator.userAgent,
-      ip: '' // IP omitted — server can determine if needed
+    // --- CONFIGURATION ---
+    const CONFIG = {
+        totalQuestions: 16,
+        timePerQuestion: 20, // seconds
+        pointsCorrect: 100,
+        pointsIncorrect: 100,
+        initialScore: 100,
+        maxErrors: 3,
+        helpCost5050: 100,
+        helpCostFreeze: 100,
+        initialSkipCost: 100,
+        skipCostIncrement: 50,
+        freezeTimeDuration: 10, // seconds
+        googleAppScriptUrl: 'https://script.google.com/macros/s/AKfycbw68QqjhU0eqOszPpLBm0tXPtjaSV000kBfOWiorLk2lFm45ud3do-f5PMCy9b0LSez/exec'
     };
-  };
 
-  const sendResultToServer = async (payload) => {
-    const endpoint = getEndpoint();
-    if (!endpoint) {
-      throw new Error('No Apps Script endpoint configured.');
+    // --- Sample Questions ---
+    const QUESTIONS = [
+        // المستوى السهل (1-5)
+        { level: 'easy', question: 'ما هي عاصمة المملكة العربية السعودية؟', options: ['جدة', 'الرياض', 'الدمام', 'مكة'], answer: 'الرياض' },
+        { level: 'easy', question: 'كم عدد ألوان قوس قزح؟', options: ['5', '6', '7', '8'], answer: '7' },
+        { level: 'easy', question: 'ما هو أكبر كوكب في نظامنا الشمسي؟', options: ['الأرض', 'المريخ', 'المشتري', 'زحل'], answer: 'المشتري' },
+        { level: 'easy', question: 'ما هو الحيوان الذي يُعرف بـ "سفينة الصحراء"؟', options: ['الحصان', 'الجمل', 'الفيل', 'الزرافة'], answer: 'الجمل' },
+        { level: 'easy', question: 'ما هو أطول نهر في العالم؟', options: ['نهر الأمازون', 'نهر النيل', 'نهر اليانغتسي', 'نهر المسيسيبي'], answer: 'نهر النيل' },
+        // المستوى المتوسط (6-10)
+        { level: 'medium', question: 'من هو مؤلف رواية "1984"؟', options: ['جورج أورويل', 'ألدوس هكسلي', 'راي برادبري', 'جي. ك. رولينغ'], answer: 'جورج أورويل' },
+        { level: 'medium', question: 'في أي عام انتهت الحرب العالمية الثانية؟', options: ['1943', '1945', '1950', '1939'], answer: '1945' },
+        { level: 'medium', question: 'ما هو العنصر الكيميائي الذي رمزه "Au"؟', options: ['الفضة', 'النحاس', 'الذهب', 'الألومنيوم'], answer: 'الذهب' },
+        { level: 'medium', question: 'كم عدد قارات العالم؟', options: ['5', '6', '7', '8'], answer: '7' },
+        { level: 'medium', question: 'من رسم لوحة الموناليزا؟', options: ['فينسنت فان جوخ', 'بابلو بيكاسو', 'ليوناردو دافنشي', 'مايكل أنجلو'], answer: 'ليوناردو دافنشي' },
+        // المستوى الصعب (11-15)
+        { level: 'hard', question: 'ما هي سرعة الضوء في الفراغ (تقريبًا)؟', options: ['300,000 كم/ث', '150,000 كم/ث', '500,000 كم/ث', '1,000,000 كم/ث'], answer: '300,000 كم/ث' },
+        { level: 'hard', question: 'ما هو أعمق محيط في العالم؟', options: ['المحيط الأطلسي', 'المحيط الهندي', 'المحيط الهادئ', 'المحيط المتجمد الشمالي'], answer: 'المحيط الهادئ' },
+        { level: 'hard', question: 'ما هو الاسم العلمي للإنسان؟', options: ['Homo Erectus', 'Homo Habilis', 'Homo Sapiens', 'Neanderthal'], answer: 'Homo Sapiens' },
+        { level: 'hard', question: 'ما هي الدولة التي لديها أكبر عدد من الجزر؟', options: ['إندونيسيا', 'الفلبين', 'اليابان', 'السويد'], answer: 'السويد' },
+        { level: 'hard', question: 'كم عدد العظام في جسم الإنسان البالغ؟', options: ['206', '212', '300', '198'], answer: '206' },
+        // المستوى المستحيل (16)
+        { level: 'impossible', question: 'ما هو الرقم الذي يأتي بعد 3.1415926535...؟', options: ['8', '9', '7', 'لا يمكن معرفته'], answer: '9' }
+    ];
+
+    // --- STATE MANAGEMENT ---
+    let state = {};
+
+    function resetState() {
+        state = {
+            playerName: '',
+            playerAvatar: '',
+            playerId: '',
+            currentQuestionIndex: 0,
+            score: CONFIG.initialScore,
+            errors: 0,
+            skips: 0,
+            startTime: null,
+            endTime: null,
+            correctAnswers: 0,
+            wrongAnswers: 0,
+            isFrozen: false,
+            used5050: false,
+            usedFreeze: false,
+            currentTimer: null,
+            currentSkipCost: CONFIG.initialSkipCost,
+            answeredImpossible: false,
+        };
     }
-    // Apps Script expects JSON with action 'submitResult'
-    const body = { action: 'submitResult', ...payload };
-    const res = await safeFetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    if (!res.ok) throw new Error(`Server error ${res.status}`);
-    const json = await res.json();
-    return json;
-  };
+    
+    // --- DOM ELEMENTS ---
+    const screens = {
+        splash: document.getElementById('splash-screen'),
+        player: document.getElementById('player-screen'),
+        instructions: document.getElementById('instructions-screen'),
+        question: document.getElementById('question-screen'),
+        results: document.getElementById('results-screen'),
+        leaderboard: document.getElementById('leaderboard-screen'),
+        exitConfirm: document.getElementById('exit-confirm-screen'),
+    };
 
-  const saveLocallyFallback = (payload) => {
-    // Save into local leaderboard (fallback)
-    const key = 'quizLeaderboard_v1';
-    const arr = JSON.parse(localStorage.getItem(key) || '[]');
-    arr.push({ name: payload.playerName, finalScore: payload.finalScore, impossible: payload.impossibleUsed ? (payload.impossibleCorrect ? 'used_correct' : 'used_wrong') : 'not_used', lastPlayed: payload.endTime, deviceId: payload.deviceId });
-    arr.sort((a, b) => b.finalScore - a.finalScore);
-    localStorage.setItem(key, JSON.stringify(arr.slice(0, 50)));
-  };
+    const elements = {
+        // Player Screen
+        avatarOptions: document.getElementById('avatar-options'),
+        playerNameInput: document.getElementById('player-name'),
+        startSetupBtn: document.getElementById('start-setup-btn'),
+        
+        // Instructions Screen
+        startGameBtn: document.getElementById('start-game-btn'),
 
-  const endGame = async () => {
-    clearInterval(timer);
-    const payload = calculateResults();
+        // Question Screen
+        progressBar: document.getElementById('progress-bar'),
+        levelIndicator: document.getElementById('level-indicator'),
+        timerBar: document.getElementById('timer-bar'),
+        errorCounter: document.getElementById('error-counter'),
+        playerAvatarGame: document.getElementById('player-avatar-game'),
+        playerNameGame: document.getElementById('player-name-game'),
+        playerIdGame: document.getElementById('player-id-game'),
+        playerScore: document.getElementById('player-score'),
+        questionText: document.getElementById('question-text'),
+        answerOptions: document.getElementById('answer-options'),
+        exitQuizBtn: document.getElementById('exit-quiz-btn'),
+        themeToggle: document.getElementById('theme-toggle'),
 
-    // Save to localStorage of player info
-    localStorage.setItem('quizPlayer_v1', JSON.stringify({ name: playerData.name, avatar: playerData.avatar }));
+        // Helps
+        help5050: document.getElementById('help-5050'),
+        helpFreeze: document.getElementById('help-freeze'),
+        helpSkip: document.getElementById('help-skip'),
+        skipCost: document.getElementById('skip-cost'),
 
-    // Try to send to server; fallback to local
-    try {
-      await sendResultToServer(payload);
-      showToast('تم إرسال النتيجة للسيرفر', 'success', 2000);
-    } catch (err) {
-      console.warn('Send to server failed, saving locally', err);
-      saveLocallyFallback(payload);
-      showToast('تعذر إرسال النتيجة — تم الحفظ محلياً', 'info', 3000);
-    }
+        // Results Screen
+        resultName: document.getElementById('result-name'),
+        resultId: document.getElementById('result-id'),
+        resultLevel: document.getElementById('result-level'),
+        resultScore: document.getElementById('result-score'),
+        resultCorrect: document.getElementById('result-correct'),
+        resultWrong: document.getElementById('result-wrong'),
+        resultSkips: document.getElementById('result-skips'),
+        resultTime: document.getElementById('result-time'),
+        performanceBar: document.getElementById('performance-bar'),
+        performanceText: document.getElementById('performance-text'),
+        playAgainBtn: document.getElementById('play-again-btn'),
+        leaderboardBtn: document.getElementById('leaderboard-btn'),
+        leaderboardBtnFromPlayer: document.getElementById('leaderboard-btn-from-player'),
 
-    // update leaderboard UI from server or local
-    await loadLeaderboard();
-    showScreen(resultsScreen);
-  };
+        // Leaderboard Screen
+        leaderboardLoading: document.getElementById('leaderboard-loading'),
+        leaderboardTable: document.getElementById('leaderboard-table'),
+        leaderboardBody: document.getElementById('leaderboard-body'),
+        backToStartBtn: document.getElementById('back-to-start-btn'),
 
-  // --- Leaderboard: try server getLeaderboard action, fallback to localStorage ---
-  const loadLeaderboard = async () => {
-    const endpoint = getEndpoint();
-    let rows = [];
-    if (endpoint) {
-      try {
-        const res = await safeFetch(endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'getLeaderboard' })
-        });
-        if (res.ok) {
-          const json = await res.json();
-          if (json.success && Array.isArray(json.leaderboard)) {
-            // expecting array of rows [rank, playerName, finalScore, level, impossibleStatus, lastPlayed, deviceId]
-            rows = json.leaderboard.map(r => ({
-              rank: r[0],
-              name: r[1],
-              score: r[2],
-              level: r[3] || '',
-              impossible: r[4] || '',
-            }));
-          }
-        } else {
-          throw new Error('Server returned ' + res.status);
+        // Modals & Notifications
+        confirmExitBtn: document.getElementById('confirm-exit-btn'),
+        cancelExitBtn: document.getElementById('cancel-exit-btn'),
+        notificationToast: document.getElementById('notification-toast'),
+        notificationText: document.getElementById('notification-text'),
+    };
+
+    // --- FUNCTIONS ---
+
+    // Screen Navigation
+    function showScreen(screenName) {
+        Object.values(screens).forEach(screen => screen.classList.add('hidden'));
+        if (screens[screenName]) {
+            screens[screenName].classList.remove('hidden');
         }
-      } catch (err) {
-        console.warn('Could not fetch leaderboard from server', err);
-        // fallback to localStorage
-      }
     }
 
-    if (!rows.length) {
-      // fallback to localStorage format
-      const local = JSON.parse(localStorage.getItem('quizLeaderboard_v1') || '[]');
-      rows = local.map((e, i) => ({ rank: i + 1, name: e.name, score: e.finalScore, level: '', impossible: e.impossible }));
+    // Show Notification
+    function showNotification(message, isError = false) {
+        elements.notificationText.textContent = message;
+        elements.notificationToast.classList.remove('bg-gray-900', 'bg-red-600');
+        elements.notificationToast.classList.add(isError ? 'bg-red-600' : 'bg-gray-900');
+        elements.notificationToast.classList.remove('opacity-0', 'translate-y-10');
+        setTimeout(() => {
+            elements.notificationToast.classList.add('opacity-0', 'translate-y-10');
+        }, 3000);
     }
 
-    // render rows
-    if (!leaderboardBody) return;
-    leaderboardBody.innerHTML = '';
-    if (!rows.length) {
-      leaderboardBody.innerHTML = `<tr><td colspan="4">لا توجد بيانات لعرضها.</td></tr>`;
-      return;
+    // Initialize Player Setup Screen
+    function initPlayerScreen() {
+        const avatarCount = 8;
+        elements.avatarOptions.innerHTML = '';
+        for (let i = 0; i < avatarCount; i++) {
+            const img = document.createElement('img');
+            img.src = `https://avatar.iran.liara.run/public/${i}`;
+            img.classList.add('avatar-option');
+            img.dataset.avatarUrl = img.src;
+            img.addEventListener('click', () => {
+                document.querySelectorAll('.avatar-option').forEach(el => el.classList.remove('selected'));
+                img.classList.add('selected');
+                state.playerAvatar = img.dataset.avatarUrl;
+            });
+            elements.avatarOptions.appendChild(img);
+        }
     }
 
-    rows.slice(0, 50).forEach((r, i) => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${i + 1}</td><td>${r.name}</td><td>${r.score}</td><td>${r.impossible}</td>`;
-      leaderboardBody.appendChild(tr);
+    // Start Setup
+    function startSetup() {
+        const playerName = elements.playerNameInput.value.trim();
+        if (!playerName) {
+            alert('الرجاء إدخال اسمك.');
+            return;
+        }
+        if (!state.playerAvatar) {
+            alert('الرجاء اختيار صورة رمزية.');
+            return;
+        }
+        state.playerName = playerName;
+        state.playerId = `player_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+        
+        // Log player to Google Sheets
+        sendDataToSheet({
+            action: 'registerPlayer',
+            id: state.playerId,
+            name: state.playerName,
+            startTime: new Date().toLocaleString()
+        });
+        
+        showScreen('instructions');
+    }
+
+    // Start Game
+    function startGame() {
+        resetStateAfterSetup();
+        state.startTime = new Date();
+        updateUI();
+        loadQuestion();
+        showScreen('question');
+    }
+    
+    function resetStateAfterSetup(){
+        const preservedState = {
+            playerName: state.playerName,
+            playerAvatar: state.playerAvatar,
+            playerId: state.playerId
+        };
+        resetState();
+        Object.assign(state, preservedState);
+    }
+
+    // Load a question
+    function loadQuestion() {
+        if (state.currentQuestionIndex >= CONFIG.totalQuestions || state.errors >= CONFIG.maxErrors) {
+            endGame();
+            return;
+        }
+
+        clearTimeout(state.currentTimer);
+        const questionData = QUESTIONS[state.currentQuestionIndex];
+        
+        // Update Level Notification
+        if(state.currentQuestionIndex === 5 || state.currentQuestionIndex === 10 || state.currentQuestionIndex === 15) {
+            const level = getLevelInfo(state.currentQuestionIndex + 1).name;
+            showNotification(`لقد وصلت إلى المستوى ${level}! 🔥`);
+        }
+
+        elements.questionText.textContent = `(${state.currentQuestionIndex + 1}/${CONFIG.totalQuestions}) ${questionData.question}`;
+        elements.answerOptions.innerHTML = '';
+
+        questionData.options.forEach(option => {
+            const button = document.createElement('button');
+            button.textContent = option;
+            button.classList.add('answer-btn');
+            button.dataset.answer = option;
+            button.addEventListener('click', () => selectAnswer(button, questionData.answer));
+            elements.answerOptions.appendChild(button);
+        });
+
+        resetHelps();
+        updateUI();
+        startTimer();
+    }
+    
+    function resetHelps() {
+        elements.help5050.disabled = state.used5050 || state.score < CONFIG.helpCost5050;
+        elements.helpFreeze.disabled = state.usedFreeze || state.score < CONFIG.helpCostFreeze;
+        elements.helpSkip.disabled = state.score < state.currentSkipCost;
+    }
+
+    // Start Timer
+    function startTimer() {
+        let timeLeft = CONFIG.timePerQuestion;
+        elements.timerBar.style.transition = 'none';
+        elements.timerBar.style.width = '100%';
+
+        setTimeout(() => {
+            elements.timerBar.style.transition = `width ${timeLeft}s linear`;
+            elements.timerBar.style.width = '0%';
+        }, 100);
+
+        state.currentTimer = setTimeout(() => {
+            if (!state.isFrozen) {
+                handleAnswer(false);
+            }
+        }, timeLeft * 1000);
+    }
+    
+    // Select an answer
+    function selectAnswer(button, correctAnswer) {
+        clearTimeout(state.currentTimer);
+        document.querySelectorAll('.answer-btn').forEach(btn => btn.disabled = true);
+        
+        button.classList.add('selected');
+        const isCorrect = button.dataset.answer === correctAnswer;
+
+        setTimeout(() => {
+            handleAnswer(isCorrect, correctAnswer);
+        }, 1000);
+    }
+    
+    // Handle Answer
+    function handleAnswer(isCorrect, correctAnswer) {
+        if (isCorrect) {
+            state.score += CONFIG.pointsCorrect;
+            state.correctAnswers++;
+            showNotification('إجابة صحيحة! ✅');
+            if (QUESTIONS[state.currentQuestionIndex].level === 'impossible') {
+                state.answeredImpossible = true;
+            }
+        } else {
+            state.score -= CONFIG.pointsIncorrect;
+            state.errors++;
+            state.wrongAnswers++;
+            showNotification('إجابة خاطئة! ❌', true);
+        }
+
+        // Highlight correct/wrong answers
+        document.querySelectorAll('.answer-btn').forEach(btn => {
+            if(btn.dataset.answer === correctAnswer) {
+                btn.classList.add('correct');
+            } else if (btn.classList.contains('selected')) {
+                btn.classList.add('wrong');
+            }
+        });
+
+        setTimeout(() => {
+            state.currentQuestionIndex++;
+            loadQuestion();
+        }, 2000);
+    }
+    
+    // --- HELP FUNCTIONS ---
+    function use5050() {
+        if (state.score < CONFIG.helpCost5050 || state.used5050) return;
+        state.score -= CONFIG.helpCost5050;
+        state.used5050 = true;
+        
+        const correctAnswer = QUESTIONS[state.currentQuestionIndex].answer;
+        const wrongOptions = QUESTIONS[state.currentQuestionIndex].options.filter(opt => opt !== correctAnswer);
+        const optionToKeep = wrongOptions[Math.floor(Math.random() * wrongOptions.length)];
+        
+        document.querySelectorAll('.answer-btn').forEach(btn => {
+            if (btn.dataset.answer !== correctAnswer && btn.dataset.answer !== optionToKeep) {
+                btn.disabled = true;
+                btn.style.opacity = '0.5';
+            }
+        });
+        showNotification('تم حذف إجابتين!');
+        updateUI();
+    }
+    
+    function useFreeze() {
+        if (state.score < CONFIG.helpCostFreeze || state.usedFreeze) return;
+        state.score -= CONFIG.helpCostFreeze;
+        state.usedFreeze = true;
+        state.isFrozen = true;
+        
+        clearTimeout(state.currentTimer);
+        const currentWidth = elements.timerBar.offsetWidth / elements.timerBar.parentElement.offsetWidth * 100;
+        elements.timerBar.style.width = `${currentWidth}%`;
+        elements.timerBar.style.transition = 'none';
+
+        showNotification(`تم تجميد الوقت لـ ${CONFIG.freezeTimeDuration} ثوانٍ!`);
+        setTimeout(() => {
+            state.isFrozen = false;
+            startTimer();
+        }, CONFIG.freezeTimeDuration * 1000);
+        updateUI();
+    }
+    
+    function useSkip() {
+        if (state.score < state.currentSkipCost) {
+            showNotification('النقاط غير كافية!', true);
+            return;
+        };
+        state.score -= state.currentSkipCost;
+        state.currentSkipCost += CONFIG.skipCostIncrement;
+        state.skips++;
+        clearTimeout(state.currentTimer);
+        showNotification('تم تخطي السؤال!');
+        state.currentQuestionIndex++;
+        loadQuestion();
+    }
+
+    // End Game
+    function endGame() {
+        clearTimeout(state.currentTimer);
+        state.endTime = new Date();
+        showResults();
+        showScreen('results');
+        
+        sendDataToSheet({
+            action: 'saveResult',
+            id: state.playerId,
+            name: state.playerName,
+            score: state.score,
+            level: getLevelInfo(state.currentQuestionIndex).name,
+            duration: Math.floor((state.endTime - state.startTime) / 1000),
+            status: state.answeredImpossible ? 'فاز (المستحيل)' : 'اكمل',
+            correct: state.correctAnswers,
+            wrong: state.wrongAnswers,
+            skips: state.skips,
+            answeredImpossible: state.answeredImpossible,
+        });
+    }
+
+    // Show Results Screen
+    function showResults() {
+        const duration = Math.floor((state.endTime - state.startTime) / 1000);
+        const levelInfo = getLevelInfo(state.currentQuestionIndex);
+        
+        elements.resultName.textContent = state.playerName;
+        elements.resultId.textContent = state.playerId;
+        elements.resultLevel.textContent = levelInfo.name;
+        elements.resultScore.textContent = `${state.score} 💰`;
+        elements.resultCorrect.textContent = state.correctAnswers;
+        elements.resultWrong.textContent = state.wrongAnswers;
+        elements.resultSkips.textContent = state.skips;
+        elements.resultTime.textContent = `${duration} ثانية`;
+        
+        // Performance Bar
+        const performancePercentage = Math.max(0, Math.min(100, (state.correctAnswers / CONFIG.totalQuestions) * 100));
+        elements.performanceBar.style.width = `${performancePercentage}%`;
+        let perfText = 'سيئ جداً';
+        let perfClass = 'bg-red-600';
+        if (performancePercentage > 25) { perfText = 'سيئ'; perfClass = 'bg-red-500'; }
+        if (performancePercentage > 50) { perfText = 'جيد'; perfClass = 'bg-yellow-500'; }
+        if (performancePercentage > 75) { perfText = 'جيد جداً'; perfClass = 'bg-blue-500'; }
+        if (performancePercentage > 90) { perfText = 'ممتاز'; perfClass = 'bg-green-500'; }
+        elements.performanceText.textContent = perfText;
+        elements.performanceBar.className = `h-6 rounded-full text-center text-white font-bold ${perfClass}`;
+        
+        // Share links
+        const shareText = `حققت ${state.score} نقطة في مسابقة المعلومات ووصلت للمستوى ${levelInfo.name}! هل يمكنك هزيمتي؟`;
+        document.getElementById('share-x').href = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
+    }
+
+    // Fetch and show Leaderboard
+    async function showLeaderboard() {
+        showScreen('leaderboard');
+        elements.leaderboardLoading.classList.remove('hidden');
+        elements.leaderboardTable.classList.add('hidden');
+        
+        try {
+            const data = await sendDataToSheet({ action: 'getLeaderboard' });
+            if (data && data.leaderboard) {
+                elements.leaderboardBody.innerHTML = '';
+                data.leaderboard.forEach((player, index) => {
+                    const row = document.createElement('tr');
+                    const rank = getRankIcon(index);
+                    const impossibleBadge = player.answeredImpossible ? '🎖️' : '';
+                    row.innerHTML = `
+                        <td class="p-2">${rank}</td>
+                        <td class="p-2">${player.name} ${impossibleBadge}</td>
+                        <td class="p-2 font-bold">${player.score}</td>
+                    `;
+                    elements.leaderboardBody.appendChild(row);
+                });
+            }
+        } catch(error) {
+            console.error('Failed to load leaderboard', error);
+            elements.leaderboardBody.innerHTML = '<tr><td colspan="3">فشل تحميل لوحة الصدارة.</td></tr>';
+        } finally {
+            elements.leaderboardLoading.classList.add('hidden');
+            elements.leaderboardTable.classList.remove('hidden');
+        }
+    }
+    
+    function getRankIcon(index) {
+        if (index === 0) return '🥇';
+        if (index === 1) return '🥈';
+        if (index === 2) return '🥉';
+        return index + 1;
+    }
+
+    // Update UI Elements during the game
+    function updateUI() {
+        elements.playerScore.textContent = `💰 ${state.score}`;
+        elements.playerAvatarGame.src = state.playerAvatar;
+        elements.playerNameGame.textContent = state.playerName;
+        elements.playerIdGame.textContent = state.playerId;
+        elements.errorCounter.textContent = `❌ ${state.errors}/${CONFIG.maxErrors}`;
+        
+        const progressPercentage = (state.currentQuestionIndex / CONFIG.totalQuestions) * 100;
+        elements.progressBar.style.width = `${progressPercentage}%`;
+        
+        const levelInfo = getLevelInfo(state.currentQuestionIndex + 1);
+        elements.levelIndicator.textContent = `المستوى: ${levelInfo.name} ${levelInfo.icon}`;
+        elements.levelIndicator.className = `text-center font-bold mb-4 ${levelInfo.colorClass}`;
+        elements.progressBar.className = `h-4 rounded-full text-center text-white text-xs ${levelInfo.progressClass}`;
+        
+        elements.skipCost.textContent = `(-${state.currentSkipCost})`;
+        resetHelps();
+    }
+    
+    // Get level info
+    function getLevelInfo(questionNumber) {
+        if (questionNumber <= 5) return { name: 'سهل', icon: '🍀', colorClass: 'level-easy', progressClass: 'progress-bar-easy' };
+        if (questionNumber <= 10) return { name: 'متوسط', icon: '🔵', colorClass: 'level-medium', progressClass: 'progress-bar-medium' };
+        if (questionNumber <= 15) return { name: 'صعب', icon: '🟠', colorClass: 'level-hard', progressClass: 'progress-bar-hard' };
+        return { name: 'المستحيل', icon: '🔴', colorClass: 'level-impossible', progressClass: 'progress-bar-impossible' };
+    }
+    
+    // Theme Toggler
+    function toggleTheme() {
+        const html = document.documentElement;
+        html.classList.toggle('dark');
+        if (html.classList.contains('dark')) {
+            elements.themeToggle.textContent = '🌙';
+        } else {
+            elements.themeToggle.textContent = '🌞';
+        }
+    }
+    
+    // Send data to Google Sheets
+    async function sendDataToSheet(payload) {
+        try {
+            const response = await fetch(CONFIG.googleAppScriptUrl, {
+                method: 'POST',
+                mode: 'no-cors', // Important for this type of deployment
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload)
+            });
+            // Due to 'no-cors' mode, we can't read the response directly.
+            // For getting data (like leaderboard), a different setup (GET with JSONP or a proper API) is needed.
+            // A common workaround is to have the Apps Script return a redirect, but for this case, let's assume it works for posting.
+            // For GETting the leaderboard, we must use a workaround. Let's make another request.
+             if (payload.action === 'getLeaderboard') {
+                 // The 'no-cors' POST is just a trigger. The real GET is separate.
+                 const getResponse = await fetch(CONFIG.googleAppScriptUrl + '?action=getLeaderboard');
+                 const data = await getResponse.json();
+                 return data;
+             }
+            
+        } catch (error) {
+            console.error('Error communicating with Google Sheets:', error);
+            showNotification('حدث خطأ في الاتصال بالخادم.', true);
+        }
+    }
+
+
+    // --- EVENT LISTENERS ---
+    elements.startSetupBtn.addEventListener('click', startSetup);
+    elements.startGameBtn.addEventListener('click', startGame);
+    elements.playAgainBtn.addEventListener('click', () => {
+        resetStateAfterSetup();
+        showScreen('instructions');
     });
-  };
+    elements.leaderboardBtn.addEventListener('click', showLeaderboard);
+    elements.leaderboardBtnFromPlayer.addEventListener('click', showLeaderboard);
+    elements.backToStartBtn.addEventListener('click', () => showScreen('player'));
+    
+    elements.exitQuizBtn.addEventListener('click', () => screens.exitConfirm.classList.remove('hidden'));
+    elements.cancelExitBtn.addEventListener('click', () => screens.exitConfirm.classList.add('hidden'));
+    elements.confirmExitBtn.addEventListener('click', () => {
+        screens.exitConfirm.classList.add('hidden');
+        endGame();
+    });
 
-  // --- Event bindings ---
-  startPlayBtn.addEventListener('click', () => {
-    // go to avatar selection
-    showScreen(avatarScreen);
-  });
+    elements.themeToggle.addEventListener('click', toggleTheme);
+    elements.help5050.addEventListener('click', use5050);
+    elements.helpFreeze.addEventListener('click', useFreeze);
+    elements.helpSkip.addEventListener('click', useSkip);
 
-  showLeaderboardBtn.addEventListener('click', async () => {
-    await loadLeaderboard();
-    showScreen(leaderboardScreen);
-  });
-
-  confirmAvatarBtn.addEventListener('click', () => {
-    // proceed to name entry
-    showScreen(nameEntryScreen);
-    // focus field
-    nameInput.focus();
-  });
-
-  confirmNameBtn.addEventListener('click', () => {
-    const name = nameInput.value.trim();
-    if (name.length < 3) {
-      nameError.textContent = 'الاسم يجب أن يكون 3 أحرف على الأقل.';
-      return;
+    // --- INITIALIZATION ---
+    function init() {
+        resetState();
+        setTimeout(() => {
+            showScreen('player');
+            initPlayerScreen();
+        }, 2000); // Splash screen duration
     }
-    playerData.name = name;
-    // save to local quick restore
-    localStorage.setItem('quizPlayer_v1', JSON.stringify({ name: playerData.name, avatar: playerData.avatar }));
-    // Start game
-    resetGame();
-    gameStartTime = new Date();
-    startGame();
-  });
 
-  const startGame = () => {
-    // shuffle questions so they appear random each play
-    shuffleArray(questions);
-    currentQuestionIndex = 0;
-    correctAnswers = 0;
-    wrongAnswers = 0;
-    score = 100;
-    startTimer(80);
-    loadQuestion();
-    showScreen(gameContainer);
-  };
-
-  // helper-btns handler
-  document.querySelector('.helpers-container')?.addEventListener('click', (ev) => {
-    const btn = ev.target.closest('.helper-btn');
-    if (!btn) return;
-    const type = btn.dataset.type;
-    if (!type) return;
-    if (btn.disabled) {
-      showToast('المساعدة غير متاحة', 'info');
-      return;
-    }
-    // check cost
-    const cost = 100;
-    if (score < cost) {
-      showToast('لا توجد نقاط كافية لاستخدام هذه المساعدة', 'error');
-      return;
-    }
-    score -= cost;
-    btn.disabled = true;
-    btn.classList.add('disabled');
-    updateGameUI();
-    showToast(`استخدمت ${type} -${cost} نقطة`, 'info');
-
-    switch (type) {
-      case 'fiftyFifty':
-        applyFiftyFifty();
-        helpersUsed.fiftyFifty = true;
-        break;
-      case 'freezeTime':
-        applyFreezeTime();
-        helpersUsed.freezeTime = true;
-        break;
-      case 'changeQuestion':
-        applyChangeQuestion();
-        helpersUsed.changeQuestion = true;
-        break;
-      case 'skipQuestion':
-        applySkip();
-        break;
-    }
-  });
-
-  // End confirm modal
-  endGameBtn.addEventListener('click', () => endConfirmModal.classList.add('active'));
-  cancelEndBtn.addEventListener('click', () => endConfirmModal.classList.remove('active'));
-  confirmEndBtn.addEventListener('click', () => {
-    endConfirmModal.classList.remove('active');
-    endGame();
-  });
-
-  // impossible question flow
-  impossibleQuestionBtn.addEventListener('click', () => {
-    if (impossibleQuestionUsed) {
-      showToast('لقد استخدمت السؤال المستحيل بالفعل!', 'info');
-      return;
-    }
-    impossibleQuestionModal.classList.add('active');
-  });
-
-  viewResultsBtn.addEventListener('click', () => {
-    impossibleQuestionModal.classList.remove('active');
-    endGame();
-  });
-
-  acceptChallengeBtn.addEventListener('click', () => {
-    impossibleQuestionModal.classList.remove('active');
-    impossibleQuestionUsed = true;
-    // hide helpers UI
-    document.querySelector('.helpers-container').style.display = 'none';
-    // load impossible
-    loadQuestion(impossibleQuestion);
-  });
-
-  // back navigation
-  playAgainBtn.addEventListener('click', () => {
-    showScreen(nameEntryScreen);
-  });
-  backToHomeBtn.addEventListener('click', () => {
-    showScreen(startScreen);
-  });
-  backToStartBtn.addEventListener('click', () => {
-    showScreen(startScreen);
-  });
-
-  themeToggleBtn.addEventListener('click', toggleTheme);
-
-  // --- small utilities ---
-  function shuffleArray(arr) {
-    for (let i = arr.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [arr[i], arr[j]] = [arr[j], arr[i]];
-    }
-  }
-
-  // init app
-  initGameState();
-
-  // expose for debugging (optional)
-  window._quiz = {
-    startGame,
-    endGame,
-    loadLeaderboard,
-    getDeviceId: () => deviceId
-  };
+    init();
 });
