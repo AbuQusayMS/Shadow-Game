@@ -3,1469 +3,196 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مسابقة المعلومات</title>
-    <style>
-        :root {
-            --primary-color: #4e54c8;
-            --secondary-color: #8f94fb;
-            --correct-color: #4caf50;
-            --wrong-color: #f44336;
-            --easy-color: #4caf50;
-            --medium-color: #2196f3;
-            --hard-color: #ff9800;
-            --impossible-color: #f44336;
-            --light-bg: #f9f9f9;
-            --dark-bg: #1a1a2e;
-            --light-text: #333;
-            --dark-text: #f9f9f9;
-            --transition: all 0.3s ease;
-        }
-
-        .dark-mode {
-            --primary-color: #6a71e5;
-            --secondary-color: #9ba0ff;
-            --light-bg: #1a1a2e;
-            --dark-bg: #f9f9f9;
-            --light-text: #f9f9f9;
-            --dark-text: #333;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-
-        body {
-            background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
-            color: var(--light-text);
-            min-height: 100vh;
-            transition: var(--transition);
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background-color: rgba(255, 255, 255, 0.9);
-            border-radius: 15px;
-            padding: 20px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-            transition: var(--transition);
-        }
-
-        .dark-mode .container {
-            background-color: rgba(26, 26, 46, 0.9);
-            color: var(--dark-text);
-        }
-
-        header {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-
-        h1 {
-            color: var(--primary-color);
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-        }
-
-        .logo {
-            font-size: 4rem;
-            margin-bottom: 20px;
-        }
-
-        .screen {
-            display: none;
-            animation: fadeIn 0.5s ease;
-        }
-
-        .active {
-            display: block;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        /* شاشة اختيار اللاعب */
-        .avatar-selection {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 15px;
-            margin: 20px 0;
-        }
-
-        .avatar {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            cursor: pointer;
-            border: 3px solid transparent;
-            transition: var(--transition);
-            object-fit: cover;
-        }
-
-        .avatar.selected {
-            border-color: var(--primary-color);
-            transform: scale(1.1);
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: bold;
-        }
-
-        input {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 1rem;
-            transition: var(--transition);
-        }
-
-        input:focus {
-            outline: none;
-            border-color: var(--primary-color);
-            box-shadow: 0 0 5px rgba(78, 84, 200, 0.5);
-        }
-
-        .player-id {
-            background-color: #f0f0f0;
-            color: #666;
-            cursor: not-allowed;
-        }
-
-        .dark-mode .player-id {
-            background-color: #2d2d46;
-            color: #ccc;
-        }
-
-        .btn {
-            background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 1rem;
-            font-weight: bold;
-            transition: var(--transition);
-            display: inline-block;
-            text-align: center;
-            margin: 5px;
-        }
-
-        .btn:hover {
-            opacity: 0.9;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-        }
-
-        .btn-secondary {
-            background: #6c757d;
-        }
-
-        .btn-danger {
-            background: var(--wrong-color);
-        }
-
-        /* شاشة الأسئلة */
-        .question-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-
-        .level-progress {
-            display: flex;
-            width: 100%;
-            margin: 15px 0;
-            border-radius: 8px;
-            overflow: hidden;
-            height: 30px;
-        }
-
-        .level-segment {
-            flex: 1;
-            text-align: center;
-            padding: 5px;
-            color: white;
-            font-weight: bold;
-        }
-
-        .level-easy {
-            background-color: var(--easy-color);
-        }
-
-        .level-medium {
-            background-color: var(--medium-color);
-        }
-
-        .level-hard {
-            background-color: var(--hard-color);
-        }
-
-        .level-impossible {
-            background-color: var(--impossible-color);
-        }
-
-        .timer-container {
-            height: 10px;
-            background-color: #eee;
-            border-radius: 5px;
-            margin: 15px 0;
-            overflow: hidden;
-        }
-
-        .timer-bar {
-            height: 100%;
-            background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
-            width: 100%;
-            transition: width 1s linear;
-        }
-
-        .player-info {
-            display: flex;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .player-avatar {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            margin-left: 15px;
-            object-fit: cover;
-        }
-
-        .player-stats {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .stat {
-            background-color: rgba(78, 84, 200, 0.1);
-            padding: 10px;
-            border-radius: 8px;
-            text-align: center;
-            flex: 1;
-            min-width: 100px;
-        }
-
-        .stat-value {
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: var(--primary-color);
-        }
-
-        .question-container {
-            margin-bottom: 20px;
-        }
-
-        .question-text {
-            font-size: 1.2rem;
-            margin-bottom: 20px;
-            line-height: 1.6;
-        }
-
-        .options-container {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 10px;
-        }
-
-        .option-btn {
-            background-color: #f0f0f0;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            padding: 15px;
-            cursor: pointer;
-            text-align: right;
-            font-size: 1rem;
-            transition: var(--transition);
-        }
-
-        .dark-mode .option-btn {
-            background-color: #2d2d46;
-            border-color: #3d3d5c;
-        }
-
-        .option-btn:hover {
-            background-color: #e0e0e0;
-            border-color: #ccc;
-        }
-
-        .dark-mode .option-btn:hover {
-            background-color: #3d3d5c;
-            border-color: #4d4d7c;
-        }
-
-        .option-btn.correct {
-            background-color: var(--correct-color);
-            color: white;
-            border-color: var(--correct-color);
-        }
-
-        .option-btn.wrong {
-            background-color: var(--wrong-color);
-            color: white;
-            border-color: var(--wrong-color);
-        }
-
-        .help-buttons {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin-top: 20px;
-        }
-
-        .help-btn {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            background-color: rgba(78, 84, 200, 0.1);
-            padding: 10px;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: var(--transition);
-            min-width: 80px;
-        }
-
-        .help-btn:hover {
-            background-color: rgba(78, 84, 200, 0.2);
-        }
-
-        .help-btn i {
-            font-size: 1.5rem;
-            margin-bottom: 5px;
-        }
-
-        .help-btn.disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        /* شاشة النتائج */
-        .results-container {
-            text-align: center;
-        }
-
-        .achievement-badge {
-            font-size: 3rem;
-            margin: 20px 0;
-        }
-
-        .results-stats {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin: 20px 0;
-        }
-
-        .result-stat {
-            background-color: rgba(78, 84, 200, 0.1);
-            padding: 15px;
-            border-radius: 8px;
-            text-align: center;
-        }
-
-        .result-stat-value {
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: var(--primary-color);
-        }
-
-        .performance-bar {
-            height: 20px;
-            background-color: #eee;
-            border-radius: 10px;
-            margin: 20px 0;
-            overflow: hidden;
-        }
-
-        .performance-fill {
-            height: 100%;
-            background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
-            width: 0%;
-            transition: width 1.5s ease;
-        }
-
-        .social-share {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin: 20px 0;
-        }
-
-        /* شاشة لوحة الصدارة */
-        .leaderboard-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 20px 0;
-        }
-
-        .leaderboard-table th, .leaderboard-table td {
-            padding: 12px;
-            text-align: center;
-            border-bottom: 1px solid #ddd;
-        }
-
-        .leaderboard-table th {
-            background-color: rgba(78, 84, 200, 0.1);
-        }
-
-        .dark-mode .leaderboard-table th {
-            background-color: rgba(78, 84, 200, 0.2);
-        }
-
-        .rank-1, .rank-2, .rank-3 {
-            font-weight: bold;
-        }
-
-        .rank-1 {
-            color: gold;
-            font-size: 1.2rem;
-        }
-
-        .rank-2 {
-            color: silver;
-            font-size: 1.1rem;
-        }
-
-        .rank-3 {
-            color: #cd7f32; /* bronze */
-        }
-
-        /* الإشعارات */
-        .notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 15px 20px;
-            border-radius: 8px;
-            color: white;
-            font-weight: bold;
-            z-index: 1000;
-            opacity: 0;
-            transform: translateY(-20px);
-            transition: opacity 0.3s, transform 0.3s;
-        }
-
-        .notification.show {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        .notification.success {
-            background-color: var(--correct-color);
-        }
-
-        .notification.error {
-            background-color: var(--wrong-color);
-        }
-
-        .notification.info {
-            background-color: var(--primary-color);
-        }
-
-        /* التجاوب مع الشاشات المختلفة */
-        @media (max-width: 768px) {
-            .container {
-                padding: 15px;
-            }
-            
-            .player-stats {
-                flex-direction: column;
-                gap: 10px;
-            }
-            
-            .stat {
-                min-width: auto;
-            }
-            
-            .results-stats {
-                grid-template-columns: 1fr;
-            }
-            
-            .help-buttons {
-                flex-wrap: wrap;
-            }
-        }
-
-        @media (max-width: 480px) {
-            h1 {
-                font-size: 2rem;
-            }
-            
-            .avatar {
-                width: 60px;
-                height: 60px;
-            }
-            
-            .question-header {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-            
-            .level-progress {
-                height: 20px;
-            }
-            
-            .level-segment {
-                font-size: 0.8rem;
-                padding: 2px;
-            }
-        }
-    </style>
+    <title>🧠 مسابقة المعلومات</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
 </head>
-<body>
-    <div class="container">
-        <!-- شاشة البداية -->
+<body class="theme-easy"> <div class="container">
         <div id="splash-screen" class="screen active">
-            <header>
+            <header class="splash-header">
                 <div class="logo">🧠</div>
                 <h1>مسابقة المعلومات</h1>
                 <p>اختبر قدراتك في مسابقة تفاعلية شيقة!</p>
             </header>
-            <div style="text-align: center; margin-top: 30px;">
-                <button id="start-btn" class="btn">ابدأ المسابقة</button>
+            <div class="text-center">
+                <button id="start-btn" class="btn btn-primary">ابدأ الآن</button>
             </div>
         </div>
 
-        <!-- شاشة اختيار اللاعب -->
-        <div id="player-setup" class="screen">
+        <div id="player-setup-screen" class="screen">
             <header>
-                <h1>اختر صورتك الرمزية</h1>
+                <h1>اختر شخصيتك</h1>
+                <p>ستظهر هذه الصورة بجانب اسمك في لوحة الصدارة</p>
             </header>
-            
             <div class="avatar-selection">
-                <img src="https://api.dicebear.com/7.x/bottts/svg?seed=Cleo" class="avatar" data-avatar="1">
-                <img src="https://api.dicebear.com/7.x/bottts/svg?seed=Max" class="avatar" data-avatar="2">
-                <img src="https://api.dicebear.com/7.x/bottts/svg?seed=Jack" class="avatar" data-avatar="3">
-                <img src="https://api.dicebear.com/7.x/bottts/svg?seed=Leo" class="avatar" data-avatar="4">
-                <img src="https://api.dicebear.com/7.x/bottts/svg?seed=Milo" class="avatar" data-avatar="5">
-                <img src="https://api.dicebear.com/7.x/bottts/svg?seed=Zoe" class="avatar" data-avatar="6">
+                <img src="https://api.dicebear.com/7.x/adventurer/svg?seed=Mimi" alt="Avatar 1" class="avatar" >
+                <img src="https://api.dicebear.com/7.x/adventurer/svg?seed=Callie" alt="Avatar 2" class="avatar">
+                <img src="https://api.dicebear.com/7.x/adventurer/svg?seed=Leo" alt="Avatar 3" class="avatar">
+                <img src="https://api.dicebear.com/7.x/adventurer/svg?seed=Loki" alt="Avatar 4" class="avatar">
+                <img src="https://api.dicebear.com/7.x/adventurer/svg?seed=Rascal" alt="Avatar 5" class="avatar">
+                <img src="https://api.dicebear.com/7.x/adventurer/svg?seed=Simon" alt="Avatar 6" class="avatar">
             </div>
-            
             <div class="form-group">
-                <label for="player-name">اسم اللاعب:</label>
-                <input type="text" id="player-name" placeholder="أدخل اسمك هنا">
+                <label for="player-name">أدخل اسمك:</label>
+                <input type="text" id="player-name" placeholder="مثال: عبد الله" maxlength="15">
             </div>
-            
             <div class="form-group">
-                <label for="player-id">معرف اللاعب:</label>
-                <input type="text" id="player-id" class="player-id" readonly>
+                <label for="player-id">معرّف اللاعب (تلقائي):</label>
+                <input type="text" id="player-id" readonly>
             </div>
-            
-            <div style="text-align: center;">
-                <button id="confirm-player" class="btn">تأكيد</button>
+            <div class="text-center">
+                <button id="confirm-player-btn" class="btn btn-primary">التالي <i class="fa-solid fa-arrow-left"></i></button>
             </div>
         </div>
-
-        <!-- شاشة التعليمات -->
-        <div id="instructions" class="screen">
+        
+        <div id="instructions-screen" class="screen">
             <header>
                 <h1>طريقة اللعب</h1>
             </header>
-            
-            <div class="instructions-content">
-                <p>✅ اكسب +100 نقطة مع كل إجابة صحيحة، وخسر -100 نقطة مع الإجابة الخاطئة</p>
-                <p>⏱️ لديك وقت محدد للإجابة على كل سؤال</p>
-                <p>🛡️ يمكنك استخدام المساعدات بتكلفة 100 نقطة لكل مساعدة</p>
-                <p>❌ يمكنك ارتكاب 3 أخطاء فقط قبل نهاية اللعبة</p>
-                <p>⚡ يمكنك المشاركة أكثر من مرة واختبار نفسك باستمرار</p>
-            </div>
-            
-            <div style="text-align: center; margin-top: 30px;">
-                <button id="start-quiz" class="btn">ابدأ اللعب</button>
+            <ul class="instructions-list">
+                <li><i class="fa-solid fa-star"></i> اكسب <strong>+100 نقطة</strong> لكل إجابة صحيحة، واخسر <strong>-100 نقطة</strong> مع كل خطأ.</li>
+                <li><i class="fa-solid fa-stopwatch"></i> لكل سؤال مؤقت زمني، أجب بسرعة!</li>
+                <li><i class="fa-solid fa-shield-halved"></i> استخدم المساعدات بذكاء، فلكل منها تكلفة.</li>
+                <li><i class="fa-solid fa-heart-crack"></i> لديك <strong>3 محاولات خاطئة</strong> فقط قبل انتهاء اللعبة.</li>
+                <li><i class="fa-solid fa-trophy"></i> هل يمكنك الوصول إلى السؤال المستحيل؟</li>
+            </ul>
+            <div class="text-center">
+                <button id="start-quiz-btn" class="btn btn-primary">لنبدأ التحدي! <i class="fa-solid fa-rocket"></i></button>
             </div>
         </div>
 
-        <!-- شاشة الأسئلة -->
         <div id="question-screen" class="screen">
-            <div class="question-header">
-                <button id="end-quiz" class="btn btn-danger">إنهاء المسابقة</button>
-                <button id="toggle-theme" class="btn">تبديل المظهر</button>
+            <div class="quiz-header">
+                <button id="end-quiz-btn" class="btn btn-danger"><i class="fa-solid fa-door-open"></i> إنهاء</button>
+                <div class="level-progress">
+                    <div id="level-seg-1" class="level-segment easy active"><span>سهل</span></div>
+                    <div id="level-seg-2" class="level-segment medium"><span>متوسط</span></div>
+                    <div id="level-seg-3" class="level-segment hard"><span>صعب</span></div>
+                    <div id="level-seg-4" class="level-segment impossible"><span>مستحيل</span></div>
+                </div>
+                <button id="toggle-theme-btn" class="btn btn-secondary"><i class="fa-solid fa-circle-half-stroke"></i></button>
             </div>
-            
-            <div class="level-progress">
-                <div class="level-segment level-easy">سهل</div>
-                <div class="level-segment level-medium">متوسط</div>
-                <div class="level-segment level-hard">صعب</div>
-                <div class="level-segment level-impossible">مستحيل</div>
-            </div>
-            
+
             <div class="timer-container">
-                <div class="timer-bar"></div>
+                <div id="timer-bar" class="timer-bar"></div>
             </div>
             
-            <div class="player-info">
-                <img id="current-avatar" class="player-avatar" src="">
-                <div>
-                    <h3 id="current-player-name"></h3>
-                    <p id="current-player-id"></p>
+            <div class="player-hud">
+                <div class="player-info">
+                    <img id="hud-avatar" src="" alt="Player Avatar" class="player-avatar">
+                    <div>
+                        <h3 id="hud-player-name"></h3>
+                        <p id="hud-player-id"></p>
+                    </div>
+                </div>
+                <div class="player-stats">
+                    <div class="stat"><i class="fa-solid fa-star"></i> النقاط: <span id="hud-points">100</span></div>
+                    <div class="stat"><i class="fa-solid fa-heart"></i> الأخطاء: <span id="hud-errors">0/3</span></div>
+                    <div class="stat"><i class="fa-solid fa-forward"></i> التخطي: <span id="hud-skips">0</span></div>
                 </div>
             </div>
-            
-            <div class="player-stats">
-                <div class="stat">
-                    <div class="stat-value" id="points">100</div>
-                    <div>النقاط</div>
-                </div>
-                <div class="stat">
-                    <div class="stat-value" id="skips">0</div>
-                    <div>مرات التخطي</div>
-                </div>
-                <div class="stat">
-                    <div class="stat-value" id="errors">0/3</div>
-                    <div>الأخطاء</div>
-                </div>
-                <div class="stat">
-                    <div class="stat-value" id="level">1</div>
-                    <div>المستوى</div>
-                </div>
-            </div>
-            
+
             <div class="question-container">
-                <div class="question-text" id="question-text"></div>
-                <div class="options-container" id="options-container"></div>
+                <p id="question-text"></p>
             </div>
+            <div id="options-container" class="options-container"></div>
             
             <div class="help-buttons">
-                <div class="help-btn" id="freeze-time">
-                    <span>⏱️</span>
+                <div id="fifty-fifty-btn" class="help-btn">
+                    <i class="fas fa-adjust"></i>
+                    <span>50:50</span>
+                    <small>100 نقطة</small>
+                </div>
+                <div id="freeze-time-btn" class="help-btn">
+                    <i class="fas fa-snowflake"></i>
                     <span>تجميد الوقت</span>
                     <small>100 نقطة</small>
                 </div>
-                <div class="help-btn" id="fifty-fifty">
-                    <span>5️⃣0️⃣</span>
-                    <span>حذف إجابتين</span>
-                    <small>100 نقطة</small>
-                </div>
-                <div class="help-btn" id="skip-question">
-                    <span>⏭️</span>
+                <div id="skip-question-btn" class="help-btn">
+                    <i class="fas fa-forward-step"></i>
                     <span>تخطي السؤال</span>
-                    <small>100 نقطة</small>
+                    <small id="skip-cost">100 نقطة</small>
                 </div>
             </div>
         </div>
 
-        <!-- شاشة النتائج -->
         <div id="results-screen" class="screen">
             <header>
-                <h1>النتائج</h1>
+                <h1>النتائج النهائية</h1>
             </header>
-            
-            <div class="results-container">
-                <div class="achievement-badge">🏆</div>
-                
-                <div class="results-stats">
-                    <div class="result-stat">
-                        <div>الاسم</div>
-                        <div class="result-stat-value" id="result-name"></div>
-                    </div>
-                    <div class="result-stat">
-                        <div>المعرف</div>
-                        <div class="result-stat-value" id="result-id"></div>
-                    </div>
-                    <div class="result-stat">
-                        <div>الإجابات الصحيحة</div>
-                        <div class="result-stat-value" id="correct-answers"></div>
-                    </div>
-                    <div class="result-stat">
-                        <div>الإجابات الخاطئة</div>
-                        <div class="result-stat-value" id="wrong-answers"></div>
-                    </div>
-                    <div class="result-stat">
-                        <div>عدد مرات التخطي</div>
-                        <div class="result-stat-value" id="total-skips"></div>
-                    </div>
-                    <div class="result-stat">
-                        <div>النقاط النهائية</div>
-                        <div class="result-stat-value" id="final-points"></div>
-                    </div>
-                    <div class="result-stat">
-                        <div>الوقت المستغرق</div>
-                        <div class="result-stat-value" id="time-spent">00:00</div>
-                    </div>
-                    <div class="result-stat">
-                        <div>المستوى الذي وصلت إليه</div>
-                        <div class="result-stat-value" id="final-level"></div>
-                    </div>
-                </div>
-                
-                <div class="performance-bar">
-                    <div class="performance-fill" id="performance-fill"></div>
-                </div>
-                
-                <div id="performance-text" style="margin-bottom: 20px;">أداء جيد</div>
-                
-                <div class="social-share">
-                    <a href="https://x.com/_MS_AbuQusay?t=Tv0klH2PdnBYFHj_G8uIEA&s=09" target="_blank" class="btn">شارك على X</a>
-                    <a href="https://www.instagram.com/ms_abuqusay?igsh=MXc2ZWptd2FkamN0" target="_blank" class="btn">شارك على Instagram</a>
-                </div>
-                
-                <div style="margin-top: 20px;">
-                    <button id="view-leaderboard" class="btn">عرض لوحة الصدارة</button>
-                    <button id="play-again" class="btn">العب مرة أخرى</button>
-                </div>
+            <div class="results-grid">
+                <div class="result-stat"><span>الاسم:</span> <strong id="result-name"></strong></div>
+                <div class="result-stat"><span>المعرّف:</span> <strong id="result-id"></strong></div>
+                <div class="result-stat"><span>الإجابات الصحيحة:</span> <strong id="result-correct"></strong></div>
+                <div class="result-stat"><span>الإجابات الخاطئة:</span> <strong id="result-wrong"></strong></div>
+                <div class="result-stat"><span>مرات التخطي:</span> <strong id="result-skips"></strong></div>
+                <div class="result-stat"><span>النقاط النهائية:</span> <strong id="result-points"></strong></div>
+                <div class="result-stat"><span>الوقت المستغرق:</span> <strong id="result-time"></strong></div>
+                <div class="result-stat"><span>أعلى مستوى:</span> <strong id="result-level"></strong></div>
+            </div>
+            <div class="performance-section">
+                <h3>تقييم الأداء</h3>
+                <div class="performance-bar"><div id="performance-fill" class="performance-fill"></div></div>
+                <p id="performance-text"></p>
+            </div>
+            <div class="social-share">
+                <p>شارك نتيجتك مع أصدقائك!</p>
+                <a href="https://x.com/_MS_AbuQusay?t=Tv0klH2PdnBYFHj_G8uIEA&s=09" target="_blank" class="btn social-btn"><i class="fa-brands fa-x-twitter"></i> شارك على X</a>
+                <a href="https://www.instagram.com/ms_abuqusay?igsh=MXc2ZWptd2FkamN0" target="_blank" class="btn social-btn"><i class="fa-brands fa-instagram"></i> شارك على Instagram</a>
+            </div>
+            <div class="results-actions">
+                <button id="view-leaderboard-btn" class="btn btn-secondary">عرض لوحة الصدارة</button>
+                <button id="play-again-btn" class="btn btn-primary">العب مرة أخرى</button>
             </div>
         </div>
 
-        <!-- شاشة لوحة الصدارة -->
         <div id="leaderboard-screen" class="screen">
-            <header>
-                <h1>لوحة الصدارة</h1>
+             <header>
+                <h1>🏆 لوحة الصدارة</h1>
             </header>
-            
-            <div id="leaderboard-container">
-                <table class="leaderboard-table">
-                    <thead>
-                        <tr>
-                            <th>الترتيب</th>
-                            <th>الاسم</th>
-                            <th>المعرف</th>
-                            <th>المستوى</th>
-                            <th>النقاط</th>
-                        </tr>
-                    </thead>
-                    <tbody id="leaderboard-body">
-                        <!-- سيتم ملؤها بواسطة JavaScript -->
+            <table class="leaderboard-table">
+                <thead>
+                    <tr>
+                        <th>الترتيب</th>
+                        <th>الاسم</th>
+                        <th>المستوى</th>
+                        <th>النقاط</th>
+                    </tr>
+                </thead>
+                <tbody id="leaderboard-body">
                     </tbody>
-                </table>
-            </div>
-            
-            <div style="text-align: center; margin-top: 20px;">
-                <button id="back-to-results" class="btn">العودة إلى النتائج</button>
+            </table>
+            <div class="text-center">
+                <button id="back-to-results-btn" class="btn btn-secondary">العودة للنتائج</button>
             </div>
         </div>
     </div>
 
-    <!-- نافذة تأكيد الخروج -->
-    <div id="exit-modal" class="screen" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
-        <div style="background-color: white; padding: 20px; border-radius: 10px; text-align: center; max-width: 400px;">
-            <h2>إنهاء المسابقة</h2>
-            <p>سيتم حفظ نقاطك الحالية. هل ترغب في المتابعة؟</p>
-            <div style="margin-top: 20px;">
-                <button id="confirm-exit" class="btn btn-danger">نعم</button>
-                <button id="cancel-exit" class="btn">لا</button>
-            </div>
+    <div id="modal-overlay" class="modal-overlay"></div>
+    
+    <div id="exit-modal" class="modal">
+        <h2>إنهاء المسابقة</h2>
+        <p>سيتم حفظ نقاطك الحالية. هل أنت متأكد من رغبتك في المتابعة؟</p>
+        <div class="modal-actions">
+            <button id="confirm-exit-btn" class="btn btn-danger">نعم، قم بالخروج</button>
+            <button class="btn btn-secondary close-modal-btn">لا، ابقَ هنا</button>
         </div>
     </div>
 
-    <!-- عنصر الإشعارات -->
-    <div id="notification" class="notification"></div>
+    <div id="level-complete-modal" class="modal">
+        <h2>🎉 أحسنت! 🎉</h2>
+        <p id="level-complete-text"></p>
+        <div class="modal-actions">
+            <button id="next-level-btn" class="btn btn-primary">الانتقال للمستوى التالي</button>
+            <button id="withdraw-btn" class="btn btn-secondary">الانسحاب وعرض النتائج</button>
+        </div>
+    </div>
 
-    <script>
-        // البيانات الأساسية
-        let player = {
-            name: '',
-            id: '',
-            avatar: '',
-            points: 100,
-            correctAnswers: 0,
-            wrongAnswers: 0,
-            skips: 0,
-            errors: 0,
-            level: 1,
-            startTime: null,
-            timeSpent: 0,
-            helpsUsed: 0
-        };
-
-        let questions = [];
-        let currentQuestion = 0;
-        let timer;
-        let timeLeft = 30;
-        let gameActive = false;
-        let leaderboard = [];
-
-        // الأسئلة العشوائية (سهلة)
-        const easyQuestions = [
-            {
-                question: "ما هي عاصمة المملكة العربية السعودية؟",
-                options: ["الرياض", "جدة", "مكة", "الدمام"],
-                correct: 0
-            },
-            {
-                question: "كم عدد أيام الأسبوع؟",
-                options: ["5 أيام", "6 أيام", "7 أيام", "8 أيام"],
-                correct: 2
-            },
-            {
-                question: "ما هو الكوكب الذي يعرف بالكوكب الأحمر؟",
-                options: ["الأرض", "المريخ", "المشتري", "الزهرة"],
-                correct: 1
-            },
-            {
-                question: "ما هو أطول نهر في العالم؟",
-                options: ["النيل", "الأمازون", "الميسيسيبي", "الدانوب"],
-                correct: 0
-            },
-            {
-                question: "ما هو الحيوان المعروف بلقب ملك الغابة؟",
-                options: ["الفيل", "الأسد", "النمر", "الدب"],
-                correct: 1
-            }
-        ];
-
-        const mediumQuestions = [
-            {
-                question: "في أي عام تم توحيد المملكة العربية السعودية؟",
-                options: ["1932", "1945", "1950", "1927"],
-                correct: 0
-            },
-            {
-                question: "ما هو العنصر الكيميائي الذي رمزه 'O'؟",
-                options: ["ذهب", "أوكسجين", فضة", "حديد"],
-                correct: 1
-            },
-            {
-                question: "من هو مؤلف كتاب 'البؤساء'؟",
-                options: ["تولستوي", "فيكتور هوجو", "شكسبير", "ديستوفسكي"],
-                correct: 1
-            },
-            {
-                question: "ما هي أصغر قارة في العالم؟",
-                options: ["أفريقيا", "أوروبا", "أستراليا", "أنتاركتيكا"],
-                correct: 2
-            },
-            {
-                question: "ما هو أسرع حيوان بري؟",
-                options: ["الفهد", "الأسد", "الغزال", "النمر"],
-                correct: 0
-            }
-        ];
-
-        const hardQuestions = [
-            {
-                question: "ما هو أعمق محيط في العالم؟",
-                options: ["المحيط الهادئ", "المحيط الأطلسي", "المحيط الهندي", "المحيط المتجمد الشمالي"],
-                correct: 0
-            },
-            {
-                question: "من هو العالم الذي اكتشف الجاذبية الأرضية؟",
-                options: ["أينشتاين", "نيوتن", "غاليليو", "كوبرنيكوس"],
-                correct: 1
-            },
-            {
-                question: "ما هو المعدن السائل في درجة حرارة الغرفة؟",
-                options: ["الذهب", "الفضة", "الزئبق", "النحاس"],
-                correct: 2
-            },
-            {
-                question: "كم عدد عناصر الجدول الدوري القياسي؟",
-                options: ["92", "118", "108", "124"],
-                correct: 1
-            },
-            {
-                question: "ما هي اللغة التي تتحدث بها أكبر عدد من الشعوب كلغة أم؟",
-                options: ["الإنجليزية", "الإسبانية", "المندرين (الصينية)", "الهندية"],
-                correct: 2
-            }
-        ];
-
-        const impossibleQuestions = [
-            {
-                question: "ما هو أصغر عدد أولي؟",
-                options: ["0", "1", "2", "3"],
-                correct: 2
-            }
-        ];
-
-        // DOM Elements
-        const screens = {
-            splash: document.getElementById('splash-screen'),
-            playerSetup: document.getElementById('player-setup'),
-            instructions: document.getElementById('instructions'),
-            questionScreen: document.getElementById('question-screen'),
-            resultsScreen: document.getElementById('results-screen'),
-            leaderboardScreen: document.getElementById('leaderboard-screen')
-        };
-
-        // وظائف التهيئة
-        function initGame() {
-            // إنشاء معرف فريد للاعب
-            document.getElementById('player-id').value = 'PLR' + Math.floor(1000 + Math.random() * 9000);
-            
-            // إعداد المستمعين للأحداث
-            document.getElementById('start-btn').addEventListener('click', () => showScreen('playerSetup'));
-            
-            const avatars = document.querySelectorAll('.avatar');
-            avatars.forEach(avatar => {
-                avatar.addEventListener('click', () => {
-                    avatars.forEach(a => a.classList.remove('selected'));
-                    avatar.classList.add('selected');
-                });
-            });
-            
-            document.getElementById('confirm-player').addEventListener('click', confirmPlayer);
-            document.getElementById('start-quiz').addEventListener('click', startQuiz);
-            document.getElementById('end-quiz').addEventListener('click', showExitModal);
-            document.getElementById('confirm-exit').addEventListener('click', endQuiz);
-            document.getElementById('cancel-exit').addEventListener('click', hideExitModal);
-            document.getElementById('toggle-theme').addEventListener('click', toggleTheme);
-            document.getElementById('view-leaderboard').addEventListener('click', showLeaderboard);
-            document.getElementById('back-to-results').addEventListener('click', () => showScreen('resultsScreen'));
-            document.getElementById('play-again').addEventListener('click', resetGame);
-            
-            // إعداد مستمعي المساعدات
-            document.getElementById('freeze-time').addEventListener('click', freezeTime);
-            document.getElementById('fifty-fifty').addEventListener('click', fiftyFifty);
-            document.getElementById('skip-question').addEventListener('click', skipQuestion);
-            
-            // تحميل لوحة الصدارة
-            loadLeaderboard();
-        }
-
-        function confirmPlayer() {
-            const selectedAvatar = document.querySelector('.avatar.selected');
-            const playerName = document.getElementById('player-name').value;
-            
-            if (!selectedAvatar || !playerName) {
-                showNotification('يرجى اختيار صورة وإدخال اسم', 'error');
-                return;
-            }
-            
-            player.name = playerName;
-            player.id = document.getElementById('player-id').value;
-            player.avatar = selectedAvatar.src;
-            
-            showScreen('instructions');
-        }
-
-        function startQuiz() {
-            player.startTime = new Date();
-            showScreen('questionScreen');
-            loadQuestion();
-            startTimer();
-            gameActive = true;
-        }
-
-        function loadQuestion() {
-            // تحديد مستوى الصعوبة بناء على رقم السؤال الحالي
-            let questionSet;
-            if (currentQuestion < 5) {
-                questionSet = easyQuestions;
-                player.level = 1;
-            } else if (currentQuestion < 10) {
-                questionSet = mediumQuestions;
-                player.level = 2;
-            } else if (currentQuestion < 15) {
-                questionSet = hardQuestions;
-                player.level = 3;
-            } else {
-                questionSet = impossibleQuestions;
-                player.level = 4;
-            }
-            
-            // تحديد السؤال الحالي ضمن المجموعة
-            const questionIndex = currentQuestion % 5;
-            const question = questionSet[questionIndex];
-            
-            // تحديث واجهة المستخدم
-            document.getElementById('question-text').textContent = question.question;
-            document.getElementById('current-avatar').src = player.avatar;
-            document.getElementById('current-player-name').textContent = player.name;
-            document.getElementById('current-player-id').textContent = player.id;
-            document.getElementById('points').textContent = player.points;
-            document.getElementById('skips').textContent = player.skips;
-            document.getElementById('errors').textContent = `${player.errors}/3`;
-            document.getElementById('level').textContent = player.level;
-            
-            // تحديث شريط التقدم
-            updateProgressBar();
-            
-            // إنشاء خيارات الإجابة
-            const optionsContainer = document.getElementById('options-container');
-            optionsContainer.innerHTML = '';
-            
-            question.options.forEach((option, index) => {
-                const button = document.createElement('button');
-                button.className = 'option-btn';
-                button.textContent = option;
-                button.addEventListener('click', () => checkAnswer(index));
-                optionsContainer.appendChild(button);
-            });
-            
-            // إعادة تعيين المؤقت
-            timeLeft = 30;
-            updateTimerDisplay();
-        }
-
-        function checkAnswer(selectedIndex) {
-            clearInterval(timer);
-            
-            let questionSet;
-            if (currentQuestion < 5) {
-                questionSet = easyQuestions;
-            } else if (currentQuestion < 10) {
-                questionSet = mediumQuestions;
-            } else if (currentQuestion < 15) {
-                questionSet = hardQuestions;
-            } else {
-                questionSet = impossibleQuestions;
-            }
-            
-            const questionIndex = currentQuestion % 5;
-            const correctIndex = questionSet[questionIndex].correct;
-            
-            const options = document.querySelectorAll('.option-btn');
-            
-            if (selectedIndex === correctIndex) {
-                // إجابة صحيحة
-                options[selectedIndex].classList.add('correct');
-                player.points += 100;
-                player.correctAnswers++;
-                showNotification('إجابة صحيحة! +100 نقطة', 'success');
-            } else {
-                // إجابة خاطئة
-                options[selectedIndex].classList.add('wrong');
-                options[correctIndex].classList.add('correct');
-                player.points -= 100;
-                player.wrongAnswers++;
-                player.errors++;
-                showNotification('إجابة خاطئة! -100 نقطة', 'error');
-                
-                if (player.errors >= 3) {
-                    setTimeout(endQuiz, 1500);
-                    return;
-                }
-            }
-            
-            // الانتقال إلى السؤال التالي بعد تأخير
-            setTimeout(nextQuestion, 1500);
-        }
-
-        function nextQuestion() {
-            currentQuestion++;
-            
-            if (currentQuestion >= 16) {
-                endQuiz();
-                return;
-            }
-            
-            // التحقق إذا انتقلنا إلى مستوى جديد
-            if (currentQuestion === 5 || currentQuestion === 10 || currentQuestion === 15) {
-                showLevelUpMessage();
-            }
-            
-            loadQuestion();
-            startTimer();
-        }
-
-        function showLevelUpMessage() {
-            let message = "";
-            if (currentQuestion === 5) {
-                message = "لقد وصلت إلى المستوى المتوسط! 🔵 استعد للتحدي!";
-            } else if (currentQuestion === 10) {
-                message = "لقد وصلت إلى المستوى الصعب! 🟠 استعد للتحدي!";
-            } else if (currentQuestion === 15) {
-                message = "لقد وصلت إلى المستوى المستحيل! 🔴 استعد للتحدي!";
-            }
-            
-            showNotification(message, 'info');
-        }
-
-        function startTimer() {
-            clearInterval(timer);
-            updateTimerDisplay();
-            
-            timer = setInterval(() => {
-                timeLeft--;
-                updateTimerDisplay();
-                
-                if (timeLeft <= 0) {
-                    clearInterval(timer);
-                    timeOut();
-                }
-            }, 1000);
-        }
-
-        function updateTimerDisplay() {
-            const timerBar = document.querySelector('.timer-bar');
-            const percentage = (timeLeft / 30) * 100;
-            timerBar.style.width = `${percentage}%`;
-            
-            // تغيير لون المؤقت حسب الوقت المتبقي
-            if (timeLeft <= 10) {
-                timerBar.style.background = 'linear-gradient(to right, #f44336, #ff9800)';
-            } else {
-                timerBar.style.background = 'linear-gradient(to right, var(--primary-color), var(--secondary-color))';
-            }
-        }
-
-        function timeOut() {
-            const options = document.querySelectorAll('.option-btn');
-            let questionSet;
-            
-            if (currentQuestion < 5) {
-                questionSet = easyQuestions;
-            } else if (currentQuestion < 10) {
-                questionSet = mediumQuestions;
-            } else if (currentQuestion < 15) {
-                questionSet = hardQuestions;
-            } else {
-                questionSet = impossibleQuestions;
-            }
-            
-            const questionIndex = currentQuestion % 5;
-            const correctIndex = questionSet[questionIndex].correct;
-            
-            options[correctIndex].classList.add('correct');
-            
-            player.points -= 100;
-            player.wrongAnswers++;
-            player.errors++;
-            
-            showNotification('انتهى الوقت! -100 نقطة', 'error');
-            
-            if (player.errors >= 3) {
-                setTimeout(endQuiz, 1500);
-                return;
-            }
-            
-            setTimeout(nextQuestion, 1500);
-        }
-
-        function freezeTime() {
-            if (player.points < 100) {
-                showNotification('النقاط غير كافية ❌', 'error');
-                return;
-            }
-            
-            player.points -= 100;
-            player.helpsUsed++;
-            timeLeft += 10;
-            updateTimerDisplay();
-            
-            document.getElementById('freeze-time').classList.add('disabled');
-            showNotification('تم تجميد الوقت لمدة 10 ثوانٍ', 'success');
-        }
-
-        function fiftyFifty() {
-            if (player.points < 100) {
-                showNotification('النقاط غير كافية ❌', 'error');
-                return;
-            }
-            
-            let questionSet;
-            if (currentQuestion < 5) {
-                questionSet = easyQuestions;
-            } else if (currentQuestion < 10) {
-                questionSet = mediumQuestions;
-            } else if (currentQuestion < 15) {
-                questionSet = hardQuestions;
-            } else {
-                questionSet = impossibleQuestions;
-            }
-            
-            const questionIndex = currentQuestion % 5;
-            const correctIndex = questionSet[questionIndex].correct;
-            
-            const options = document.querySelectorAll('.option-btn');
-            let wrongOptions = [];
-            
-            for (let i = 0; i < options.length; i++) {
-                if (i !== correctIndex) {
-                    wrongOptions.push(i);
-                }
-            }
-            
-            // اختيار خيارين خاطئين عشوائيًا لإزالتهما
-            const removeCount = 2;
-            for (let i = 0; i < removeCount; i++) {
-                const randomIndex = Math.floor(Math.random() * wrongOptions.length);
-                const optionToRemove = wrongOptions[randomIndex];
-                options[optionToRemove].style.visibility = 'hidden';
-                wrongOptions.splice(randomIndex, 1);
-            }
-            
-            player.points -= 100;
-            player.helpsUsed++;
-            
-            document.getElementById('fifty-fifty').classList.add('disabled');
-            showNotification('تم حذف إجابتين خاطئتين', 'success');
-        }
-
-        function skipQuestion() {
-            const skipCost = 100 + (player.skips * 50);
-            
-            if (player.points < skipCost) {
-                showNotification('النقاط غير كافية ❌', 'error');
-                return;
-            }
-            
-            player.points -= skipCost;
-            player.skips++;
-            
-            showNotification(`تم تخطي السؤال بتكلفة ${skipCost} نقطة`, 'info');
-            nextQuestion();
-        }
-
-        function endQuiz() {
-            clearInterval(timer);
-            gameActive = false;
-            hideExitModal();
-            
-            // حساب الوقت المستغرق
-            const endTime = new Date();
-            player.timeSpent = Math.floor((endTime - player.startTime) / 1000);
-            
-            // تحديث شاشة النتائج
-            document.getElementById('result-name').textContent = player.name;
-            document.getElementById('result-id').textContent = player.id;
-            document.getElementById('correct-answers').textContent = player.correctAnswers;
-            document.getElementById('wrong-answers').textContent = player.wrongAnswers;
-            document.getElementById('total-skips').textContent = player.skips;
-            document.getElementById('final-points').textContent = player.points;
-            document.getElementById('final-level').textContent = player.level;
-            
-            // تحويل الوقت إلى تنسيق دقائق:ثواني
-            const minutes = Math.floor(player.timeSpent / 60);
-            const seconds = player.timeSpent % 60;
-            document.getElementById('time-spent').textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-            
-            // تحديد أداء اللاعب
-            const performanceFill = document.getElementById('performance-fill');
-            const performanceText = document.getElementById('performance-text');
-            
-            let performancePercentage = 0;
-            let performanceRating = '';
-            
-            if (player.points >= 500) {
-                performancePercentage = 100;
-                performanceRating = 'ممتاز!';
-            } else if (player.points >= 300) {
-                performancePercentage = 75;
-                performanceRating = 'جيد جدًا';
-            } else if (player.points >= 100) {
-                performancePercentage = 50;
-                performanceRating = 'جيد';
-            } else if (player.points >= 0) {
-                performancePercentage = 25;
-                performanceRating = 'سيئ';
-            } else {
-                performancePercentage = 0;
-                performanceRating = 'سيئ جدًا';
-            }
-            
-            performanceFill.style.width = `${performancePercentage}%`;
-            performanceText.textContent = performanceRating;
-            
-            // إرسال النتائج إلى Google Sheets
-            submitResults();
-            
-            showScreen('resultsScreen');
-        }
-
-        function submitResults() {
-            // إضافة النتيجة إلى لوحة الصدارة المحلية
-            leaderboard.push({
-                name: player.name,
-                id: player.id,
-                level: player.level,
-                points: player.points,
-                time: player.timeSpent
-            });
-            
-            // ترتيب اللوحة حسب النقاط
-            leaderboard.sort((a, b) => b.points - a.points);
-            
-            // حفظ اللوحة في localStorage
-            localStorage.setItem('quizLeaderboard', JSON.stringify(leaderboard));
-            
-            // هنا سيتم إرسال البيانات إلى Google App Script
-            // const scriptURL = 'https://script.google.com/macros/s/AKfycbw68QqjhU0eqOszPpLBm0tXPtjaSV000kBfOWiorLk2lFm45ud3do-f5PMCy9b0LSez/exec';
-            
-            // const data = {
-            //     deviceId: generateDeviceId(),
-            //     playerName: player.name,
-            //     playerId: player.id,
-            //     startTime: player.startTime.toISOString(),
-            //     duration: player.timeSpent,
-            //     status: 'completed',
-            //     helpsUsed: player.helpsUsed,
-            //     finalLevel: player.level,
-            //     points: player.points
-            // };
-            
-            // fetch(scriptURL, {
-            //     method: 'POST',
-            //     mode: 'no-cors',
-            //     headers: {
-            //         'Content-Type': 'application/json',
-            //     },
-            //     body: JSON.stringify(data)
-            // });
-        }
-
-        function generateDeviceId() {
-            return 'DEV' + Math.floor(10000 + Math.random() * 90000);
-        }
-
-        function loadLeaderboard() {
-            const savedLeaderboard = localStorage.getItem('quizLeaderboard');
-            if (savedLeaderboard) {
-                leaderboard = JSON.parse(savedLeaderboard);
-            }
-        }
-
-        function showLeaderboard() {
-            const leaderboardBody = document.getElementById('leaderboard-body');
-            leaderboardBody.innerHTML = '';
-            
-            leaderboard.slice(0, 10).forEach((entry, index) => {
-                const row = document.createElement('tr');
-                
-                let rankClass = '';
-                if (index === 0) rankClass = 'rank-1';
-                else if (index === 1) rankClass = 'rank-2';
-                else if (index === 2) rankClass = 'rank-3';
-                
-                // تحويل الوقت إلى تنسيق دقائق:ثواني
-                const minutes = Math.floor(entry.time / 60);
-                const seconds = entry.time % 60;
-                const timeFormatted = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-                
-                row.innerHTML = `
-                    <td class="${rankClass}">${index + 1}</td>
-                    <td>${entry.name}</td>
-                    <td>${entry.id}</td>
-                    <td>${entry.level}</td>
-                    <td>${entry.points}</td>
-                `;
-                
-                leaderboardBody.appendChild(row);
-            });
-            
-            showScreen('leaderboardScreen');
-        }
-
-        function resetGame() {
-            player = {
-                name: player.name,
-                id: player.id,
-                avatar: player.avatar,
-                points: 100,
-                correctAnswers: 0,
-                wrongAnswers: 0,
-                skips: 0,
-                errors: 0,
-                level: 1,
-                startTime: null,
-                timeSpent: 0,
-                helpsUsed: 0
-            };
-            
-            currentQuestion = 0;
-            
-            // إعادة تمكين المساعدات
-            document.getElementById('freeze-time').classList.remove('disabled');
-            document.getElementById('fifty-fifty').classList.remove('disabled');
-            
-            showScreen('questionScreen');
-            startQuiz();
-        }
-
-        function showScreen(screenName) {
-            for (const screen in screens) {
-                screens[screen].classList.remove('active');
-            }
-            screens[screenName].classList.add('active');
-        }
-
-        function showExitModal() {
-            document.getElementById('exit-modal').style.display = 'flex';
-        }
-
-        function hideExitModal() {
-            document.getElementById('exit-modal').style.display = 'none';
-        }
-
-        function showNotification(message, type) {
-            const notification = document.getElementById('notification');
-            notification.textContent = message;
-            notification.className = `notification ${type} show`;
-            
-            setTimeout(() => {
-                notification.classList.remove('show');
-            }, 3000);
-        }
-
-        function toggleTheme() {
-            document.body.classList.toggle('dark-mode');
-        }
-
-        function updateProgressBar() {
-            const segments = document.querySelectorAll('.level-segment');
-            
-            segments.forEach(segment => {
-                segment.style.opacity = '0.6';
-            });
-            
-            if (player.level >= 1) segments[0].style.opacity = '1';
-            if (player.level >= 2) segments[1].style.opacity = '1';
-            if (player.level >= 3) segments[2].style.opacity = '1';
-            if (player.level >= 4) segments[3].style.opacity = '1';
-        }
-
-        // تهيئة اللعبة عند تحميل الصفحة
-        window.addEventListener('DOMContentLoaded', initGame);
-    </script>
-
-    <script>
-        // Google App Script Code (للاستخدام في مشروع منفصل)
-        /*
-        function doPost(e) {
-            const sheet = SpreadsheetApp.openById('YOUR_SHEET_ID').getActiveSheet();
-            const data = JSON.parse(e.postData.contents);
-            
-            sheet.appendRow([
-                new Date(),
-                data.deviceId,
-                data.playerName,
-                data.playerId,
-                data.startTime,
-                data.duration,
-                data.status,
-                data.helpsUsed,
-                data.finalLevel,
-                data.points
-            ]);
-            
-            return ContentService.createTextOutput(JSON.stringify({result: 'success'})).setMimeType(ContentService.MimeType.JSON);
-        }
-        
-        function doGet() {
-            const sheet = SpreadsheetApp.openById('YOUR_SHEET_ID').getSheetByName('Leaderboard');
-            const data = sheet.getDataRange().getValues();
-            
-            const leaderboardData = data.slice(1).map(row => ({
-                name: row[2],
-                id: row[3],
-                level: row[8],
-                points: row[9],
-                time: row[5]
-            })).sort((a, b) => b.points - a.points);
-            
-            return ContentService.createTextOutput(JSON.stringify(leaderboardData)).setMimeType(ContentService.MimeType.JSON);
-        }
-        */
-    </script>
+    <div id="notification-container"></div>
+    
+    <script src="script.js"></script>
 </body>
 </html>
