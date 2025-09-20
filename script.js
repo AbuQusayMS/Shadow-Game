@@ -236,39 +236,55 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function endQuiz(reason = "انتهت المسابقة") {
-        gameState.gameActive = false;
-        clearInterval(gameState.timer);
-        hideModals();
-        showNotification(reason, 'info');
+    // 1. التأكد من إيقاف كل العمليات النشطة
+    gameState.gameActive = false;
+    clearInterval(gameState.timer);
+    hideModals();
+    showNotification(reason, 'info');
 
-        const endTime = new Date();
-        const timeSpent = Math.round((endTime - gameState.player.startTime) / 1000);
-        const minutes = Math.floor(timeSpent / 60).toString().padStart(2, '0');
-        const seconds = (timeSpent % 60).toString().padStart(2, '0');
+    // 2. حساب وعرض البيانات الأساسية
+    const endTime = new Date();
+    const timeSpent = Math.round((endTime - gameState.player.startTime) / 1000);
+    const minutes = Math.floor(timeSpent / 60).toString().padStart(2, '0');
+    const seconds = (timeSpent % 60).toString().padStart(2, '0');
 
-        document.getElementById('result-name').textContent = gameState.player.name;
-        document.getElementById('result-id').textContent = gameState.player.id;
-        document.getElementById('result-correct').textContent = gameState.player.correctAnswers;
-        document.getElementById('result-wrong').textContent = gameState.player.wrongAnswers;
-        document.getElementById('result-skips').textContent = gameState.player.skips;
-        document.getElementById('result-points').textContent = gameState.player.points;
-        document.getElementById('result-time').textContent = `${minutes}:${seconds}`;
-        document.getElementById('result-level').textContent = gameState.levels[gameState.currentLevelIndex];
-        
-        // حساب شريط الأداء
-        const performance = Math.max(0, (gameState.player.points / ((gameState.player.correctAnswers + gameState.player.wrongAnswers) * 100)) * 100);
-        const performanceFill = document.getElementById('performance-fill');
-        const performanceText = document.getElementById('performance-text');
-        performanceFill.style.width = `${performance}%`;
-        
-        if (performance >= 80) performanceText.textContent = 'ممتاز 🚀';
-        else if (performance >= 60) performanceText.textContent = 'جيد جدًا 👍';
-        else if (performance >= 40) performanceText.textContent = 'جيد 🙂';
-        else performanceText.textContent = 'يمكنك فعل ما هو أفضل 💪';
+    document.getElementById('result-name').textContent = gameState.player.name;
+    document.getElementById('result-id').textContent = gameState.player.id;
+    document.getElementById('result-correct').textContent = gameState.player.correctAnswers;
+    document.getElementById('result-wrong').textContent = gameState.player.wrongAnswers;
+    document.getElementById('result-skips').textContent = gameState.player.skips;
+    document.getElementById('result-points').textContent = gameState.player.points;
+    document.getElementById('result-time').textContent = `${minutes}:${seconds}`;
+    
+    // التحقق من أن مؤشر المستوى ضمن النطاق الصحيح
+    const levelToShow = gameState.levels[gameState.currentLevelIndex] || "غير محدد";
+    document.getElementById('result-level').textContent = levelToShow;
 
-        // submitToGoogleSheets();
-        showScreen('results');
+    // 3. حساب شريط الأداء مع معالجة الأخطاء
+    const performanceFill = document.getElementById('performance-fill');
+    const performanceText = document.getElementById('performance-text');
+    const totalAnswers = gameState.player.correctAnswers + gameState.player.wrongAnswers;
+    let performance = 0; // القيمة الافتراضية هي صفر
+
+    // تجنب القسمة على صفر إذا لم يجب اللاعب على أي سؤال
+    if (totalAnswers > 0) {
+        // تم تبسيط المعادلة لتكون أكثر دقة
+        performance = Math.max(0, (gameState.player.correctAnswers / totalAnswers) * 100);
     }
+    
+    performanceFill.style.width = `${performance}%`;
+
+    if (performance >= 80) performanceText.textContent = 'ممتاز 🚀';
+    else if (performance >= 60) performanceText.textContent = 'جيد جدًا 👍';
+    else if (performance >= 40) performanceText.textContent = 'جيد 🙂';
+    else performanceText.textContent = 'يمكنك فعل ما هو أفضل 💪';
+
+    // 4. إرسال البيانات إلى Google Sheets
+    submitToGoogleSheets(gameState);
+
+    // 5. عرض شاشة النتائج
+    showScreen('results');
+}
 
     function updateHud() {
         hud.points.textContent = gameState.player.points;
