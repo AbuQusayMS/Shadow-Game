@@ -1117,77 +1117,31 @@
         </div>
     </div>
 
-    <script>
+<script>
     class QuizGame {
         constructor() {
             this.API_URL = "https://script.google.com/macros/s/AKfycbw68QqjhU0eqOszPpLBm0tXPtjaSV000kBfOWiorLk2lFm45ud3do-f5PMCy9b0LSez/exec";
             this.QUESTION_TIME = 80;
-            this.TOTAL_AVATARS = 16;
             this.MAX_WRONG_ANSWERS = 3;
             this.STARTING_SCORE = 100;
 
-            // تعريف المستويات والأسئلة
+            // 1. تعريف المستويات بدون عدد أسئلة ثابت
             this.LEVELS = [
-                {
-                    name: "easy",
-                    label: "سهل",
-                    questions: 5,
-                    color: "#10b981"
-                },
-                {
-                    name: "medium", 
-                    label: "متوسط",
-                    questions: 5,
-                    color: "#3b82f6"
-                },
-                {
-                    name: "hard",
-                    label: "صعب", 
-                    questions: 5,
-                    color: "#f59e0b"
-                },
-                {
-                    name: "impossible",
-                    label: "مستحيل",
-                    questions: 1,
-                    color: "#ef4444"
-                }
+                { name: "easy", label: "سهل", color: "#10b981" },
+                { name: "medium", label: "متوسط", color: "#3b82f6" },
+                { name: "hard", label: "صعب", color: "#f59e0b" },
+                { name: "impossible", label: "مستحيل", color: "#ef4444" }
             ];
 
-            // الأسئلة (يجب استبدالها بأسئلتك الفعلية)
-            this.QUESTIONS = {
-                easy: [
-                    { q: "ما هي عاصمة فرنسا؟", options: ["باريس", "لندن", "برلين", "روما"], correct: 0 },
-                    { q: "كم عدد الكواكب في النظام الشمسي؟", options: ["7", "8", "9", "10"], correct: 1 },
-                    { q: "ما هو أطول نهر في العالم؟", options: ["النيل", "الأمازون", "الميسيسيبي", "الدانوب"], correct: 1 },
-                    { q: "في أي عام هبط الإنسان على القمر؟", options: ["1965", "1969", "1972", "1975"], correct: 1 },
-                    { q: "ما هي اللغة الرسمية في البرازيل؟", options: ["الإسبانية", "البرتغالية", "الإنجليزية", "الفرنسية"], correct: 1 }
-                ],
-                medium: [
-                    { q: "من هو مؤلف رواية 'البؤساء'؟", options: ["تولستوي", "فيكتور هوغو", "ديستوفسكي", "شكسبير"], correct: 1 },
-                    { q: "ما هو العنصر الكيميائي الذي رمزه 'Au'؟", options: ["الفضة", "الذهب", "الألومنيوم", "الأرجون"], correct: 1 },
-                    { q: "ما هي أصغر عظمة في جسم الإنسان؟", options: ["عظمة الركاب", "عظمة المطرقة", "عظمة السندان", "عظمة اللقمة"], correct: 0 },
-                    { q: "في أي قارة تقع دولة رواندا؟", options: ["آسيا", "أفريقيا", "أمريكا الجنوبية", "أوروبا"], correct: 1 },
-                    { q: "من هو الفنان الذي رسم 'ليلة مرصعة بالنجوم'؟", options: ["بيكاسو", "فان غوخ", "دافنشي", "مونيه"], correct: 1 }
-                ],
-                hard: [
-                    { q: "ما هو أعمق محيط في العالم؟", options: ["المحيط الأطلسي", "المحيط الهندي", "المحيط الهادئ", "المحيط المتجمد الشمالي"], correct: 2 },
-                    { q: "من هو العالم الذي اكتشف قانون الجاذبية؟", options: ["أينشتاين", "نيوتن", "غاليليو", "كبلر"], correct: 1 },
-                    { q: "ما هي أقدم حضارة في التاريخ؟", options: ["الحضارة الفرعونية", "الحضارة السومرية", "الحضارة الصينية", "الحضارة الهندية"], correct: 1 },
-                    { q: "كم عدد عناصر الجدول الدوري؟", options: ["108", "118", "128", "138"], correct: 1 },
-                    { q: "ما هو أسرع حيوان بري؟", options: ["الفهد", "الأسد", "النمر", "الظبي"], correct: 0 }
-                ],
-                impossible: [
-                    { q: "ما هو أصغر عدد أولي؟", options: ["0", "1", "2", "3"], correct: 2 }
-                ]
-            };
+            // 2. الأسئلة ستُحمّل من ملف خارجي
+            this.QUESTIONS = {};
 
-                this.HELPER_COSTS = {
-                    fiftyFifty: 100,
-                    freezeTime: 100
-                };
-                this.initialSkipCost = 100; // تكلفة التخطي الأولية
-                this.currentSkipCost = this.initialSkipCost; // التكلفة الحالية التي ستتغير
+            this.HELPER_COSTS = {
+                fiftyFifty: 100,
+                freezeTime: 100
+            };
+            this.initialSkipCost = 100;
+            this.currentSkipCost = this.initialSkipCost;
 
             this.isTimeFrozen = false;
             this.gameState = {};
@@ -1199,12 +1153,43 @@
             this.init();
         }
 
-        init() {
+        // 3. دالة جديدة لتحميل الأسئلة من ملف JSON
+        async loadQuestions() {
+            try {
+                const response = await fetch('questions.json');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                this.QUESTIONS = await response.json();
+                return true;
+            } catch (error) {
+                console.error("فشل في تحميل ملف الأسئلة:", error);
+                return false;
+            }
+        }
+
+        // 4. دالة جديدة لخلط ترتيب المصفوفات
+        shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        // 5. تعديل init لتحميل الأسئلة أولاً
+        async init() {
             this.cacheDomElements();
             this.bindEventListeners();
             this.populateAvatarGrid();
-            this.showScreen('start');
-            this.hideLoader();
+
+            const questionsLoaded = await this.loadQuestions();
+            
+            if (questionsLoaded) {
+                this.showScreen('start');
+                this.hideLoader();
+            } else {
+                this.domElements.screens.loader.textContent = "حدث خطأ في تحميل الأسئلة. الرجاء تحديث الصفحة.";
+            }
         }
 
         cacheDomElements() {
@@ -1258,34 +1243,34 @@
 
         const avatarUrls = [
             // --- المجموعة الأولى: أشخاص عامون 🧑‍🤝‍🧑 ---
-            "https://em-content.zobj.net/thumbs/120/apple/354/woman_1f469.png",                           // امرأة
-            "https://em-content.zobj.net/thumbs/120/apple/354/man_1f468.png",                              // رجل
-            "https://em-content.zobj.net/thumbs/120/apple/354/woman-curly-hair_1f469-200d-1f9b1.png",      // امرأة بشعر مجعد
-            "https://em-content.zobj.net/thumbs/120/apple/354/person-beard_1f9d4.png",                      // شخص بلحية
-            "https://em-content.zobj.net/thumbs/120/apple/354/old-man_1f474.png",                           // رجل كبير في السن
+            "https://em-content.zobj.net/thumbs/120/apple/354/woman_1f469.png",                 // امرأة
+            "https://em-content.zobj.net/thumbs/120/apple/354/man_1f468.png",                       // رجل
+            "https://em-content.zobj.net/thumbs/120/apple/354/woman-curly-hair_1f469-200d-1f9b1.png",     // امرأة بشعر مجعد
+            "https://em-content.zobj.net/thumbs/120/apple/354/person-beard_1f9d4.png",                 // شخص بلحية
+            "https://em-content.zobj.net/thumbs/120/apple/354/old-man_1f474.png",                      // رجل كبير في السن
 
             // --- المجموعة الثانية: مهن واختصاصات 🧑‍💼 ---
-            "https://em-content.zobj.net/thumbs/120/apple/354/student_1f9d1-200d-1f393.png",                // طالب
-            "https://em-content.zobj.net/thumbs/120/apple/354/teacher_1f9d1-200d-1f3eb.png",                // معلم
-            "https://em-content.zobj.net/thumbs/120/apple/354/scientist_1f9d1-200d-1f52c.png",              // عالم
-            "https://em-content.zobj.net/thumbs/120/apple/354/health-worker_1f9d1-200d-2695-fe0f.png",      // عامل صحي
-            "https://em-content.zobj.net/thumbs/120/apple/354/cook_1f9d1-200d-1f373.png",                   // طباخ
-            "https://em-content.zobj.net/thumbs/120/apple/354/farmer_1f9d1-200d-1f33e.png",                 // مزارع
-            "https://em-content.zobj.net/thumbs/120/apple/354/mechanic_1f9d1-200d-1f527.png",               // ميكانيكي
-            "https://em-content.zobj.net/thumbs/120/apple/354/office-worker_1f9d1-200d-1f4bc.png",          // موظف مكتب
-            "https://em-content.zobj.net/thumbs/120/apple/354/artist_1f9d1-200d-1f3a8.png",                 // فنان
-            "https://em-content.zobj.net/thumbs/120/apple/354/singer_1f9d1-200d-1f3a4.png",                 // مغني
-            "https://em-content.zobj.net/thumbs/120/apple/354/astronaut_1f9d1-200d-1f680.png",              // رائد فضاء
-            "https://em-content.zobj.net/thumbs/120/apple/354/pilot_1f9d1-200d-2708-fe0f.png",                // طيار
-            "https://em-content.zobj.net/thumbs/120/apple/354/police-officer_1f46e.png",                    // ضابط شرطة
-            "https://em-content.zobj.net/thumbs/120/apple/354/firefighter_1f9d1-200d-1f692.png",            // رجل إطفاء
-            "https://em-content.zobj.net/thumbs/120/apple/354/detective_1f575-fe0f.png",                    // محقق
-            "https://em-content.zobj.net/thumbs/120/apple/354/judge_1f9d1-200d-2696-fe0f.png",               // قاضي
+            "https://em-content.zobj.net/thumbs/120/apple/354/student_1f9d1-200d-1f393.png",            // طالب
+            "https://em-content.zobj.net/thumbs/120/apple/354/teacher_1f9d1-200d-1f3eb.png",            // معلم
+            "https://em-content.zobj.net/thumbs/120/apple/354/scientist_1f9d1-200d-1f52c.png",          // عالم
+            "https://em-content.zobj.net/thumbs/120/apple/354/health-worker_1f9d1-200d-2695-fe0f.png",    // عامل صحي
+            "https://em-content.zobj.net/thumbs/120/apple/354/cook_1f9d1-200d-1f373.png",                // طباخ
+            "https://em-content.zobj.net/thumbs/120/apple/354/farmer_1f9d1-200d-1f33e.png",             // مزارع
+            "https://em-content.zobj.net/thumbs/120/apple/354/mechanic_1f9d1-200d-1f527.png",           // ميكانيكي
+            "https://em-content.zobj.net/thumbs/120/apple/354/office-worker_1f9d1-200d-1f4bc.png",        // موظف مكتب
+            "https://em-content.zobj.net/thumbs/120/apple/354/artist_1f9d1-200d-1f3a8.png",              // فنان
+            "https://em-content.zobj.net/thumbs/120/apple/354/singer_1f9d1-200d-1f3a4.png",              // مغني
+            "https://em-content.zobj.net/thumbs/120/apple/354/astronaut_1f9d1-200d-1f680.png",          // رائد فضاء
+            "https://em-content.zobj.net/thumbs/120/apple/354/pilot_1f9d1-200d-2708-fe0f.png",             // طيار
+            "https://em-content.zobj.net/thumbs/120/apple/354/police-officer_1f46e.png",               // ضابط شرطة
+            "https://em-content.zobj.net/thumbs/120/apple/354/firefighter_1f9d1-200d-1f692.png",         // رجل إطفاء
+            "https://em-content.zobj.net/thumbs/120/apple/354/detective_1f575-fe0f.png",                // محقق
+            "https://em-content.zobj.net/thumbs/120/apple/354/judge_1f9d1-200d-2696-fe0f.png",             // قاضي
 
             // --- المجموعة الثالثة: شخصيات خيالية ومميزة 🦸‍♂️ ---
-            "https://em-content.zobj.net/thumbs/120/apple/354/superhero_1f9b8.png",                         // بطل خارق
-            "https://em-content.zobj.net/thumbs/120/apple/354/mage_1f9d9.png",                              // ساحر
-            "https://em-content.zobj.net/thumbs/120/apple/354/elf_1f9dd.png"                                // قزم
+            "https://em-content.zobj.net/thumbs/120/apple/354/superhero_1f9b8.png",                   // بطل خارق
+            "https://em-content.zobj.net/thumbs/120/apple/354/mage_1f9d9.png",                       // ساحر
+            "https://em-content.zobj.net/thumbs/120/apple/354/elf_1f9dd.png"                           // قزم
         ];
 
             avatarUrls.forEach((url, index) => {
@@ -1323,8 +1308,8 @@
 
         hideLoader() {
             this.domElements.screens.loader.classList.remove('active');
-        } 
-        
+        }
+
         async startGame() {
             const name = this.domElements.nameInput.value.trim();
             if (name.length < 2) {
@@ -1332,7 +1317,7 @@
                 this.domElements.nameError.classList.add('show');
                 return;
             }
-    
+
             this.gameState = {
                 name: name,
                 avatar: this.gameState.avatar,
@@ -1343,12 +1328,11 @@
                 correctAnswers: 0,
                 skips: 0,
                 startTime: new Date(),
-                helpersUsed: { fiftyFifty: false, freezeTime: false }, 
+                helpersUsed: { fiftyFifty: false, freezeTime: false },
             };
-    
-            // يقوم بإعادة تعيين سعر التخطي إلى 100 مع بداية كل لعبة
-            this.currentSkipCost = this.initialSkipCost; 
-    
+
+            this.currentSkipCost = this.initialSkipCost;
+
             this.updateScore(this.STARTING_SCORE);
             this.setupGameUI();
             this.showScreen('game');
@@ -1359,16 +1343,22 @@
             return `P${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
         }
 
+        // 6. تعديل startLevel لخلط الأسئلة
         startLevel() {
             const currentLevel = this.LEVELS[this.gameState.level];
             document.body.setAttribute('data-level', currentLevel.name);
             document.getElementById('currentLevelBadge').textContent = currentLevel.label;
-            
-            // تحديث مؤشرات المستوى
+
+            // خلط الأسئلة في بداية المستوى
+            let levelQuestions = [...this.QUESTIONS[currentLevel.name]];
+            if (currentLevel.name !== 'impossible') {
+                this.shuffleArray(levelQuestions);
+            }
+            this.gameState.shuffledQuestions = levelQuestions;
+
             document.querySelectorAll('.level-indicator').forEach((indicator, index) => {
                 if (index < this.gameState.level) {
-                    indicator.classList.add('completed');
-                    indicator.classList.add('active');
+                    indicator.classList.add('completed', 'active');
                 } else if (index === this.gameState.level) {
                     indicator.classList.add('active');
                     indicator.classList.remove('completed');
@@ -1381,11 +1371,11 @@
             this.fetchQuestion();
         }
 
+        // 7. تعديل fetchQuestion ليقرأ من الأسئلة المخلوطة
         fetchQuestion() {
-            const currentLevel = this.LEVELS[this.gameState.level];
-            const questions = this.QUESTIONS[currentLevel.name];
+            const questions = this.gameState.shuffledQuestions;
             
-            if (this.gameState.question >= questions.length) {
+            if (!questions || this.gameState.question >= questions.length) {
                 this.levelComplete();
                 return;
             }
@@ -1394,32 +1384,31 @@
             this.displayQuestion(questionData);
         }
 
+        // 8. تعديل displayQuestion لخلط الخيارات
         displayQuestion(questionData) {
             this.answerSubmitted = false;
+            
+            const correctAnswerText = questionData.options[questionData.correct];
+            let shuffledOptions = [...questionData.options];
+            this.shuffleArray(shuffledOptions);
+
+            const totalQuestionsInLevel = this.gameState.shuffledQuestions.length;
+            document.getElementById('questionCounter').textContent = `السؤال ${this.gameState.question + 1} من ${totalQuestionsInLevel}`;
+            
             this.domElements.questionText.textContent = questionData.q;
-            document.getElementById('questionCounter').textContent = `السؤال ${this.gameState.question + 1} من ${this.LEVELS[this.gameState.level].questions}`;
             this.domElements.optionsGrid.innerHTML = '';
 
-            let answers = questionData.options.map((optionText, index) => ({
-                text: optionText,
-                isCorrect: index === questionData.correct
-            }));
-
-            for (let i = answers.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [answers[i], answers[j]] = [answers[j], answers[i]];
-            }
-            
-            answers.forEach(answer => {
+            shuffledOptions.forEach(optionText => {
                 const button = document.createElement('button');
                 button.className = 'option-btn';
-                button.textContent = answer.text;
+                button.textContent = optionText;
                 
-                if (answer.isCorrect) {
+                const isCorrect = optionText === correctAnswerText;
+                if (isCorrect) {
                     button.dataset.correct = 'true';
                 }
                 
-                button.addEventListener('click', () => this.checkAnswer(answer.isCorrect, button));
+                button.addEventListener('click', () => this.checkAnswer(isCorrect, button));
                 
                 this.domElements.optionsGrid.appendChild(button);
             });
@@ -1461,7 +1450,7 @@
             setTimeout(() => {
                 if (isGameOver) {
                     this.endGame();
-                } else if (this.gameState.question >= this.QUESTIONS[this.LEVELS[this.gameState.level].name].length) {
+                } else if (this.gameState.question >= this.gameState.shuffledQuestions.length) {
                     this.levelComplete();
                 } else {
                     this.fetchQuestion();
@@ -1506,23 +1495,10 @@
             document.getElementById('totalTime').textContent = this.formatTime(totalTimeSeconds);
             document.getElementById('finalLevel').textContent = currentLevel.label;
             
-            // تحديد تقييم الأداء
             const performanceRating = this.calculatePerformanceRating();
             document.getElementById('performanceText').textContent = performanceRating;
             
             this.showScreen('end');
-            
-            // حفظ النتائج (يمكن تفعيله عند الاتصال بالخادم)
-            /* this.apiCall({
-                action: 'saveScore',
-                playerId: this.gameState.playerId,
-                name: this.gameState.name,
-                score: this.currentScoreValue,
-                level: currentLevel.name,
-                correctAnswers: this.gameState.correctAnswers,
-                wrongAnswers: this.gameState.wrongAnswers,
-                totalTime: totalTimeSeconds
-            }).catch(error => console.error("Failed to save score:", error)); */
         }
         
         calculatePerformanceRating() {
@@ -1543,12 +1519,11 @@
             const type = btn.dataset.type;
 
             if (type === 'skipQuestion') {
-                // --- منطق زر التخطي ---
                 if (this.currentScoreValue < this.currentSkipCost) {
                     this.showToast("نقاطك غير كافية لاستخدام التخطي!", "error");
                     return;
                 }
-        
+                
                 this.updateScore(this.currentScoreValue - this.currentSkipCost);
                 this.showToast(`تم التخطي! -${this.currentSkipCost} نقطة`, "success");
                 this.currentSkipCost += 50; 
@@ -1559,31 +1534,26 @@
                 this.fetchQuestion();
 
             } else {
-                // --- منطق المساعدات الأخرى (50:50 و تجميد الوقت) ---
-
-                // 1. تحقق أولاً إذا كانت المساعدة مستخدمة
                 if (this.gameState.helpersUsed[type]) {
                     this.showToast("لقد استخدمت هذه المساعدة بالفعل!", "info");
                     return;
                 }
 
-                // 2. إذا لم تكن مستخدمة، تحقق من النقاط
                 const cost = this.HELPER_COSTS[type];
                 if (this.currentScoreValue < cost) {
                     this.showToast("نقاطك غير كافية لهذه المساعدة!", "error");
                     return;
                 }
 
-                // 3. إذا نجحت كل الشروط، قم بتنفيذ المساعدة
                 this.updateScore(this.currentScoreValue - cost);
                 this.gameState.helpersUsed[type] = true;
-                this.updateUI(); // لتعطيل الزر فورًا بعد الاستخدام
+                this.updateUI();
                 this.showToast(`تم استخدام المساعدة! -${cost} نقطة`, "success");
 
                 if (type === 'fiftyFifty') {
                     const options = Array.from(this.domElements.optionsGrid.querySelectorAll('.option-btn'));
                     let wrongOptions = options.filter(btn => btn.dataset.correct !== 'true');
-            
+                    
                     wrongOptions.sort(() => 0.5 - Math.random());
                     if(wrongOptions.length > 1) {
                         wrongOptions[0].classList.add('hidden');
@@ -1598,7 +1568,9 @@
                     }, 10000);
                 }
             }
-        }        startTimer() {
+        }
+
+        startTimer() {
             clearInterval(this.timerInterval);
             let timeLeft = this.QUESTION_TIME;
             const timerBar = document.querySelector('.timer-bar');
@@ -1650,7 +1622,6 @@
             document.getElementById('wrongAnswersCount').textContent = `${this.gameState.wrongAnswers} / ${this.MAX_WRONG_ANSWERS}`;
             document.getElementById('skipCount').textContent = this.gameState.skips;
 
-            // تحديث تكلفة زر التخطي
             const skipCostSpan = document.getElementById('skipCost');
             if (skipCostSpan) {
                 skipCostSpan.textContent = `(${this.currentSkipCost})`;
@@ -1659,8 +1630,7 @@
             document.querySelectorAll('.helper-btn').forEach(btn => {
                 const type = btn.dataset.type;
                 if (type !== 'skipQuestion') {
-                    // عطّل الزر فقط إذا تم استخدامه بالفعل
-            const helperIsUsed = this.gameState.helpersUsed[type];
+                    const helperIsUsed = this.gameState.helpersUsed[type];
                     btn.disabled = helperIsUsed;
                 }
             });
@@ -1792,7 +1762,7 @@
         
         new QuizGame();
     });
-    </script>
+</script>
     
     <div class="sr-only" aria-live="polite" id="liveAnnouncements"></div>
 </body>
