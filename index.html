@@ -1243,19 +1243,55 @@
         populateAvatarGrid() {
             const avatarGrid = document.querySelector('.avatar-grid');
             avatarGrid.innerHTML = '';
-            for (let i = 1; i <= this.TOTAL_AVATARS; i++) {
+
+            // تم زيادة عدد الروابط هنا
+            const avatarUrls = [
+                // الـ 16 صورة الأصلية
+                "https://em-content.zobj.net/thumbs/120/apple/354/woman_1f469.png",
+                "https://em-content.zobj.net/thumbs/120/apple/354/man_1f468.png",
+                "https://em-content.zobj.net/thumbs/120/apple/354/woman-curly-hair_1f469-200d-1f9b1.png",
+                "https://em-content.zobj.net/thumbs/120/apple/354/man-beard_1f9d4.png",
+                "https://em-content.zobj.net/thumbs/120/apple/354/astronaut_1f9d1-200d-1f680.png",
+                "https://em-content.zobj.net/thumbs/120/apple/354/older-woman_1f475.png",
+                "https://em-content.zobj.net/thumbs/120/apple/354/old-man_1f474.png",
+                "https://em-content.zobj.net/thumbs/120/apple/354/person-beard_1f9d4.png",
+                "https://em-content.zobj.net/thumbs/120/apple/354/artist_1f9d1-200d-1f3a8.png",
+                "https://em-content.zobj.net/thumbs/120/apple/354/cook_1f9d1-200d-1f373.png",
+                "https://em-content.zobj.net/thumbs/120/apple/354/health-worker_1f9d1-200d-2695-fe0f.png",
+                "https://em-content.zobj.net/thumbs/120/apple/354/office-worker_1f9d1-200d-1f4bc.png",
+                "https://em-content.zobj.net/thumbs/120/apple/354/farmer_1f9d1-200d-1f33e.png",
+                "https://em-content.zobj.net/thumbs/120/apple/354/mechanic_1f9d1-200d-1f527.png",
+                "https://em-content.zobj.net/thumbs/120/apple/354/student_1f9d1-200d-1f393.png",
+                "https://em-content.zobj.net/thumbs/120/apple/354/teacher_1f9d1-200d-1f3eb.png",
+        
+        // -- 10 صور جديدة --
+                "https://em-content.zobj.net/thumbs/120/apple/354/police-officer_1f46e.png",
+                "https://em-content.zobj.net/thumbs/120/apple/354/firefighter_1f9d1-200d-1f692.png",
+                "https://em-content.zobj.net/thumbs/120/apple/354/scientist_1f9d1-200d-1f52c.png",
+                "https://em-content.zobj.net/thumbs/120/apple/354/judge_1f9d1-200d-2696-fe0f.png",
+                "https://em-content.zobj.net/thumbs/120/apple/354/pilot_1f9d1-200d-2708-fe0f.png",
+                "https://em-content.zobj.net/thumbs/120/apple/354/singer_1f9d1-200d-1f3a4.png",
+                "https://em-content.zobj.net/thumbs/120/apple/354/detective_1f575-fe0f.png",
+                "https://em-content.zobj.net/thumbs/120/apple/354/mage_1f9d9.png",
+                "https://em-content.zobj.net/thumbs/120/apple/354/superhero_1f9b8.png",
+                "https://em-content.zobj.net/thumbs/120/apple/354/elf_1f9dd.png"
+            ];
+
+            avatarUrls.forEach((url, index) => {
                 const img = document.createElement('img');
-                img.src = `https://via.placeholder.com/100?text=صورة+${i}`;
-                img.alt = `صورة رمزية ${i}`;
+                img.src = url; 
+                img.alt = `صورة رمزية ${index + 1}`;
                 img.classList.add('avatar-option');
+        
                 img.addEventListener('click', () => {
                     document.querySelectorAll('.avatar-option.selected').forEach(el => el.classList.remove('selected'));
                     img.classList.add('selected');
                     this.gameState.avatar = img.src;
                     this.domElements.confirmAvatarBtn.disabled = false;
                 });
+        
                 avatarGrid.appendChild(img);
-            }
+            });
         }
         
         showScreen(screenName) {
