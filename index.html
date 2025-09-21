@@ -1244,34 +1244,37 @@
             const avatarGrid = document.querySelector('.avatar-grid');
             avatarGrid.innerHTML = '';
 
-            const avatarUrls = [
-                "https://em-content.zobj.net/thumbs/120/apple/354/woman_1f469.png",
-                "https://em-content.zobj.net/thumbs/120/apple/354/man_1f468.png",
-                "https://em-content.zobj.net/thumbs/120/apple/354/woman-curly-hair_1f469-200d-1f9b1.png",
-                "https://em-content.zobj.net/thumbs/120/apple/354/detective_1f575-fe0f.png",
-                "https://em-content.zobj.net/thumbs/120/apple/354/astronaut_1f9d1-200d-1f680.png",
-                "https://em-content.zobj.net/thumbs/120/apple/354/judge_1f9d1-200d-2696-fe0f.png",
-                "https://em-content.zobj.net/thumbs/120/apple/354/old-man_1f474.png",
-                "https://em-content.zobj.net/thumbs/120/apple/354/person-beard_1f9d4.png",
-                "https://em-content.zobj.net/thumbs/120/apple/354/artist_1f9d1-200d-1f3a8.png",
-                "https://em-content.zobj.net/thumbs/120/apple/354/cook_1f9d1-200d-1f373.png",
-                "https://em-content.zobj.net/thumbs/120/apple/354/health-worker_1f9d1-200d-2695-fe0f.png",
-                "https://em-content.zobj.net/thumbs/120/apple/354/office-worker_1f9d1-200d-1f4bc.png",
-                "https://em-content.zobj.net/thumbs/120/apple/354/farmer_1f9d1-200d-1f33e.png",
-                "https://em-content.zobj.net/thumbs/120/apple/354/mechanic_1f9d1-200d-1f527.png",
-                "https://em-content.zobj.net/thumbs/120/apple/354/student_1f9d1-200d-1f393.png",
-                "https://em-content.zobj.net/thumbs/120/apple/354/teacher_1f9d1-200d-1f3eb.png",
-                "https://em-content.zobj.net/thumbs/120/apple/354/police-officer_1f46e.png",
-                "https://em-content.zobj.net/thumbs/120/apple/354/firefighter_1f9d1-200d-1f692.png",
-                "https://em-content.zobj.net/thumbs/120/apple/354/scientist_1f9d1-200d-1f52c.png",
-                "https://em-content.zobj.net/thumbs/120/apple/354/judge_1f9d1-200d-2696-fe0f.png",
-                "https://em-content.zobj.net/thumbs/120/apple/354/pilot_1f9d1-200d-2708-fe0f.png",
-                "https://em-content.zobj.net/thumbs/120/apple/354/singer_1f9d1-200d-1f3a4.png",
-                "https://em-content.zobj.net/thumbs/120/apple/354/detective_1f575-fe0f.png",
-                "https://em-content.zobj.net/thumbs/120/apple/354/mage_1f9d9.png",
-                "https://em-content.zobj.net/thumbs/120/apple/354/superhero_1f9b8.png",
-                "https://em-content.zobj.net/thumbs/120/apple/354/elf_1f9dd.png"
-            ];
+        const avatarUrls = [
+            // --- المجموعة الأولى: أشخاص عامون 🧑‍🤝‍🧑 ---
+            "https://em-content.zobj.net/thumbs/120/apple/354/woman_1f469.png",                           // امرأة
+            "https://em-content.zobj.net/thumbs/120/apple/354/man_1f468.png",                              // رجل
+            "https://em-content.zobj.net/thumbs/120/apple/354/woman-curly-hair_1f469-200d-1f9b1.png",      // امرأة بشعر مجعد
+            "https://em-content.zobj.net/thumbs/120/apple/354/person-beard_1f9d4.png",                      // شخص بلحية
+            "https://em-content.zobj.net/thumbs/120/apple/354/old-man_1f474.png",                           // رجل كبير في السن
+
+            // --- المجموعة الثانية: مهن واختصاصات 🧑‍💼 ---
+            "https://em-content.zobj.net/thumbs/120/apple/354/student_1f9d1-200d-1f393.png",                // طالب
+            "https://em-content.zobj.net/thumbs/120/apple/354/teacher_1f9d1-200d-1f3eb.png",                // معلم
+            "https://em-content.zobj.net/thumbs/120/apple/354/scientist_1f9d1-200d-1f52c.png",              // عالم
+            "https://em-content.zobj.net/thumbs/120/apple/354/health-worker_1f9d1-200d-2695-fe0f.png",      // عامل صحي
+            "https://em-content.zobj.net/thumbs/120/apple/354/cook_1f9d1-200d-1f373.png",                   // طباخ
+            "https://em-content.zobj.net/thumbs/120/apple/354/farmer_1f9d1-200d-1f33e.png",                 // مزارع
+            "https://em-content.zobj.net/thumbs/120/apple/354/mechanic_1f9d1-200d-1f527.png",               // ميكانيكي
+            "https://em-content.zobj.net/thumbs/120/apple/354/office-worker_1f9d1-200d-1f4bc.png",          // موظف مكتب
+            "https://em-content.zobj.net/thumbs/120/apple/354/artist_1f9d1-200d-1f3a8.png",                 // فنان
+            "https://em-content.zobj.net/thumbs/120/apple/354/singer_1f9d1-200d-1f3a4.png",                 // مغني
+            "https://em-content.zobj.net/thumbs/120/apple/354/astronaut_1f9d1-200d-1f680.png",              // رائد فضاء
+            "https://em-content.zobj.net/thumbs/120/apple/354/pilot_1f9d1-200d-2708-fe0f.png",                // طيار
+            "https://em-content.zobj.net/thumbs/120/apple/354/police-officer_1f46e.png",                    // ضابط شرطة
+            "https://em-content.zobj.net/thumbs/120/apple/354/firefighter_1f9d1-200d-1f692.png",            // رجل إطفاء
+            "https://em-content.zobj.net/thumbs/120/apple/354/detective_1f575-fe0f.png",                    // محقق
+            "https://em-content.zobj.net/thumbs/120/apple/354/judge_1f9d1-200d-2696-fe0f.png",               // قاضي
+
+            // --- المجموعة الثالثة: شخصيات خيالية ومميزة 🦸‍♂️ ---
+            "https://em-content.zobj.net/thumbs/120/apple/354/superhero_1f9b8.png",                         // بطل خارق
+            "https://em-content.zobj.net/thumbs/120/apple/354/mage_1f9d9.png",                              // ساحر
+            "https://em-content.zobj.net/thumbs/120/apple/354/elf_1f9dd.png"                                // قزم
+        ];
 
             avatarUrls.forEach((url, index) => {
                 const img = document.createElement('img');
