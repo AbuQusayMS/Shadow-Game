@@ -1658,15 +1658,10 @@
 
             document.querySelectorAll('.helper-btn').forEach(btn => {
                 const type = btn.dataset.type;
-        
-                if (type === 'skipQuestion') {
-                    // زر التخطي يُعطّل فقط إذا كانت النقاط غير كافية
-                    btn.disabled = this.currentScoreValue < this.currentSkipCost;
-                } else {
-                    // المساعدات الأخرى تعمل لمرة واحدة فقط
-                    const cost = this.HELPER_COSTS[type];
-                    const helperIsUsed = this.gameState.helpersUsed && this.gameState.helpersUsed[type];
-                    btn.disabled = helperIsUsed || this.currentScoreValue < cost;
+                if (type !== 'skipQuestion') {
+                    // عطّل الزر فقط إذا تم استخدامه بالفعل
+            const helperIsUsed = this.gameState.helpersUsed[type];
+                    btn.disabled = helperIsUsed;
                 }
             });
         }
