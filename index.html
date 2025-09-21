@@ -993,16 +993,16 @@
                 <div id="fiftyFiftyDesc" class="sr-only">يزيل خيارين خاطئين</div>
     
                 <button class="helper-btn" data-type="freezeTime" aria-describedby="freezeTimeDesc">
-                   ❄️ 10ث
+                                 ❄️ 10ث
                     <span class="helper-cost">(100)</span>
                 </button>
                 <div id="freezeTimeDesc" class="sr-only">يوقف المؤقت لمدة 10 ثوان</div>
 
-                <button class="helper-btn" data-type="changeQuestion" aria-describedby="changeQuestionDesc">
-                   🔄 تغيير
-                   <span class="helper-cost">(100)</span>
+                <button class="helper-btn" data-type="skipQuestion" aria-describedby="skipQuestionDesc">
+                    ⏭️ تخطي
+                    <span id="skipCost" class="helper-cost">(100)</span>
                 </button>
-                <div id="changeQuestionDesc" class="sr-only">يغير السؤال الحالي</div>
+                <div id="skipQuestionDesc" class="sr-only">تخطي السؤال الحالي</div>
             </div>
         </header>
 
@@ -1182,11 +1182,12 @@
                 ]
             };
 
-            this.HELPER_COSTS = {
-                fiftyFifty: 100,
-                freezeTime: 100,
-                changeQuestion: 100
-            };
+                this.HELPER_COSTS = {
+                    fiftyFifty: 100,
+                    freezeTime: 100
+                };
+                this.initialSkipCost = 100; // تكلفة التخطي الأولية
+                this.currentSkipCost = this.initialSkipCost; // التكلفة الحالية التي ستتغير
 
             this.isTimeFrozen = false;
             this.gameState = {};
@@ -1322,8 +1323,7 @@
 
         hideLoader() {
             this.domElements.screens.loader.classList.remove('active');
-        }
-
+        
         async startGame() {
             const name = this.domElements.nameInput.value.trim();
             if (name.length < 2) {
@@ -1331,7 +1331,7 @@
                 this.domElements.nameError.classList.add('show');
                 return;
             }
-            
+    
             this.gameState = {
                 name: name,
                 avatar: this.gameState.avatar,
@@ -1342,9 +1342,12 @@
                 correctAnswers: 0,
                 skips: 0,
                 startTime: new Date(),
-                helpersUsed: { fiftyFifty: false, freezeTime: false, changeQuestion: false },
+                helpersUsed: { fiftyFifty: false, freezeTime: false }, 
             };
-            
+    
+            // يقوم بإعادة تعيين سعر التخطي إلى 100 مع بداية كل لعبة
+            this.currentSkipCost = this.initialSkipCost; 
+    
             this.updateScore(this.STARTING_SCORE);
             this.setupGameUI();
             this.showScreen('game');
@@ -1533,43 +1536,59 @@
             if (accuracy >= 40) return "مقبول 👌";
             return "يحتاج تحسين 📈";
         }
-        
+
         useHelper(event) {
             const btn = event.currentTarget;
             const type = btn.dataset.type;
-            const cost = this.HELPER_COSTS[type];
 
-            if (this.currentScoreValue < cost) {
-                this.showToast("نقاطك غير كافية!", "error");
-                return;
-            }
-
-            this.updateScore(this.currentScoreValue - cost);
-            this.gameState.helpersUsed[type] = true;
-            btn.disabled = true;
-            this.showToast(`تم استخدام المساعدة! -${cost} نقطة`, "success");
-
-            if (type === 'fiftyFifty') {
-                const options = Array.from(this.domElements.optionsGrid.querySelectorAll('.option-btn'));
-                let wrongOptions = options.filter(btn => btn.dataset.correct !== 'true');
-                
-                wrongOptions.sort(() => 0.5 - Math.random());
-                if(wrongOptions.length > 1) {
-                    wrongOptions[0].classList.add('hidden');
-                    wrongOptions[1].classList.add('hidden');
+            if (type === 'skipQuestion') {
+                // --- أولاً: منطق خاص بزر التخطي الديناميكي ---
+                if (this.currentScoreValue < this.currentSkipCost) {
+                    this.showToast("نقاطك غير كافية!", "error");
+                    return;
                 }
-            } else if (type === 'freezeTime') {
-                this.isTimeFrozen = true;
-                document.querySelector('.timer-bar').classList.add('frozen');
-                setTimeout(() => {
-                    this.isTimeFrozen = false;
-                    document.querySelector('.timer-bar').classList.remove('frozen');
-                }, 10000);
-            } else if (type === 'changeQuestion') {
+        
+                // خصم التكلفة الحالية وزيادتها للمرة القادمة
+                this.updateScore(this.currentScoreValue - this.currentSkipCost);
+                this.showToast(`تم التخطي! -${this.currentSkipCost} نقطة`, "success");
+                this.currentSkipCost += 50; 
+
+                // تحديث اللعبة
                 this.gameState.skips++;
                 this.gameState.question++;
                 this.updateUI();
                 this.fetchQuestion();
+
+            } else {
+                // --- ثانياً: المنطق القديم للمساعدات الأخرى ذات التكلفة الثابتة ---
+                const cost = this.HELPER_COSTS[type];
+                if (this.currentScoreValue < cost) {
+                    this.showToast("نقاطك غير كافية!", "error");
+                    return;
+                }
+
+                this.updateScore(this.currentScoreValue - cost);
+                this.gameState.helpersUsed[type] = true; // يتم استخدامها مرة واحدة فقط
+                btn.disabled = true;
+                this.showToast(`تم استخدام المساعدة! -${cost} نقطة`, "success");
+
+                if (type === 'fiftyFifty') {
+                    const options = Array.from(this.domElements.optionsGrid.querySelectorAll('.option-btn'));
+                    let wrongOptions = options.filter(btn => btn.dataset.correct !== 'true');
+            
+                    wrongOptions.sort(() => 0.5 - Math.random());
+                    if(wrongOptions.length > 1) {
+                        wrongOptions[0].classList.add('hidden');
+                        wrongOptions[1].classList.add('hidden');
+                    }
+                } else if (type === 'freezeTime') {
+                    this.isTimeFrozen = true;
+                    document.querySelector('.timer-bar').classList.add('frozen');
+                    setTimeout(() => {
+                        this.isTimeFrozen = false;
+                        document.querySelector('.timer-bar').classList.remove('frozen');
+                    }, 10000);
+                }
             }
         }
 
@@ -1625,10 +1644,24 @@
             document.getElementById('wrongAnswersCount').textContent = `${this.gameState.wrongAnswers} / ${this.MAX_WRONG_ANSWERS}`;
             document.getElementById('skipCount').textContent = this.gameState.skips;
 
+            // تحديث تكلفة زر التخطي
+            const skipCostSpan = document.getElementById('skipCost');
+            if (skipCostSpan) {
+                skipCostSpan.textContent = `(${this.currentSkipCost})`;
+            }
+
             document.querySelectorAll('.helper-btn').forEach(btn => {
                 const type = btn.dataset.type;
-                const helperIsUsed = this.gameState.helpersUsed && this.gameState.helpersUsed[type];
-                btn.disabled = helperIsUsed || this.currentScoreValue < this.HELPER_COSTS[type];
+        
+                if (type === 'skipQuestion') {
+                    // زر التخطي يُعطّل فقط إذا كانت النقاط غير كافية
+                    btn.disabled = this.currentScoreValue < this.currentSkipCost;
+                } else {
+                    // المساعدات الأخرى تعمل لمرة واحدة فقط
+                    const cost = this.HELPER_COSTS[type];
+                    const helperIsUsed = this.gameState.helpersUsed && this.gameState.helpersUsed[type];
+                    btn.disabled = helperIsUsed || this.currentScoreValue < cost;
+                }
             });
         }
 
