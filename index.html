@@ -1543,34 +1543,41 @@
             const type = btn.dataset.type;
 
             if (type === 'skipQuestion') {
-                // --- أولاً: منطق خاص بزر التخطي الديناميكي ---
+                // --- منطق زر التخطي ---
                 if (this.currentScoreValue < this.currentSkipCost) {
-                    this.showToast("نقاطك غير كافية!", "error");
+                    this.showToast("نقاطك غير كافية لاستخدام التخطي!", "error");
                     return;
                 }
         
-                // خصم التكلفة الحالية وزيادتها للمرة القادمة
                 this.updateScore(this.currentScoreValue - this.currentSkipCost);
                 this.showToast(`تم التخطي! -${this.currentSkipCost} نقطة`, "success");
                 this.currentSkipCost += 50; 
 
-                // تحديث اللعبة
                 this.gameState.skips++;
                 this.gameState.question++;
                 this.updateUI();
                 this.fetchQuestion();
 
             } else {
-                // --- ثانياً: المنطق القديم للمساعدات الأخرى ذات التكلفة الثابتة ---
-                const cost = this.HELPER_COSTS[type];
-                if (this.currentScoreValue < cost) {
-                    this.showToast("نقاطك غير كافية!", "error");
+                // --- منطق المساعدات الأخرى (50:50 و تجميد الوقت) ---
+
+                // 1. تحقق أولاً إذا كانت المساعدة مستخدمة
+                if (this.gameState.helpersUsed[type]) {
+                    this.showToast("لقد استخدمت هذه المساعدة بالفعل!", "info");
                     return;
                 }
 
+                // 2. إذا لم تكن مستخدمة، تحقق من النقاط
+                const cost = this.HELPER_COSTS[type];
+                if (this.currentScoreValue < cost) {
+                    this.showToast("نقاطك غير كافية لهذه المساعدة!", "error");
+                    return;
+                }
+
+                // 3. إذا نجحت كل الشروط، قم بتنفيذ المساعدة
                 this.updateScore(this.currentScoreValue - cost);
-                this.gameState.helpersUsed[type] = true; // يتم استخدامها مرة واحدة فقط
-                btn.disabled = true;
+                this.gameState.helpersUsed[type] = true;
+                this.updateUI(); // لتعطيل الزر فورًا بعد الاستخدام
                 this.showToast(`تم استخدام المساعدة! -${cost} نقطة`, "success");
 
                 if (type === 'fiftyFifty') {
@@ -1591,9 +1598,7 @@
                     }, 10000);
                 }
             }
-        }
-
-        startTimer() {
+        }        startTimer() {
             clearInterval(this.timerInterval);
             let timeLeft = this.QUESTION_TIME;
             const timerBar = document.querySelector('.timer-bar');
