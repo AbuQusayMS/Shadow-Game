@@ -789,6 +789,25 @@
         grid-template-columns: repeat(2, 1fr);
       }
     }
+
+            /* 1. تعريف حركة الأنميشن نفسها */
+    @keyframes avatar-click-animation {
+      0% {
+        transform: scale(1.1); /* الحجم عند بداية ونهاية الأنميشن (نفس حجم الاختيار) */
+      }
+      50% {
+        transform: scale(1.25); /* الحجم الأقصى في منتصف الأنميشن (النبضة) */
+      }
+      100% {
+        transform: scale(1.1);
+      }
+    }
+
+    /* 2. كلاس لتشغيل الأنميشن عند إضافته للعنصر */
+    .avatar-option.clicked {
+      animation: avatar-click-animation 300ms ease-out;
+    }
+        
     </style>
     
     <script type="application/ld+json">
@@ -1279,12 +1298,21 @@
                 img.alt = `صورة رمزية ${index + 1}`;
                 img.classList.add('avatar-option');
         
-                img.addEventListener('click', () => {
-                    document.querySelectorAll('.avatar-option.selected').forEach(el => el.classList.remove('selected'));
-                    img.classList.add('selected');
-                    this.gameState.avatar = img.src;
-                    this.domElements.confirmAvatarBtn.disabled = false;
-                });
+        img.addEventListener('click', () => {
+            document.querySelectorAll('.avatar-option.selected').forEach(el => el.classList.remove('selected'));
+            img.classList.add('selected');
+            this.gameState.avatar = img.src;
+            this.domElements.confirmAvatarBtn.disabled = false;
+
+            // --- الجزء الجديد لتشغيل الأنميشن ---
+            img.classList.add('clicked'); // أضف الكلاس لتشغيل الأنميشن
+
+            // احذف الكلاس بعد انتهاء الأنميشن (300ms) للسماح بتكراره
+            setTimeout(() => {
+                img.classList.remove('clicked');
+            }, 300); 
+            // --- نهاية الجزء الجديد ---
+        });
         
                 avatarGrid.appendChild(img);
             });
