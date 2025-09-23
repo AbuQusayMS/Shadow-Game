@@ -1142,7 +1142,7 @@
 <script>
     class QuizGame {
         constructor() {
-            this.API_URL = "https://script.google.com/macros/s/AKfycbw68QqjhU0eqOszPpLBm0tXPtjaSV000kBfOWiorLk2lFm45ud3do-f5PMCy9b0LSez/exec";
+            this.API_URL = "https://script.google.com/macros/s/AKfycbwSieydP8pgaTKpqzlDBYDEjeuMSYu85eVLwUlMepwkbGOi4toI5-Lc-lpeK8T6rRdg/exec";
             this.QUESTION_TIME = 80;
             this.MAX_WRONG_ANSWERS = 3;
             this.STARTING_SCORE = 100;
@@ -1535,14 +1535,27 @@
             }
         }
 
-         endGame() {
+        endGame() {
+            // ================================================
+            //  1. تجهيز وإنهاء عمليات اللعبة الحالية
+           // ================================================
             clearInterval(this.timerInterval);
             this.hideConfirmExit();
-    
+
+            // ================================================
+            //  2. حساب جميع الإحصائيات والنتائج
+            // ================================================
             const totalTimeSeconds = (new Date() - this.gameState.startTime) / 1000;
             const currentLevel = this.LEVELS[Math.min(this.gameState.level, this.LEVELS.length - 1)];
+            const totalAnswered = this.gameState.correctAnswers + this.gameState.wrongAnswers;
     
-            // عرض الإحصائيات الأساسية
+            const accuracy = totalAnswered > 0 ? ((this.gameState.correctAnswers / totalAnswered) * 100).toFixed(1) : "0.0";
+            const avgTime = totalAnswered > 0 ? (totalTimeSeconds / totalAnswered).toFixed(1) : 0;
+            const performanceRating = this.calculatePerformanceRating();
+
+            // ================================================
+                    //  3. تحديث جميع عناصر واجهة المستخدم (UI)
+            // ================================================
             document.getElementById('finalName').textContent = this.gameState.name;
             document.getElementById('finalId').textContent = this.gameState.playerId;
             document.getElementById('finalCorrect').textContent = this.gameState.correctAnswers;
@@ -1551,28 +1564,35 @@
             document.getElementById('finalScore').textContent = this.formatNumber(this.currentScoreValue);
             document.getElementById('totalTime').textContent = this.formatTime(totalTimeSeconds);
             document.getElementById('finalLevel').textContent = currentLevel.label;
-    
-            // --- الجزء الجديد لحساب وعرض الإحصائيات التفصيلية ---
-
-            const totalAnswered = this.gameState.correctAnswers + this.gameState.wrongAnswers;
-
-            // 1. حساب وعرض نسبة الدقة
-            const accuracy = totalAnswered > 0 ? ((this.gameState.correctAnswers / totalAnswered) * 100).toFixed(1) : 0;
             document.getElementById('finalAccuracy').textContent = `${accuracy}%`;
-
-            // 2. عرض أفضل سلسلة متتالية
             document.getElementById('finalBestStreak').textContent = this.gameState.bestStreak;
-
-            // 3. حساب وعرض متوسط وقت الإجابة
-            const avgTime = totalAnswered > 0 ? (totalTimeSeconds / totalAnswered).toFixed(1) : 0;
             document.getElementById('finalAvgTime').textContent = `${avgTime} ثانية/سؤال`;
-    
-            // --- نهاية الجزء الجديد ---
-
-            const performanceRating = this.calculatePerformanceRating();
             document.getElementById('performanceText').textContent = performanceRating;
+
+            // ================================================
+            //  4. الإجراءات النهائية (إرسال البيانات وإظهار الشاشة)
+            // ================================================
+            // تجميع البيانات لإرسالها إلى Google Sheets
+            const resultsData = {
+                name: this.gameState.name,
+                deviceId: this.deviceId,
+                playerId: this.gameState.playerId,
+                correct: this.gameState.correctAnswers,
+                wrong: this.gameState.wrongAnswers,
+                level: currentLevel.label,
+                score: this.currentScoreValue,
+                accuracy: accuracy,
+                bestStreak: this.gameState.bestStreak,
+                totalTime: this.formatTime(totalTimeSeconds),
+                avgTime: parseFloat(avgTime),
+                skips: this.gameState.skips,
+                usedFiftyFifty: this.gameState.helpersUsed.fiftyFifty,
+                usedFreezeTime: this.gameState.helpersUsed.freezeTime
+            };
     
-            this.showScreen('end');
+            this.saveResults(resultsData); // إرسال البيانات
+    
+            this.showScreen('end'); // إظهار شاشة النتائج
         }
         
         calculatePerformanceRating() {
