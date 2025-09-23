@@ -1077,8 +1077,11 @@
                 <p>⏭️ مرات التخطي: <strong id="finalSkips"></strong></p>
                 <p>⭐ النقاط النهائية: <strong id="finalScore"></strong></p>
                 <p>⏱️ الوقت المستغرق: <strong id="totalTime"></strong></p>
-                <p>📈 المستوى الذي وصلت إليه: <strong id="finalLevel"></strong></p>
-                
+                <p>📈 المستوى الذي وصلت إليه: <strong id="finalLevel"></strong></p>        
+                <p>🎯 نسبة الدقة: <strong id="finalAccuracy"></strong></p>
+                <p>🔥 أفضل سلسلة متتالية: <strong id="finalBestStreak"></strong></p>
+                <p>⏳ متوسط وقت الإجابة: <strong id="finalAvgTime"></strong></p>
+    
                 <div class="performance-rating">
                     <span>أداؤك: </span>
                     <strong id="performanceText"></strong>
@@ -1357,6 +1360,8 @@
                 skips: 0,
                 startTime: new Date(),
                 helpersUsed: { fiftyFifty: false, freezeTime: false },
+                currentStreak: 0, // لتتبع السلسلة الحالية
+                bestStreak: 0,    // لتخزين أفضل سلسلة
             };
 
             this.currentSkipCost = this.initialSkipCost;
@@ -1456,10 +1461,10 @@
             this.startTimer();
         }
 
-        checkAnswer(isCorrect, selectedButton) {
+       checkAnswer(isCorrect, selectedButton) {
             if (this.answerSubmitted) return;
             this.answerSubmitted = true;
-            
+    
             clearInterval(this.timerInterval);
             document.querySelectorAll('.option-btn').forEach(b => b.classList.add('disabled'));
 
@@ -1468,24 +1473,36 @@
                 this.updateScore(this.currentScoreValue + 100);
                 this.gameState.correctAnswers++;
                 this.showToast("إجابة صحيحة! +100 نقطة", "success");
+
+                // --- الجزء الجديد لتتبع السلسلة ---
+                this.gameState.currentStreak++;
+                if (this.gameState.currentStreak > this.gameState.bestStreak) {
+                    this.gameState.bestStreak = this.gameState.currentStreak;
+                }
+                // --- نهاية الجزء الجديد ---
+
             } else {
                 selectedButton.classList.add('wrong');
-                
+        
                 const correctButton = this.domElements.optionsGrid.querySelector('[data-correct="true"]');
                 if (correctButton) {
                     correctButton.classList.add('correct');
                 }
-                
+        
                 this.gameState.wrongAnswers++;
                 this.updateScore(this.currentScoreValue - 100);
                 this.showToast("إجابة خاطئة! -100 نقطة", "error");
+
+                // --- الجزء الجديد لتتبع السلسلة ---
+                this.gameState.currentStreak = 0; // إعادة تعيين السلسلة عند الخطأ
+                // --- نهاية الجزء الجديد ---
             }
 
             this.gameState.question++;
             this.updateUI();
 
             const isGameOver = this.gameState.wrongAnswers >= this.MAX_WRONG_ANSWERS;
-            
+    
             setTimeout(() => {
                 if (isGameOver) {
                     this.endGame();
@@ -1517,14 +1534,15 @@
                 this.startLevel();
             }
         }
-        
-        endGame() {
+
+         endGame() {
             clearInterval(this.timerInterval);
             this.hideConfirmExit();
-            
+    
             const totalTimeSeconds = (new Date() - this.gameState.startTime) / 1000;
             const currentLevel = this.LEVELS[Math.min(this.gameState.level, this.LEVELS.length - 1)];
-            
+    
+            // عرض الإحصائيات الأساسية
             document.getElementById('finalName').textContent = this.gameState.name;
             document.getElementById('finalId').textContent = this.gameState.playerId;
             document.getElementById('finalCorrect').textContent = this.gameState.correctAnswers;
@@ -1533,10 +1551,27 @@
             document.getElementById('finalScore').textContent = this.formatNumber(this.currentScoreValue);
             document.getElementById('totalTime').textContent = this.formatTime(totalTimeSeconds);
             document.getElementById('finalLevel').textContent = currentLevel.label;
-            
+    
+            // --- الجزء الجديد لحساب وعرض الإحصائيات التفصيلية ---
+
+            const totalAnswered = this.gameState.correctAnswers + this.gameState.wrongAnswers;
+
+            // 1. حساب وعرض نسبة الدقة
+            const accuracy = totalAnswered > 0 ? ((this.gameState.correctAnswers / totalAnswered) * 100).toFixed(1) : 0;
+            document.getElementById('finalAccuracy').textContent = `${accuracy}%`;
+
+            // 2. عرض أفضل سلسلة متتالية
+            document.getElementById('finalBestStreak').textContent = this.gameState.bestStreak;
+
+            // 3. حساب وعرض متوسط وقت الإجابة
+            const avgTime = totalAnswered > 0 ? (totalTimeSeconds / totalAnswered).toFixed(1) : 0;
+            document.getElementById('finalAvgTime').textContent = `${avgTime} ثانية/سؤال`;
+    
+            // --- نهاية الجزء الجديد ---
+
             const performanceRating = this.calculatePerformanceRating();
             document.getElementById('performanceText').textContent = performanceRating;
-            
+    
             this.showScreen('end');
         }
         
