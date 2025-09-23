@@ -1371,15 +1371,26 @@
             this.fetchQuestion();
         }
 
-        // 7. تعديل fetchQuestion ليقرأ من الأسئلة المخلوطة
         fetchQuestion() {
             const questions = this.gameState.shuffledQuestions;
-            
+    
+            // عند انتهاء أسئلة المستوى
             if (!questions || this.gameState.question >= questions.length) {
-                this.levelComplete();
-                return;
+        
+                // تحقق إذا كان هذا هو المستوى الأخير أم لا
+                const isLastLevel = this.gameState.level >= this.LEVELS.length - 1;
+        
+                if (isLastLevel) {
+                    // إذا كان الأخير، أنهِ اللعبة
+                    this.endGame(); 
+                } else {
+                    // وإلا، انتقل للمستوى التالي
+                    this.levelComplete();
+                }
+                return; // أوقف الدالة هنا
             }
-            
+    
+            // إذا لم ينتهِ المستوى، اعرض السؤال التالي
             const questionData = questions[this.gameState.question];
             this.displayQuestion(questionData);
         }
