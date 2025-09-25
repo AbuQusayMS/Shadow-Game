@@ -1567,7 +1567,7 @@
                 correct: this.gameState.correctAnswers,
                 wrong: this.gameState.wrongAnswers,
                 level: currentLevel.label,
-                score: this.currentScoreValue,
+                score: Number(this.currentScoreValue) || 0, // ضمان إرسال النقاط كرقم صالح
                 accuracy: accuracy,
                 bestStreak: this.gameState.bestStreak,
                 totalTime: Math.round(totalTimeSeconds), // إرسال الوقت بالثواني كرقم
@@ -1874,3 +1874,4 @@
     <div class="sr-only" aria-live="polite" id="liveAnnouncements"></div>
 </body>
 </html>
+
