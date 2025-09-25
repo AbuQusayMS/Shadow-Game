@@ -767,6 +767,28 @@
       100% { transform: rotate(360deg); }
     }
 
+    .report-fab {
+      position: fixed;
+      bottom: var(--space-4);
+      left: var(--space-4);
+      width: 3.5rem;
+      height: 3.5rem;
+      background-color: var(--gold-color);
+      color: var(--color-black);
+      border-radius: var(--radius-full);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 1.5rem;
+      box-shadow: var(--shadow-lg);
+      cursor: pointer;
+      z-index: 999;
+      transition: transform var(--transition-fast);
+    }
+    .report-fab:hover {
+      transform: scale(1.1);
+    }
+
     @media (min-width: 768px) {
       .screen {
           padding: var(--space-8);
@@ -832,6 +854,7 @@
 </head>
 <body data-theme="dark" aria-live="polite" data-level="easy">
     <div id="toast-container" class="toast-container" aria-live="assertive"></div>
+    <div id="reportErrorFab" class="report-fab" role="button" aria-label="الإبلاغ عن مشكلة">⚠️</div>
 
     <div id="loader" class="screen active" role="status" aria-label="جاري التحميل">
         <div class="spinner" aria-hidden="true"></div>
@@ -1143,14 +1166,25 @@
             </div>
         </div>
     </div>
+    
+    <div id="reportErrorModal" class="modal" aria-hidden="true">
+        <div class="modal-content">
+            <h3>الإبلاغ عن مشكلة</h3>
+            <p>هل تريد إرسال تقرير بالمشكلة التي واجهتها؟ سيتم إرسال تفاصيل الخطأ تلقائيًا.</p>
+            <div id="lastErrorMessage" style="font-family: monospace; background: var(--secondary-color); padding: 8px; border-radius: 8px; margin-top: 1rem; direction: ltr; text-align: left; display: none;"></div>
+            <div class="modal-buttons">
+                <button id="confirmReportYes" class="btn-main">نعم، أرسل</button>
+                <button id="confirmReportNo" class="btn-secondary">إلغاء</button>
+            </div>
+        </div>
+    </div>
 
 <script>
     class QuizGame {
         constructor() {
             // =================================================================
-            // !!!  مهــم جــداً: املأ الحقول التالية  !!!
+            // !!!  تم تحديث البيانات التالية  !!!
             // =================================================================
-            // *** تعديل 1: ضع رابط تطبيق الويب ومفتاح API هنا ***
             this.API_URL = "https://script.google.com/macros/s/AKfycbwSieydP8pgaTKpqzlDBYDEjeuMSYu85eVLwUlMepwkbGOi4toI5-Lc-lpeK8T6rRdg/exec";
             this.API_KEY = "AbuQusay2025_SecretKey";
             // =================================================================
@@ -1182,7 +1216,24 @@
             this.answerSubmitted = false;
             this.domElements = {};
 
+            this.lastCapturedError = null;
+            this.setupGlobalErrorHandler();
+
             this.init();
+        }
+
+        setupGlobalErrorHandler() {
+            window.onerror = (message, source, lineno, colno, error) => {
+                this.lastCapturedError = {
+                    message: message,
+                    source: source.split('/').pop(),
+                    lineno: lineno,
+                    colno: colno,
+                    error: error ? error.stack : 'N/A'
+                };
+                console.error("Caught a global error:", this.lastCapturedError);
+                return true;
+            };
         }
 
         async loadQuestions() {
@@ -1242,6 +1293,9 @@
                 confirmAvatarBtn: document.getElementById('confirmAvatarBtn'),
                 themeToggleBtn: document.querySelector('.theme-toggle-btn'),
                 confirmExitModal: document.getElementById('confirmExitModal'),
+                reportErrorFab: document.getElementById('reportErrorFab'),
+                reportErrorModal: document.getElementById('reportErrorModal'),
+                lastErrorMessage: document.getElementById('lastErrorMessage'),
             };
         }
 
@@ -1264,6 +1318,11 @@
             document.getElementById('shareXBtn').addEventListener('click', () => this.shareOnX());
             document.getElementById('shareInstagramBtn').addEventListener('click', () => this.shareOnInstagram());
             this.domElements.nameInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') this.showScreen('instructions'); });
+            
+            // Listeners for report feature
+            this.domElements.reportErrorFab.addEventListener('click', () => this.showReportModal());
+            document.getElementById('confirmReportYes').addEventListener('click', () => this.sendErrorReport());
+            document.getElementById('confirmReportNo').addEventListener('click', () => this.hideReportModal());
         }
         
         populateAvatarGrid() {
@@ -1357,7 +1416,6 @@
                 name: name,
                 avatar: this.gameState.avatar,
                 playerId: this.generatePlayerId(),
-                // *** تعديل 2: إضافة معرّف الجهاز ***
                 deviceId: this.generateDeviceId(), 
                 level: 0,
                 question: 0,
@@ -1382,7 +1440,6 @@
             return `P${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
         }
         
-        // *** تعديل 2.1: دالة جديدة لإنشاء معرّف الجهاز ***
         generateDeviceId() {
             let deviceId = localStorage.getItem('quizGameDeviceId');
             if (!deviceId) {
@@ -1564,7 +1621,6 @@
             document.getElementById('finalAvgTime').textContent = `${this.formatTime(avgTime)} / سؤال`;
             document.getElementById('performanceText').textContent = performanceRating;
 
-            // *** تعديل 3: تجهيز البيانات وإرسالها ***
             const resultsData = {
                 name: this.gameState.name,
                 deviceId: this.gameState.deviceId,
@@ -1572,29 +1628,27 @@
                 correct: this.gameState.correctAnswers,
                 wrong: this.gameState.wrongAnswers,
                 level: currentLevel.label,
-                score: Number(this.currentScoreValue) || 0, // ضمان إرسال النقاط كرقم صالح
+                score: Number(this.currentScoreValue) || 0, 
                 accuracy: accuracy,
                 bestStreak: this.gameState.bestStreak,
-                totalTime: Math.round(totalTimeSeconds), // إرسال الوقت بالثواني كرقم
-                avgTime: avgTime,                         // إرسال متوسط الوقت كرقم
+                totalTime: Math.round(totalTimeSeconds),
+                avgTime: avgTime,
                 skips: this.gameState.skips,
                 usedFiftyFifty: this.gameState.helpersUsed.fiftyFifty,
                 usedFreezeTime: this.gameState.helpersUsed.freezeTime
             };
     
-            this.saveResults(resultsData); // استدعاء دالة الحفظ الجديدة
+            this.saveResults(resultsData);
     
             this.showScreen('end');
         }
 
-        // *** تعديل 4: دالة جديدة لحفظ النتائج عبر API ***
         async saveResults(resultsData) {
             console.log("إرسال البيانات إلى السكربت:", resultsData);
             try {
-                // نستخدم دالة apiCall الموجودة أصلاً
                 const response = await this.apiCall({
                     action: 'endGame',
-                    ...resultsData // دمج كل بيانات النتائج
+                    ...resultsData
                 });
 
                 if (response.success) {
@@ -1765,6 +1819,55 @@
             this.domElements.confirmExitModal.classList.remove('active');
         }
 
+        showReportModal() {
+            if (this.lastCapturedError) {
+                this.domElements.lastErrorMessage.textContent = `Error: ${this.lastCapturedError.message} at line ${this.lastCapturedError.lineno}`;
+                this.domElements.lastErrorMessage.style.display = 'block';
+            } else {
+                this.domElements.lastErrorMessage.textContent = "لم يتم اكتشاف أي خطأ تلقائي.";
+                this.domElements.lastErrorMessage.style.display = 'block';
+            }
+            this.domElements.reportErrorModal.classList.add('active');
+        }
+
+        hideReportModal() {
+            this.domElements.reportErrorModal.classList.remove('active');
+        }
+
+        async sendErrorReport() {
+            const reportData = {
+                errorDetails: this.lastCapturedError || "No automatic error captured.",
+                gameState: {
+                    name: this.gameState.name || 'N/A',
+                    playerId: this.gameState.playerId || 'N/A',
+                    level: this.gameState.level !== undefined ? this.LEVELS[this.gameState.level].label : 'N/A',
+                    score: this.currentScoreValue
+                },
+                userAgent: navigator.userAgent
+            };
+
+            console.log("إرسال بلاغ بالخطأ:", reportData);
+            this.hideReportModal();
+            this.showToast("جاري إرسال البلاغ...", "info");
+
+            try {
+                const response = await this.apiCall({
+                    action: 'reportError',
+                    data: reportData
+                });
+
+                if (response.success) {
+                    this.showToast("تم إرسال البلاغ بنجاح. شكراً لك!", "success");
+                } else {
+                    throw new Error(response.error || "فشل إرسال البلاغ");
+                }
+            } catch (error) {
+                console.error("فشل إرسال البلاغ:", error);
+                this.showToast("حدث خطأ أثناء إرسال البلاغ.", "error");
+            }
+            this.lastCapturedError = null; // Clear the error after reporting
+        }
+
         showToast(message, type = 'info') {
             const toastContainer = document.getElementById('toast-container');
             const toast = document.createElement('div');
@@ -1776,7 +1879,6 @@
         }
 
         async apiCall(payload) {
-            // أضف مفتاح API إلى كل طلب
             const payloadWithKey = {
                 apiKey: this.API_KEY,
                 ...payload
@@ -1785,15 +1887,12 @@
             try {
                 const response = await fetch(this.API_URL, {
                     method: 'POST',
-                    // لا تستخدم mode: 'cors' هنا، فهي قد تسبب مشاكل مع GAS
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify(payloadWithKey)
                 });
-                // لا تتحقق من response.ok هنا لأن GAS قد يرسل استجابة خطأ مع status 200
                 return await response.json();
             } catch (error) {
                 console.error('API Error:', error);
-                // أعد رمي الخطأ ليتم التقاطه في دالة saveResults
                 throw error;
             }
         }
