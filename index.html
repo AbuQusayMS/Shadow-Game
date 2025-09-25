@@ -168,9 +168,9 @@
       height: 100%;
       display: flex;
       flex-direction: column;
-      justify-content: center;
+      justify-content: flex-start; /* Changed from 'center' to fix scrolling */
       align-items: center;
-      padding: var(--space-4);
+      padding: var(--space-8) var(--space-4); /* Increased top/bottom padding for better spacing */
       opacity: 0;
       visibility: hidden;
       transform: scale(0.95);
@@ -1556,7 +1556,7 @@
             document.getElementById('finalLevel').textContent = currentLevel.label;
             document.getElementById('finalAccuracy').textContent = `${accuracy}%`;
             document.getElementById('finalBestStreak').textContent = this.gameState.bestStreak;
-            document.getElementById('finalAvgTime').textContent = `${avgTime} ثانية/سؤال`;
+            document.getElementById('finalAvgTime').textContent = `${this.formatTime(avgTime)} / سؤال`;
             document.getElementById('performanceText').textContent = performanceRating;
 
             // *** تعديل 3: تجهيز البيانات وإرسالها ***
@@ -1850,12 +1850,10 @@
         }
         
         formatTime(totalSeconds) {
-            const minutes = Math.floor(totalSeconds / 60);
-            const seconds = Math.floor(totalSeconds % 60);
-            if (minutes > 0) {
-                return `${minutes} دقيقة و ${seconds} ثانية`;
-            }
-            return `${seconds} ثانية`;
+            const total = Math.floor(totalSeconds);
+            const minutes = Math.floor(total / 60);
+            const seconds = total % 60;
+            return `${minutes}:${seconds.toString().padStart(2, '0')}`;
         }
 
         formatNumber(num) {
@@ -1874,4 +1872,6 @@
     <div class="sr-only" aria-live="polite" id="liveAnnouncements"></div>
 </body>
 </html>
+
+
 
