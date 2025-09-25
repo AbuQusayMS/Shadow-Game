@@ -790,7 +790,7 @@
       }
     }
 
-            /* 1. تعريف حركة الأنميشن نفسها */
+    /* 1. تعريف حركة الأنميشن نفسها */
     @keyframes avatar-click-animation {
       0% {
         transform: scale(1.1); /* الحجم عند بداية ونهاية الأنميشن (نفس حجم الاختيار) */
@@ -901,7 +901,7 @@
         </div>
     </div>
     
-   
+    
     <div id="instructionsScreen" class="screen" aria-hidden="true">
         <div class="content-box">
             <header class="screen-header">
@@ -1010,9 +1010,9 @@
                     <span class="helper-cost">(100)</span>
                 </button>
                 <div id="fiftyFiftyDesc" class="sr-only">يزيل خيارين خاطئين</div>
-    
+        
                 <button class="helper-btn" data-type="freezeTime" aria-describedby="freezeTimeDesc">
-                                 ❄️ 10ث
+                                ❄️ 10ث
                     <span class="helper-cost">(100)</span>
                 </button>
                 <div id="freezeTimeDesc" class="sr-only">يوقف المؤقت لمدة 10 ثوان</div>
@@ -1077,7 +1077,7 @@
                 <p>⏭️ مرات التخطي: <strong id="finalSkips"></strong></p>
                 <p>⭐ النقاط النهائية: <strong id="finalScore"></strong></p>
                 <p>⏱️ الوقت المستغرق: <strong id="totalTime"></strong></p>
-                <p>📈 المستوى الذي وصلت إليه: <strong id="finalLevel"></strong></p>        
+                <p>📈 المستوى الذي وصلت إليه: <strong id="finalLevel"></strong></p>            
                 <p>🎯 نسبة الدقة: <strong id="finalAccuracy"></strong></p>
                 <p>🔥 أفضل سلسلة متتالية: <strong id="finalBestStreak"></strong></p>
                 <p>⏳ متوسط وقت الإجابة: <strong id="finalAvgTime"></strong></p>
@@ -1142,12 +1142,18 @@
 <script>
     class QuizGame {
         constructor() {
-            this.API_URL = "https://script.google.com/macros/s/AKfycbwSieydP8pgaTKpqzlDBYDEjeuMSYu85eVLwUlMepwkbGOi4toI5-Lc-lpeK8T6rRdg/exec";
+            // =================================================================
+            // !!!  مهــم جــداً: املأ الحقول التالية  !!!
+            // =================================================================
+            // *** تعديل 1: ضع رابط تطبيق الويب ومفتاح API هنا ***
+            this.API_URL = "ضع رابط تطبيق الويب الخاص بك هنا";
+            this.API_KEY = "ضع مفتاح API الخاص بك هنا";
+            // =================================================================
+
             this.QUESTION_TIME = 80;
             this.MAX_WRONG_ANSWERS = 3;
             this.STARTING_SCORE = 100;
 
-            // 1. تعريف المستويات بدون عدد أسئلة ثابت
             this.LEVELS = [
                 { name: "easy", label: "سهل", color: "#10b981" },
                 { name: "medium", label: "متوسط", color: "#3b82f6" },
@@ -1155,7 +1161,6 @@
                 { name: "impossible", label: "مستحيل", color: "#ef4444" }
             ];
 
-            // 2. الأسئلة ستُحمّل من ملف خارجي
             this.QUESTIONS = {};
 
             this.HELPER_COSTS = {
@@ -1175,7 +1180,6 @@
             this.init();
         }
 
-        // 3. دالة جديدة لتحميل الأسئلة من ملف JSON
         async loadQuestions() {
             try {
                 const response = await fetch('questions.json');
@@ -1190,7 +1194,6 @@
             }
         }
 
-        // 4. دالة جديدة لخلط ترتيب المصفوفات
         shuffleArray(array) {
             for (let i = array.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
@@ -1198,7 +1201,6 @@
             }
         }
 
-        // 5. تعديل init لتحميل الأسئلة أولاً
         async init() {
             this.cacheDomElements();
             this.bindEventListeners();
@@ -1263,37 +1265,37 @@
             const avatarGrid = document.querySelector('.avatar-grid');
             avatarGrid.innerHTML = '';
 
-        const avatarUrls = [
-            // --- المجموعة الأولى: أشخاص عامون 🧑‍🤝‍🧑 ---
-            "https://em-content.zobj.net/thumbs/120/apple/354/woman_1f469.png",                 // امرأة
-            "https://em-content.zobj.net/thumbs/120/apple/354/man_1f468.png",                       // رجل
-            "https://em-content.zobj.net/thumbs/120/apple/354/woman-curly-hair_1f469-200d-1f9b1.png",     // امرأة بشعر مجعد
-            "https://em-content.zobj.net/thumbs/120/apple/354/person-beard_1f9d4.png",                 // شخص بلحية
-            "https://em-content.zobj.net/thumbs/120/apple/354/old-man_1f474.png",                      // رجل كبير في السن
+            const avatarUrls = [
+                // --- المجموعة الأولى: أشخاص عامون 🧑‍🤝‍🧑 ---
+                "https://em-content.zobj.net/thumbs/120/apple/354/woman_1f469.png",                // امرأة
+                "https://em-content.zobj.net/thumbs/120/apple/354/man_1f468.png",                  // رجل
+                "https://em-content.zobj.net/thumbs/120/apple/354/woman-curly-hair_1f469-200d-1f9b1.png",   // امرأة بشعر مجعد
+                "https://em-content.zobj.net/thumbs/120/apple/354/person-beard_1f9d4.png",                // شخص بلحية
+                "https://em-content.zobj.net/thumbs/120/apple/354/old-man_1f474.png",                   // رجل كبير في السن
 
-            // --- المجموعة الثانية: مهن واختصاصات 🧑‍💼 ---
-            "https://em-content.zobj.net/thumbs/120/apple/354/student_1f9d1-200d-1f393.png",            // طالب
-            "https://em-content.zobj.net/thumbs/120/apple/354/teacher_1f9d1-200d-1f3eb.png",            // معلم
-            "https://em-content.zobj.net/thumbs/120/apple/354/scientist_1f9d1-200d-1f52c.png",          // عالم
-            "https://em-content.zobj.net/thumbs/120/apple/354/health-worker_1f9d1-200d-2695-fe0f.png",    // عامل صحي
-            "https://em-content.zobj.net/thumbs/120/apple/354/cook_1f9d1-200d-1f373.png",                // طباخ
-            "https://em-content.zobj.net/thumbs/120/apple/354/farmer_1f9d1-200d-1f33e.png",             // مزارع
-            "https://em-content.zobj.net/thumbs/120/apple/354/mechanic_1f9d1-200d-1f527.png",           // ميكانيكي
-            "https://em-content.zobj.net/thumbs/120/apple/354/office-worker_1f9d1-200d-1f4bc.png",        // موظف مكتب
-            "https://em-content.zobj.net/thumbs/120/apple/354/artist_1f9d1-200d-1f3a8.png",              // فنان
-            "https://em-content.zobj.net/thumbs/120/apple/354/singer_1f9d1-200d-1f3a4.png",              // مغني
-            "https://em-content.zobj.net/thumbs/120/apple/354/astronaut_1f9d1-200d-1f680.png",          // رائد فضاء
-            "https://em-content.zobj.net/thumbs/120/apple/354/pilot_1f9d1-200d-2708-fe0f.png",             // طيار
-            "https://em-content.zobj.net/thumbs/120/apple/354/police-officer_1f46e.png",               // ضابط شرطة
-            "https://em-content.zobj.net/thumbs/120/apple/354/firefighter_1f9d1-200d-1f692.png",         // رجل إطفاء
-            "https://em-content.zobj.net/thumbs/120/apple/354/detective_1f575-fe0f.png",                // محقق
-            "https://em-content.zobj.net/thumbs/120/apple/354/judge_1f9d1-200d-2696-fe0f.png",             // قاضي
+                // --- المجموعة الثانية: مهن واختصاصات 🧑‍💼 ---
+                "https://em-content.zobj.net/thumbs/120/apple/354/student_1f9d1-200d-1f393.png",          // طالب
+                "https://em-content.zobj.net/thumbs/120/apple/354/teacher_1f9d1-200d-1f3eb.png",          // معلم
+                "https://em-content.zobj.net/thumbs/120/apple/354/scientist_1f9d1-200d-1f52c.png",        // عالم
+                "https://em-content.zobj.net/thumbs/120/apple/354/health-worker_1f9d1-200d-2695-fe0f.png",   // عامل صحي
+                "https://em-content.zobj.net/thumbs/120/apple/354/cook_1f9d1-200d-1f373.png",             // طباخ
+                "https://em-content.zobj.net/thumbs/120/apple/354/farmer_1f9d1-200d-1f33e.png",           // مزارع
+                "https://em-content.zobj.net/thumbs/120/apple/354/mechanic_1f9d1-200d-1f527.png",          // ميكانيكي
+                "https://em-content.zobj.net/thumbs/120/apple/354/office-worker_1f9d1-200d-1f4bc.png",     // موظف مكتب
+                "https://em-content.zobj.net/thumbs/120/apple/354/artist_1f9d1-200d-1f3a8.png",            // فنان
+                "https://em-content.zobj.net/thumbs/120/apple/354/singer_1f9d1-200d-1f3a4.png",            // مغني
+                "https://em-content.zobj.net/thumbs/120/apple/354/astronaut_1f9d1-200d-1f680.png",         // رائد فضاء
+                "https://em-content.zobj.net/thumbs/120/apple/354/pilot_1f9d1-200d-2708-fe0f.png",          // طيار
+                "https://em-content.zobj.net/thumbs/120/apple/354/police-officer_1f46e.png",              // ضابط شرطة
+                "https://em-content.zobj.net/thumbs/120/apple/354/firefighter_1f9d1-200d-1f692.png",       // رجل إطفاء
+                "https://em-content.zobj.net/thumbs/120/apple/354/detective_1f575-fe0f.png",              // محقق
+                "https://em-content.zobj.net/thumbs/120/apple/354/judge_1f9d1-200d-2696-fe0f.png",          // قاضي
 
-            // --- المجموعة الثالثة: شخصيات خيالية ومميزة 🦸‍♂️ ---
-            "https://em-content.zobj.net/thumbs/120/apple/354/superhero_1f9b8.png",                   // بطل خارق
-            "https://em-content.zobj.net/thumbs/120/apple/354/mage_1f9d9.png",                       // ساحر
-            "https://em-content.zobj.net/thumbs/120/apple/354/elf_1f9dd.png"                           // قزم
-        ];
+                // --- المجموعة الثالثة: شخصيات خيالية ومميزة 🦸‍♂️ ---
+                "https://em-content.zobj.net/thumbs/120/apple/354/superhero_1f9b8.png",              // بطل خارق
+                "https://em-content.zobj.net/thumbs/120/apple/354/mage_1f9d9.png",                   // ساحر
+                "https://em-content.zobj.net/thumbs/120/apple/354/elf_1f9dd.png"                     // قزم
+            ];
 
             avatarUrls.forEach((url, index) => {
                 const img = document.createElement('img');
@@ -1301,22 +1303,19 @@
                 img.alt = `صورة رمزية ${index + 1}`;
                 img.classList.add('avatar-option');
         
-        img.addEventListener('click', () => {
-            document.querySelectorAll('.avatar-option.selected').forEach(el => el.classList.remove('selected'));
-            img.classList.add('selected');
-            this.gameState.avatar = img.src;
-            this.domElements.confirmAvatarBtn.disabled = false;
+                img.addEventListener('click', () => {
+                    document.querySelectorAll('.avatar-option.selected').forEach(el => el.classList.remove('selected'));
+                    img.classList.add('selected');
+                    this.gameState.avatar = img.src;
+                    this.domElements.confirmAvatarBtn.disabled = false;
 
-            // --- الجزء الجديد لتشغيل الأنميشن ---
-            img.classList.add('clicked'); // أضف الكلاس لتشغيل الأنميشن
+                    img.classList.add('clicked'); 
 
-            // احذف الكلاس بعد انتهاء الأنميشن (300ms) للسماح بتكراره
-            setTimeout(() => {
-                img.classList.remove('clicked');
-            }, 300); 
-            // --- نهاية الجزء الجديد ---
-        });
-        
+                    setTimeout(() => {
+                        img.classList.remove('clicked');
+                    }, 300); 
+                });
+                
                 avatarGrid.appendChild(img);
             });
         }
@@ -1353,6 +1352,8 @@
                 name: name,
                 avatar: this.gameState.avatar,
                 playerId: this.generatePlayerId(),
+                // *** تعديل 2: إضافة معرّف الجهاز ***
+                deviceId: this.generateDeviceId(), 
                 level: 0,
                 question: 0,
                 wrongAnswers: 0,
@@ -1360,8 +1361,8 @@
                 skips: 0,
                 startTime: new Date(),
                 helpersUsed: { fiftyFifty: false, freezeTime: false },
-                currentStreak: 0, // لتتبع السلسلة الحالية
-                bestStreak: 0,    // لتخزين أفضل سلسلة
+                currentStreak: 0,
+                bestStreak: 0,   
             };
 
             this.currentSkipCost = this.initialSkipCost;
@@ -1375,14 +1376,23 @@
         generatePlayerId() {
             return `P${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
         }
+        
+        // *** تعديل 2.1: دالة جديدة لإنشاء معرّف الجهاز ***
+        generateDeviceId() {
+            let deviceId = localStorage.getItem('quizGameDeviceId');
+            if (!deviceId) {
+                deviceId = 'D' + Date.now().toString(36) + Math.random().toString(36).substr(2, 9).toUpperCase();
+                localStorage.setItem('quizGameDeviceId', deviceId);
+            }
+            return deviceId;
+        }
 
-        // 6. تعديل startLevel لخلط الأسئلة
+
         startLevel() {
             const currentLevel = this.LEVELS[this.gameState.level];
             document.body.setAttribute('data-level', currentLevel.name);
             document.getElementById('currentLevelBadge').textContent = currentLevel.label;
 
-            // خلط الأسئلة في بداية المستوى
             let levelQuestions = [...this.QUESTIONS[currentLevel.name]];
             if (currentLevel.name !== 'impossible') {
                 this.shuffleArray(levelQuestions);
@@ -1406,29 +1416,23 @@
 
         fetchQuestion() {
             const questions = this.gameState.shuffledQuestions;
-    
-            // عند انتهاء أسئلة المستوى
+        
             if (!questions || this.gameState.question >= questions.length) {
         
-                // تحقق إذا كان هذا هو المستوى الأخير أم لا
                 const isLastLevel = this.gameState.level >= this.LEVELS.length - 1;
         
                 if (isLastLevel) {
-                    // إذا كان الأخير، أنهِ اللعبة
                     this.endGame(); 
                 } else {
-                    // وإلا، انتقل للمستوى التالي
                     this.levelComplete();
                 }
-                return; // أوقف الدالة هنا
+                return; 
             }
     
-            // إذا لم ينتهِ المستوى، اعرض السؤال التالي
             const questionData = questions[this.gameState.question];
             this.displayQuestion(questionData);
         }
 
-        // 8. تعديل displayQuestion لخلط الخيارات
         displayQuestion(questionData) {
             this.answerSubmitted = false;
             
@@ -1461,7 +1465,7 @@
             this.startTimer();
         }
 
-       checkAnswer(isCorrect, selectedButton) {
+        checkAnswer(isCorrect, selectedButton) {
             if (this.answerSubmitted) return;
             this.answerSubmitted = true;
     
@@ -1474,13 +1478,10 @@
                 this.gameState.correctAnswers++;
                 this.showToast("إجابة صحيحة! +100 نقطة", "success");
 
-                // --- الجزء الجديد لتتبع السلسلة ---
                 this.gameState.currentStreak++;
                 if (this.gameState.currentStreak > this.gameState.bestStreak) {
                     this.gameState.bestStreak = this.gameState.currentStreak;
                 }
-                // --- نهاية الجزء الجديد ---
-
             } else {
                 selectedButton.classList.add('wrong');
         
@@ -1493,9 +1494,7 @@
                 this.updateScore(this.currentScoreValue - 100);
                 this.showToast("إجابة خاطئة! -100 نقطة", "error");
 
-                // --- الجزء الجديد لتتبع السلسلة ---
-                this.gameState.currentStreak = 0; // إعادة تعيين السلسلة عند الخطأ
-                // --- نهاية الجزء الجديد ---
+                this.gameState.currentStreak = 0;
             }
 
             this.gameState.question++;
@@ -1536,26 +1535,17 @@
         }
 
         endGame() {
-            // ================================================
-            //  1. تجهيز وإنهاء عمليات اللعبة الحالية
-           // ================================================
             clearInterval(this.timerInterval);
             this.hideConfirmExit();
 
-            // ================================================
-            //  2. حساب جميع الإحصائيات والنتائج
-            // ================================================
             const totalTimeSeconds = (new Date() - this.gameState.startTime) / 1000;
             const currentLevel = this.LEVELS[Math.min(this.gameState.level, this.LEVELS.length - 1)];
             const totalAnswered = this.gameState.correctAnswers + this.gameState.wrongAnswers;
     
-            const accuracy = totalAnswered > 0 ? ((this.gameState.correctAnswers / totalAnswered) * 100).toFixed(1) : "0.0";
-            const avgTime = totalAnswered > 0 ? (totalTimeSeconds / totalAnswered).toFixed(1) : 0;
+            const accuracy = totalAnswered > 0 ? parseFloat(((this.gameState.correctAnswers / totalAnswered) * 100).toFixed(1)) : 0.0;
+            const avgTime = totalAnswered > 0 ? parseFloat((totalTimeSeconds / totalAnswered).toFixed(1)) : 0;
             const performanceRating = this.calculatePerformanceRating();
 
-            // ================================================
-                    //  3. تحديث جميع عناصر واجهة المستخدم (UI)
-            // ================================================
             document.getElementById('finalName').textContent = this.gameState.name;
             document.getElementById('finalId').textContent = this.gameState.playerId;
             document.getElementById('finalCorrect').textContent = this.gameState.correctAnswers;
@@ -1569,13 +1559,10 @@
             document.getElementById('finalAvgTime').textContent = `${avgTime} ثانية/سؤال`;
             document.getElementById('performanceText').textContent = performanceRating;
 
-            // ================================================
-            //  4. الإجراءات النهائية (إرسال البيانات وإظهار الشاشة)
-            // ================================================
-            // تجميع البيانات لإرسالها إلى Google Sheets
+            // *** تعديل 3: تجهيز البيانات وإرسالها ***
             const resultsData = {
                 name: this.gameState.name,
-                deviceId: this.deviceId,
+                deviceId: this.gameState.deviceId,
                 playerId: this.gameState.playerId,
                 correct: this.gameState.correctAnswers,
                 wrong: this.gameState.wrongAnswers,
@@ -1583,16 +1570,38 @@
                 score: this.currentScoreValue,
                 accuracy: accuracy,
                 bestStreak: this.gameState.bestStreak,
-                totalTime: this.formatTime(totalTimeSeconds),
-                avgTime: parseFloat(avgTime),
+                totalTime: Math.round(totalTimeSeconds), // إرسال الوقت بالثواني كرقم
+                avgTime: avgTime,                         // إرسال متوسط الوقت كرقم
                 skips: this.gameState.skips,
                 usedFiftyFifty: this.gameState.helpersUsed.fiftyFifty,
                 usedFreezeTime: this.gameState.helpersUsed.freezeTime
             };
     
-            this.saveResults(resultsData); // إرسال البيانات
+            this.saveResults(resultsData); // استدعاء دالة الحفظ الجديدة
     
-            this.showScreen('end'); // إظهار شاشة النتائج
+            this.showScreen('end');
+        }
+
+        // *** تعديل 4: دالة جديدة لحفظ النتائج عبر API ***
+        async saveResults(resultsData) {
+            console.log("إرسال البيانات إلى السكربت:", resultsData);
+            try {
+                // نستخدم دالة apiCall الموجودة أصلاً
+                const response = await this.apiCall({
+                    action: 'endGame',
+                    ...resultsData // دمج كل بيانات النتائج
+                });
+
+                if (response.success) {
+                    this.showToast("تم حفظ نتيجتك بنجاح!", "success");
+                    console.log("GAS Response:", response);
+                } else {
+                    throw new Error(response.error || "خطأ غير معروف من الخادم");
+                }
+            } catch (error) {
+                console.error("فشل إرسال النتائج:", error);
+                this.showToast("حدث خطأ أثناء حفظ النتيجة.", "error");
+            }
         }
         
         calculatePerformanceRating() {
@@ -1762,17 +1771,24 @@
         }
 
         async apiCall(payload) {
+            // أضف مفتاح API إلى كل طلب
+            const payloadWithKey = {
+                apiKey: this.API_KEY,
+                ...payload
+            };
+
             try {
                 const response = await fetch(this.API_URL, {
                     method: 'POST',
-                    mode: 'cors',
+                    // لا تستخدم mode: 'cors' هنا، فهي قد تسبب مشاكل مع GAS
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify(payloadWithKey)
                 });
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                // لا تتحقق من response.ok هنا لأن GAS قد يرسل استجابة خطأ مع status 200
                 return await response.json();
             } catch (error) {
                 console.error('API Error:', error);
+                // أعد رمي الخطأ ليتم التقاطه في دالة saveResults
                 throw error;
             }
         }
@@ -1787,16 +1803,15 @@
                 if (response && response.success && response.leaderboard) {
                     let tableHTML = '<p>لوحة الصدارة فارغة حاليًا!</p>';
                     if (response.leaderboard.length > 0) {
-                        tableHTML = `<table class="leaderboard-table">
-                            <tr><th>الترتيب</th><th>الاسم</th><th>المعرّف</th><th>المستوى</th><th>النقاط</th></tr>
-                            ${response.leaderboard.map((row, index) => `
+                        tableHTML = `<table class="leaderboard-table" style="width:100%; text-align:right; border-collapse: collapse;">
+                            <thead style="font-weight:bold;"><tr><th style="padding:8px;">الترتيب</th><th style="padding:8px;">الاسم</th><th style="padding:8px;">المستوى</th><th style="padding:8px;">النقاط</th></tr></thead>
+                            <tbody>${response.leaderboard.map((row, index) => `
                                 <tr>
-                                    <td>${['🥇', '🥈', '🥉'][index] || index + 1}</td>
-                                    <td>${row.name || 'غير معروف'}</td>
-                                    <td>${row.playerId || 'N/A'}</td>
-                                    <td>${row.level || 'N/A'}</td>
-                                    <td>${this.formatNumber(row.score || 0)}</td>
-                                </tr>`).join('')}
+                                    <td style="padding:8px;">${['🥇', '🥈', '🥉'][index] || index + 1}</td>
+                                    <td style="padding:8px;">${row.name || 'غير معروف'}</td>
+                                    <td style="padding:8px;">${row.level || 'N/A'}</td>
+                                    <td style="padding:8px;">${this.formatNumber(row.score || 0)}</td>
+                                </tr>`).join('')}</tbody>
                         </table>`;
                     }
                     contentDiv.innerHTML = tableHTML;
@@ -1812,12 +1827,11 @@
         getShareText() {
             const performanceRating = this.calculatePerformanceRating();
             return `🧠 نتائجي في مسابقة المعلومات 🧠\n` +
-                   `الاسم: ${this.gameState.name}\n` +
-                   `المعرّف: ${this.gameState.playerId}\n` +
-                   `النقاط: ${this.formatNumber(this.currentScoreValue)}\n` +
-                   `المستوى: ${this.LEVELS[Math.min(this.gameState.level, this.LEVELS.length - 1)].label}\n` +
-                   `التقييم: ${performanceRating}\n\n` +
-                   `🔗 جرب تحديك أنت أيضاً!`;
+                  `الاسم: ${this.gameState.name}\n` +
+                  `النقاط: ${this.formatNumber(this.currentScoreValue)}\n` +
+                  `المستوى: ${this.LEVELS[Math.min(this.gameState.level, this.LEVELS.length - 1)].label}\n` +
+                  `التقييم: ${performanceRating}\n\n` +
+                  `🔗 جرب تحديك أنت أيضاً!`;
         }
         
         shareOnX() {
@@ -1850,7 +1864,6 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        // تحميل السمة المحفوظة
         const savedTheme = localStorage.getItem('theme') || 'dark';
         document.body.dataset.theme = savedTheme;
         
