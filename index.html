@@ -168,15 +168,20 @@
       height: 100%;
       display: flex;
       flex-direction: column;
-      justify-content: flex-start; /* Changed from 'center' to fix scrolling */
+      justify-content: center; /* Reverted to 'center' for default vertical centering */
       align-items: center;
-      padding: var(--space-8) var(--space-4); /* Increased top/bottom padding for better spacing */
+      padding: var(--space-8) var(--space-4);
       opacity: 0;
       visibility: hidden;
       transform: scale(0.95);
       transition: opacity var(--transition-normal), visibility var(--transition-normal), transform var(--transition-normal);
       overflow-y: auto;
       z-index: 1;
+    }
+
+    /* New class for screens that need to scroll and align to top */
+    .screen.screen--align-top {
+        justify-content: flex-start;
     }
 
     .screen.active {
@@ -902,7 +907,7 @@
     </div>
     
     
-    <div id="instructionsScreen" class="screen" aria-hidden="true">
+    <div id="instructionsScreen" class="screen screen--align-top" aria-hidden="true">
         <div class="content-box">
             <header class="screen-header">
                 <h2>📋 تعليمات اللعبة</h2>
@@ -1062,7 +1067,7 @@
         </div>
     </div>
 
-    <div id="endScreen" class="screen" aria-hidden="true">
+    <div id="endScreen" class="screen screen--align-top" aria-hidden="true">
         <div class="content-box">
             <header class="screen-header">
                 <h2>🏆 النتائج النهائية 🏆</h2>
@@ -1107,7 +1112,7 @@
         </div>
     </div>
     
-    <div id="leaderboardScreen" class="screen" aria-hidden="true">
+    <div id="leaderboardScreen" class="screen screen--align-top" aria-hidden="true">
         <div class="content-box">
             <header class="screen-header">
                 <h2>
@@ -1872,6 +1877,4 @@
     <div class="sr-only" aria-live="polite" id="liveAnnouncements"></div>
 </body>
 </html>
-
-
 
