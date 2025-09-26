@@ -1907,14 +1907,15 @@
                 if (response && response.success && response.leaderboard) {
                     let tableHTML = '<p>لوحة الصدارة فارغة حاليًا!</p>';
                     if (response.leaderboard.length > 0) {
+                        // --- تم تعديل الأعمدة والبيانات هنا ---
                         tableHTML = `<table class="leaderboard-table" style="width:100%; text-align:right; border-collapse: collapse;">
-                            <thead style="font-weight:bold;"><tr><th style="padding:8px;">الترتيب</th><th style="padding:8px;">الاسم</th><th style="padding:8px;">المستوى</th><th style="padding:8px;">النقاط</th></tr></thead>
+                            <thead style="font-weight:bold;"><tr><th style="padding:8px;">الترتيب</th><th style="padding:8px;">الاسم</th><th style="padding:8px;">رقم المحاولة</th><th style="padding:8px;">التاريخ</th></tr></thead>
                             <tbody>${response.leaderboard.map((row, index) => `
                                 <tr>
                                     <td style="padding:8px;">${['🥇', '🥈', '🥉'][index] || index + 1}</td>
                                     <td style="padding:8px;">${row.name || 'غير معروف'}</td>
-                                    <td style="padding:8px;">${row.level || 'N/A'}</td>
-                                    <td style="padding:8px;">${this.formatNumber(row.score || 0)}</td>
+                                    <td style="padding:8px;">${row.attempt || 'N/A'}</td>
+                                    <td style="padding:8px;">${row.date || 'N/A'}</td>
                                 </tr>`).join('')}</tbody>
                         </table>`;
                     }
@@ -1976,4 +1977,5 @@
     <div class="sr-only" aria-live="polite" id="liveAnnouncements"></div>
 </body>
 </html>
+
 
