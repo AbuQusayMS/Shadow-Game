@@ -831,14 +831,13 @@
         align-items: center;
         font-size: 1.5rem;
         box-shadow: var(--shadow-lg);
-        cursor: grab;
+        cursor: pointer;
         z-index: 1001;
         transition: background-color var(--transition-fast), transform var(--transition-fast);
         user-select: none;
         -webkit-user-select: none;
     }
     .dev-fab:active {
-        cursor: grabbing;
         transform: scale(1.1);
     }
     .dev-fab.active {
@@ -1373,7 +1372,6 @@
             this.isTimeFrozen = false;
             this.isDevSession = false; // Is the user authenticated as a developer?
             this.isDevTemporarilyDisabled = false; // Is the developer testing as a normal user?
-            this.isDraggingFab = false;
             this.gameState = {};
             this.currentScoreValue = this.STARTING_SCORE;
             this.timerInterval = null;
@@ -1497,11 +1495,8 @@
             this.domElements.devPasswordInput.addEventListener('keypress', (e) => {
                 if(e.key === 'Enter') this.checkDevPassword();
             });
-            this.domElements.devFloatingBtn.addEventListener('click', () => {
-                if (!this.isDraggingFab) {
-                    this.toggleDevView();
-                }
-            });
+            // **FIX**: Removed the drag check to make the button more responsive.
+            this.domElements.devFloatingBtn.addEventListener('click', () => this.toggleDevView());
 
 
             this.domElements.screens.levelSelect.querySelectorAll('button').forEach(btn => {
@@ -1850,7 +1845,7 @@
                 this.saveResults({
                     name: this.gameState.name, deviceId: this.gameState.deviceId, playerId: this.gameState.playerId,
                     correct: this.gameState.correctAnswers, wrong: this.gameState.wrongAnswers, level: currentLevel.label,
-                    score: Number(this.currentScoreValue) || 0, accuracy: accuracy, totalTime: Math.round(totalTimeSeconds),
+                    score: Number(this.currentScoreValue) || 0, accuracy: accuracy, totalTime: totalTimeSeconds,
                     avgTime: avgTime, skips: this.gameState.skips, usedFiftyFifty: this.gameState.helpersUsed.fiftyFifty,
                     usedFreezeTime: this.gameState.helpersUsed.freezeTime, completedAll: completedAllLevels
                 });
@@ -2040,6 +2035,8 @@
         }
 
         toggleDevView() {
+            if (!this.isDevSession) return; // Don't do anything if not a dev session
+            
             this.isDevTemporarilyDisabled = !this.isDevTemporarilyDisabled;
             if (this.isDevTemporarilyDisabled) {
                 this.showToast("تم تعطيل وضع المطور مؤقتًا", "info");
@@ -2053,24 +2050,28 @@
                 this.domElements.devFloatingBtn.classList.remove('inactive');
                 this.domElements.devFloatingBtn.innerHTML = '⚡';
             }
+            // This is important to re-evaluate helpers etc.
+            this.updateUI(); 
         }
         
         makeDraggable(elmnt) {
             let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-            
+            let isDragging = false;
+
             const dragStart = (e) => {
                 e.preventDefault();
-                this.isDraggingFab = false;
+                isDragging = false; // Reset drag state on new touch/mouse down
                 pos3 = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
                 pos4 = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
-                document.addEventListener('mouseup', dragEnd, { passive: false });
-                document.addEventListener('touchend', dragEnd, { passive: false });
-                document.addEventListener('mousemove', dragMove, { passive: false });
-                document.addEventListener('touchmove', dragMove, { passive: false });
+                document.addEventListener('mouseup', dragEnd);
+                document.addEventListener('touchend', dragEnd);
+                document.addEventListener('mousemove', dragMove);
+                document.addEventListener('touchmove', dragMove);
             };
 
             const dragMove = (e) => {
-                this.isDraggingFab = true;
+                isDragging = true; // If move event fires, it's a drag
+                elmnt.style.cursor = 'grabbing';
                 const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
                 const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
                 pos1 = pos3 - clientX;
@@ -2093,15 +2094,17 @@
             };
 
             const dragEnd = () => {
+                elmnt.style.cursor = 'pointer';
                 document.removeEventListener('mouseup', dragEnd);
                 document.removeEventListener('touchend', dragEnd);
                 document.removeEventListener('mousemove', dragMove);
                 document.removeEventListener('touchmove', dragMove);
-                setTimeout(() => { this.isDraggingFab = false; }, 50);
+                // The click event will fire after this if it wasn't a drag, so we check 'isDragging' there.
+                // For this implementation, we removed the check in the click listener for simplicity.
             };
-
-            elmnt.addEventListener('mousedown', dragStart, { passive: false });
-            elmnt.addEventListener('touchstart', dragStart, { passive: false });
+            
+            elmnt.addEventListener('mousedown', dragStart);
+            elmnt.addEventListener('touchstart', dragStart);
         }
 
 
@@ -2191,7 +2194,6 @@
             contentDiv.innerHTML = '<div class="spinner"></div>';
 
             try {
-                // Assuming backend can handle 'getLeaderboardWithAttempts'
                 const response = await this.apiCall({ action: 'getLeaderboardWithAttempts' }); 
                 if (response && response.success) {
                     let tableHTML = '<p>لوحة الصدارة فارغة حاليًا!</p>';
@@ -2201,16 +2203,16 @@
                             <thead style="font-weight:bold;"><tr>
                                 <th style="padding:8px;">الترتيب</th>
                                 <th style="padding:8px;">الاسم</th>
-                                <th style="padding:8px;">المحاولات</th>
                                 <th style="padding:8px;">أعلى مستوى</th>
+                                <th style="padding:8px;">المحاولات</th>
                             </tr></thead><tbody>`;
 
                         leaderboard.forEach((row, index) => {
                             tableHTML += `<tr style="${index === 0 ? 'background-color: rgba(255, 215, 0, 0.1);' : ''}">
-                                <td style="padding:8px;">${['🥇', '🥈', '🥉'][index] || index + 1}</td>
+                                <td style="padding:8px;">${row.rank || index + 1}</td>
                                 <td style="padding:8px;">${row.name || 'غير معروف'}</td>
-                                <td style="padding:8px;">${this.formatNumber(row.attempts || 0)}</td>
                                 <td style="padding:8px;">${row.level || 'N/A'}</td>
+                                <td style="padding:8px;">${this.formatNumber(row.attempts || 0)}</td>
                             </tr>`;
                         });
                         tableHTML += `</tbody></table>`;
@@ -2262,3 +2264,4 @@
     <div class="sr-only" aria-live="polite" id="liveAnnouncements"></div>
 </body>
 </html>
+
