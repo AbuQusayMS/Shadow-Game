@@ -825,6 +825,7 @@
         right: var(--space-4);
         width: 3.5rem;
         height: 3.5rem;
+        padding: 0.5rem; /* Added padding to increase hitbox */
         border-radius: var(--radius-full);
         display: flex;
         justify-content: center;
@@ -847,6 +848,9 @@
     .dev-fab.inactive {
         background-color: var(--color-gray-500);
         color: var(--color-white);
+    }
+    .dev-fab span {
+        pointer-events: none; /* Make sure click goes to parent div */
     }
     
     #image-editor-container {
@@ -931,7 +935,7 @@
 <body data-theme="dark" aria-live="polite" data-level="easy">
     <div id="toast-container" class="toast-container" aria-live="assertive"></div>
     <div id="reportErrorFab" class="report-fab" role="button" aria-label="الإبلاغ عن مشكلة">⚠️</div>
-    <div id="devFloatingBtn" class="dev-fab" role="button" title="تبديل وضع المطور" style="display: none;">⚡</div>
+    <div id="devFloatingBtn" class="dev-fab" role="button" title="تبديل وضع المطور" style="display: none;"><span>⚡</span></div>
 
     <div id="loader" class="screen active" role="status" aria-label="جاري التحميل">
         <div class="spinner" aria-hidden="true"></div>
@@ -1407,7 +1411,6 @@
             this.cacheDomElements();
             this.bindEventListeners();
             this.populateAvatarGrid();
-            this.makeDraggable(this.domElements.devFloatingBtn);
 
             const questionsLoaded = await this.loadQuestions();
             
@@ -1465,9 +1468,9 @@
             document.getElementById('showLeaderboardBtn').addEventListener('click', () => this.displayLeaderboard());
             document.getElementById('backToStartBtn').addEventListener('click', () => this.showScreen('start'));
             this.domElements.themeToggleBtn.addEventListener('click', () => this.toggleTheme());
-            document.getElementById('endQuizBtn').addEventListener('click', () => this.showConfirmExit());
+            document.getElementById('endQuizBtn').addEventListener('click', () => this.showModal(this.domElements.confirmExitModal));
             document.getElementById('confirmExitYes').addEventListener('click', () => this.endGame());
-            document.getElementById('confirmExitNo').addEventListener('click', () => this.hideConfirmExit());
+            document.getElementById('confirmExitNo').addEventListener('click', () => this.hideModal(this.domElements.confirmExitModal));
             document.getElementById('nextLevelBtn').addEventListener('click', () => this.nextLevel());
             document.getElementById('quitLevelBtn').addEventListener('click', () => this.endGame());
             document.getElementById('playAgainBtn').addEventListener('click', () => this.resetGame());
@@ -1481,21 +1484,20 @@
                 if (e.key === 'Enter') this.handleNameConfirmation();
             });
             
-            this.domElements.reportErrorFab.addEventListener('click', () => this.showAdvancedReportModal());
+            this.domElements.reportErrorFab.addEventListener('click', () => this.showModal(this.domElements.advancedReportModal));
             this.domElements.reportProblemForm.addEventListener('submit', (e) => this.handleReportSubmit(e));
-            this.domElements.cancelReportBtn.addEventListener('click', () => this.hideAdvancedReportModal());
+            this.domElements.cancelReportBtn.addEventListener('click', () => this.hideModal(this.domElements.advancedReportModal));
             
             this.domElements.saveCroppedImageBtn.addEventListener('click', () => this.saveCroppedAvatar());
-            this.domElements.cancelCropBtn.addEventListener('click', () => this.hideAvatarEditor());
+            this.domElements.cancelCropBtn.addEventListener('click', () => this.hideModal(this.domElements.avatarEditorModal));
 
             // Developer Mode Listeners
-            document.getElementById('showDevModeBtn').addEventListener('click', () => this.showDevPasswordModal());
+            document.getElementById('showDevModeBtn').addEventListener('click', () => this.showModal(this.domElements.devPasswordModal));
             document.getElementById('confirmDevPassword').addEventListener('click', () => this.checkDevPassword());
-            document.getElementById('cancelDevPassword').addEventListener('click', () => this.hideDevPasswordModal());
+            document.getElementById('cancelDevPassword').addEventListener('click', () => this.hideModal(this.domElements.devPasswordModal));
             this.domElements.devPasswordInput.addEventListener('keypress', (e) => {
                 if(e.key === 'Enter') this.checkDevPassword();
             });
-            // **FIX**: Removed the drag check to make the button more responsive.
             this.domElements.devFloatingBtn.addEventListener('click', () => this.toggleDevView());
 
 
@@ -1592,26 +1594,10 @@
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     this.domElements.imageToCrop.src = e.target.result;
-                    this.showAvatarEditor();
+                    this.showModal(this.domElements.avatarEditorModal);
                 };
                 reader.readAsDataURL(file);
             }
-        }
-
-        showAvatarEditor() {
-            this.domElements.avatarEditorModal.classList.add('active');
-            setTimeout(() => {
-                if (this.cropper) this.cropper.destroy();
-                this.cropper = new Cropper(this.domElements.imageToCrop, {
-                    aspectRatio: 1, viewMode: 1, background: false, responsive: true,
-                    autoCropArea: 1, zoomable: true, movable: true,
-                });
-            }, 300);
-        }
-        
-        hideAvatarEditor() {
-            if (this.cropper) { this.cropper.destroy(); this.cropper = null; }
-            this.domElements.avatarEditorModal.classList.remove('active');
         }
 
         saveCroppedAvatar() {
@@ -1633,7 +1619,7 @@
 
             newAvatarImg.addEventListener('click', (e) => this.selectAvatar(e.target));
             this.selectAvatar(newAvatarImg);
-            this.hideAvatarEditor();
+            this.hideModal(this.domElements.avatarEditorModal);
         }
 
         showScreen(screenName) {
@@ -1820,7 +1806,7 @@
 
         endGame(completedAllLevels = false) {
             clearInterval(this.timerInterval);
-            this.hideConfirmExit();
+            this.hideModal(this.domElements.confirmExitModal);
 
             const totalTimeSeconds = (new Date() - this.gameState.startTime) / 1000;
             const currentLevel = this.LEVELS[Math.min(this.gameState.level, this.LEVELS.length - 1)];
@@ -2000,18 +1986,6 @@
 
         // --- Developer Mode Functions ---
 
-        showDevPasswordModal() {
-            this.domElements.devPasswordInput.value = "";
-            this.domElements.devPasswordError.textContent = "";
-            this.domElements.devPasswordError.classList.remove('show');
-            this.domElements.devPasswordModal.classList.add('active');
-            setTimeout(() => this.domElements.devPasswordInput.focus(), 100);
-        }
-
-        hideDevPasswordModal() {
-            this.domElements.devPasswordModal.classList.remove('active');
-        }
-
         checkDevPassword() {
             const input = this.domElements.devPasswordInput.value;
             if (input === this.config.developerPassword) {
@@ -2025,91 +1999,54 @@
         activateDevSession(fromModal = true) {
             this.isDevSession = true;
             if(fromModal) {
-              this.hideDevPasswordModal();
+              this.hideModal(this.domElements.devPasswordModal);
             }
             this.showToast("تم تفعيل وضع المطور", "success");
-            this.domElements.devFloatingBtn.style.display = 'flex';
-            this.domElements.devFloatingBtn.classList.add('active');
-            this.domElements.devFloatingBtn.classList.remove('inactive');
-            this.domElements.devFloatingBtn.innerHTML = '⚡';
+            const fab = this.domElements.devFloatingBtn;
+            fab.style.display = 'flex';
+            fab.classList.add('active');
+            fab.classList.remove('inactive');
+            fab.querySelector('span').innerHTML = '⚡';
         }
 
         toggleDevView() {
             if (!this.isDevSession) return; // Don't do anything if not a dev session
             
             this.isDevTemporarilyDisabled = !this.isDevTemporarilyDisabled;
+            const fab = this.domElements.devFloatingBtn;
             if (this.isDevTemporarilyDisabled) {
                 this.showToast("تم تعطيل وضع المطور مؤقتًا", "info");
-                this.domElements.devFloatingBtn.classList.remove('active');
-                this.domElements.devFloatingBtn.classList.add('inactive');
-                this.domElements.devFloatingBtn.innerHTML = '🛠️';
+                fab.classList.remove('active');
+                fab.classList.add('inactive');
+                fab.querySelector('span').innerHTML = '🛠️';
 
             } else {
                 this.showToast("تم تفعيل وضع المطور", "success");
-                this.domElements.devFloatingBtn.classList.add('active');
-                this.domElements.devFloatingBtn.classList.remove('inactive');
-                this.domElements.devFloatingBtn.innerHTML = '⚡';
+                fab.classList.add('active');
+                fab.classList.remove('inactive');
+                fab.querySelector('span').innerHTML = '⚡';
             }
             // This is important to re-evaluate helpers etc.
             this.updateUI(); 
         }
-        
-        makeDraggable(elmnt) {
-            let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-            let isDragging = false;
 
-            const dragStart = (e) => {
-                e.preventDefault();
-                isDragging = false; // Reset drag state on new touch/mouse down
-                pos3 = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
-                pos4 = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
-                document.addEventListener('mouseup', dragEnd);
-                document.addEventListener('touchend', dragEnd);
-                document.addEventListener('mousemove', dragMove);
-                document.addEventListener('touchmove', dragMove);
-            };
+        // --- Modal and Theme Helpers ---
 
-            const dragMove = (e) => {
-                isDragging = true; // If move event fires, it's a drag
-                elmnt.style.cursor = 'grabbing';
-                const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
-                const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
-                pos1 = pos3 - clientX;
-                pos2 = pos4 - clientY;
-                pos3 = clientX;
-                pos4 = clientY;
-
-                let newTop = elmnt.offsetTop - pos2;
-                let newLeft = elmnt.offsetLeft - pos1;
-
-                const rect = elmnt.getBoundingClientRect();
-                const parentRect = elmnt.parentElement.getBoundingClientRect();
-                newTop = Math.max(0, Math.min(newTop, parentRect.height - rect.height));
-                newLeft = Math.max(0, Math.min(newLeft, parentRect.width - rect.width));
-
-                elmnt.style.top = newTop + "px";
-                elmnt.style.left = newLeft + "px";
-                elmnt.style.bottom = 'auto';
-                elmnt.style.right = 'auto';
-            };
-
-            const dragEnd = () => {
-                elmnt.style.cursor = 'pointer';
-                document.removeEventListener('mouseup', dragEnd);
-                document.removeEventListener('touchend', dragEnd);
-                document.removeEventListener('mousemove', dragMove);
-                document.removeEventListener('touchmove', dragMove);
-                // The click event will fire after this if it wasn't a drag, so we check 'isDragging' there.
-                // For this implementation, we removed the check in the click listener for simplicity.
-            };
-            
-            elmnt.addEventListener('mousedown', dragStart);
-            elmnt.addEventListener('touchstart', dragStart);
+        showModal(modalElement) {
+            modalElement.classList.add('active');
+            modalElement.setAttribute('aria-hidden', 'false');
+            const firstFocusable = modalElement.querySelector('button, [href], input, select, textarea');
+            if(firstFocusable) setTimeout(() => firstFocusable.focus(), 100);
         }
 
-
-        // --- End of Developer Functions ---
-
+        hideModal(modalElement) {
+            modalElement.classList.remove('active');
+            modalElement.setAttribute('aria-hidden', 'true');
+            if (modalElement === this.domElements.advancedReportModal) {
+                this.domElements.reportProblemForm.reset();
+            }
+        }
+        
         toggleTheme() {
             const newTheme = document.body.dataset.theme === 'dark' ? 'light' : 'dark';
             document.body.dataset.theme = newTheme;
@@ -2117,13 +2054,7 @@
             this.domElements.themeToggleBtn.textContent = newTheme === 'dark' ? '☀️' : '🌙';
         }
 
-        showConfirmExit() { this.domElements.confirmExitModal.classList.add('active'); }
-        hideConfirmExit() { this.domElements.confirmExitModal.classList.remove('active'); }
-        showAdvancedReportModal() { this.domElements.advancedReportModal.classList.add('active'); }
-        hideAdvancedReportModal() {
-            this.domElements.advancedReportModal.classList.remove('active');
-            this.domElements.reportProblemForm.reset();
-        }
+        // --- Reporting and API ---
 
         async handleReportSubmit(event) {
             event.preventDefault();
@@ -2132,7 +2063,7 @@
             let screenshotBase64 = null;
 
             this.showToast("جاري إرسال البلاغ...", "info");
-            this.hideAdvancedReportModal();
+            this.hideModal(this.domElements.advancedReportModal);
 
             if (file && file.size > 0) {
                 try { screenshotBase64 = await this.fileToBase64(file); } 
@@ -2149,8 +2080,6 @@
                 timestamp: new Date().toISOString()
             };
 
-            // This structure sends all data to the Apps Script.
-            // The script will then decide whether to use sendMessage (no image) or sendPhoto (with image).
             try {
                 const response = await this.apiCall({ action: 'submitReportWithPhoto', data: reportData });
                 if (response.success) this.showToast("تم إرسال بلاغك بنجاح. شكراً لك!", "success");
@@ -2227,18 +2156,40 @@
         
         getShareText() {
             const performanceRating = this.calculatePerformanceRating();
-            return `🧠 نتائجي في مسابقة المعلومات 🧠\n` + `الاسم: ${this.gameState.name}\n` +
-                  `النقاط: ${this.formatNumber(this.currentScoreValue)}\n` + `المستوى: ${this.LEVELS[Math.min(this.gameState.level, this.LEVELS.length - 1)].label}\n` +
-                  `التقييم: ${performanceRating}\n\n` + `🔗 جرب تحديك أنت أيضاً!`;
+            return `🏆 النتائج النهائية 🏆\n\n` + 
+                `الاسم: ${this.gameState.name}\n` +
+                `المعرّف: ${this.gameState.playerId}\n` +
+                `الإجابات الصحيحة: ${this.gameState.correctAnswers}\n` +
+                `الإجابات الخاطئة: ${this.gameState.wrongAnswers}\n` +
+                `مرات التخطي: ${this.gameState.skips}\n` +
+                `النقاط النهائية: ${this.formatNumber(this.currentScoreValue)}\n` +
+                `الوقت المستغرق: ${this.formatTime((new Date() - this.gameState.startTime) / 1000)}\n` +
+                `المستوى الذي وصلت إليه: ${this.LEVELS[Math.min(this.gameState.level, this.LEVELS.length - 1)].label}\n` +
+                `نسبة الدقة: ${this.getFinalAccuracy()}%` +
+                `\nمتوسط وقت الإجابة: ${this.getFinalAvgTime()} / سؤال` +
+                `\nأداؤك: ${performanceRating}`;
         }
         
+        getFinalAccuracy() {
+            const totalAnswered = this.gameState.correctAnswers + this.gameState.wrongAnswers;
+            return totalAnswered > 0 ? parseFloat(((this.gameState.correctAnswers / totalAnswered) * 100).toFixed(1)) : 0.0;
+        }
+
+        getFinalAvgTime() {
+            const totalAnswered = this.gameState.correctAnswers + this.gameState.wrongAnswers;
+            const totalTimeSeconds = (new Date() - this.gameState.startTime) / 1000;
+            const avgTime = totalAnswered > 0 ? parseFloat((totalTimeSeconds / totalAnswered).toFixed(1)) : 0;
+            return this.formatTime(avgTime);
+        }
+
         shareOnX() {
-            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(this.getShareText())}`, '_blank');
+            const textToShare = this.getShareText() + `\n\n🔗 جرب تحديك أنت أيضاً!\n${this.API_URL.replace("macros/s", "d")}`;
+            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(textToShare)}`, '_blank');
         }
 
         shareOnInstagram() {
             navigator.clipboard.writeText(this.getShareText())
-                .then(() => this.showToast("تم نسخ النتيجة!", "success"))
+                .then(() => this.showToast("تم نسخ النتيجة لمشاركتها!", "success"))
                 .catch(() => this.showToast("فشل نسخ النتيجة.", "error"));
         }
 
