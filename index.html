@@ -1377,7 +1377,7 @@
             this.HELPER_COSTS = {
                 fiftyFifty: 100,
                 freezeTime: 100,
-                skipQuestion: 30 // Base cost - غير التكلفة الأساسية هنا
+                skipQuestion: 1 // Base cost - غير التكلفة الأساسية هنا
             };
             
             this.isTimeFrozen = false;
@@ -1914,7 +1914,7 @@
             const isDev = this.isDeveloper();
             
             let cost = (type === 'skipQuestion')
-                ? this.HELPER_COSTS.skipQuestion + (this.gameState.skips * 10) // غير القيمة المتزايدة هنا
+                ? this.HELPER_COSTS.skipQuestion + (this.gameState.skips * 1) // غير القيمة المتزايدة هنا
                 : this.HELPER_COSTS[type];
 
             if (!isDev && this.currentScoreValue < cost) {
@@ -2001,7 +2001,7 @@
 
             const skipCostSpan = document.getElementById('skipCost');
             if (skipCostSpan) {
-                const currentSkipCost = this.HELPER_COSTS.skipQuestion + (this.gameState.skips * 10); // غير القيمة المتزايدة هنا أيضاً لتحديث الواجهة
+                const currentSkipCost = this.HELPER_COSTS.skipQuestion + (this.gameState.skips * 1); // غير القيمة المتزايدة هنا أيضاً لتحديث الواجهة
                 skipCostSpan.textContent = `(${currentSkipCost})`;
             }
 
