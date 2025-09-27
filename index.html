@@ -1206,6 +1206,7 @@
                 <h3 id="finalStatsHeading" class="sr-only">الإحصائيات النهائية</h3>
                 <p>✍️ الاسم: <strong id="finalName"></strong></p>
                 <p>🆔 المعرّف: <strong id="finalId"></strong></p>
+                <p>🔢 رقم المحاولة: <strong id="finalAttemptNumber"></strong></p>
                 <p>✅ الإجابات الصحيحة: <strong id="finalCorrect"></strong></p>
                 <p>❌ الإجابات الخاطئة: <strong id="finalWrong"></strong></p>
                 <p>⏭️ مرات التخطي: <strong id="finalSkips"></strong></p>
@@ -1817,6 +1818,7 @@
 
             document.getElementById('finalName').textContent = this.gameState.name;
             document.getElementById('finalId').textContent = this.gameState.playerId;
+            document.getElementById('finalAttemptNumber').textContent = this.gameState.attemptNumber;
             document.getElementById('finalCorrect').textContent = this.gameState.correctAnswers;
             document.getElementById('finalWrong').textContent = this.gameState.wrongAnswers;
             document.getElementById('finalSkips').textContent = this.gameState.skips;
@@ -2159,6 +2161,7 @@
             return `🏆 النتائج النهائية 🏆\n\n` + 
                 `الاسم: ${this.gameState.name}\n` +
                 `المعرّف: ${this.gameState.playerId}\n` +
+                `رقم المحاولة: ${this.gameState.attemptNumber}\n` +
                 `الإجابات الصحيحة: ${this.gameState.correctAnswers}\n` +
                 `الإجابات الخاطئة: ${this.gameState.wrongAnswers}\n` +
                 `مرات التخطي: ${this.gameState.skips}\n` +
@@ -2215,4 +2218,5 @@
     <div class="sr-only" aria-live="polite" id="liveAnnouncements"></div>
 </body>
 </html>
+
 
