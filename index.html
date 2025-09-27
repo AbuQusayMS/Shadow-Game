@@ -1146,7 +1146,7 @@
                 <div id="fiftyFiftyDesc" class="sr-only">يزيل خيارين خاطئين</div>
         
                 <button class="helper-btn" data-type="freezeTime" aria-describedby="freezeTimeDesc">
-                            ❄️ 10ث
+                        ❄️ 10ث
                     <span class="helper-cost">(100)</span>
                 </button>
                 <div id="freezeTimeDesc" class="sr-only">يوقف المؤقت لمدة 10 ثوان</div>
@@ -1348,8 +1348,14 @@
             this.config = {
                 developerName: "AbuQusay",
                 developerPassword: "AbuQusay", // The password for developer mode
-                randomize_questions: true,
-                randomize_answers: true,
+                // *** NEW FEATURE: Flexible Question/Answer System ***
+                // The following settings control the randomization of questions and answers.
+                // This system is designed to be flexible:
+                // 1. To add/remove questions or levels, simply edit the 'questions.json' file.
+                // 2. To add/remove answer options, edit the 'options' array for a question in 'questions.json'
+                //    and make sure the 'correct' index is updated. The system handles any number of options.
+                randomize_questions: true, // Set to true to shuffle question order within a level.
+                randomize_answers: true,   // Set to true to shuffle answer options for each question.
             };
             this.API_URL = "https://script.google.com/macros/s/AKfycbwSieydP8pgaTKpqzlDBYDEjeuMSYu85eVLwUlMepwkbGOi4toI5-Lc-lpeK8T6rRdg/exec";
             this.API_KEY = "AbuQusay2025_SecretKey";
@@ -1393,6 +1399,9 @@
         }
 
         async loadQuestions() {
+             // This function loads all questions from an external JSON file.
+             // This makes the game highly flexible. You can change all questions
+             // without touching the main game code.
             try {
                 const response = await fetch(`questions.json?v=${new Date().getTime()}`); // Cache busting
                 if (!response.ok) {
@@ -1692,6 +1701,9 @@
                 this.showToast("المساعدات معطلة في المستوى المستحيل!", "info");
             }
 
+            // *** NEW FEATURE: Question Randomization ***
+            // If randomize_questions is true in the config, this will shuffle the questions
+            // for the current level before starting.
             let levelQuestions = [...this.QUESTIONS[currentLevel.name]];
             if (this.config.randomize_questions && currentLevel.name !== 'impossible') {
                 this.shuffleArray(levelQuestions);
@@ -1725,6 +1737,9 @@
         displayQuestion(questionData) {
             this.answerSubmitted = false;
             
+            // *** NEW FEATURE: Answer Randomization ***
+            // This logic ensures the correct answer is tracked even after shuffling the options.
+            // It finds the correct answer text before shuffling, then shuffles the options array.
             const correctAnswerText = questionData.options[questionData.correct];
             let shuffledOptions = [...questionData.options];
             if (this.config.randomize_answers) {
@@ -1737,6 +1752,8 @@
             this.domElements.questionText.textContent = questionData.q;
             this.domElements.optionsGrid.innerHTML = '';
 
+            // When creating the buttons, it marks the correct one with a 'data-correct' attribute
+            // based on the original correct text. This makes the system flexible to any number of answers.
             shuffledOptions.forEach(optionText => {
                 const button = document.createElement('button');
                 button.className = 'option-btn';
@@ -2170,12 +2187,27 @@
             contentDiv.innerHTML = '<div class="spinner"></div>';
 
             try {
-                const response = await this.apiCall({ action: 'getLeaderboardWithAttempts' }); 
-                if (response && response.success) {
+                const response = await this.apiCall({ action: 'getLeaderboardWithAttempts' });
+                if (response && response.success && Array.isArray(response.leaderboard)) {
+                    let players = response.leaderboard;
+
+                    // *** NEW FEATURE: Enhanced Leaderboard Sorting ***
+                    // This logic sorts the players to prioritize those who have completed the entire quiz.
+                    // It assumes the API provides a 'completedAll' boolean for each player.
+                    // The first player in the sorted list who has 'completedAll' is considered the winner.
+                    players.sort((a, b) => {
+                        // A player who completed (`a.completedAll`) always comes before one who hasn't.
+                        if (a.completedAll && !b.completedAll) return -1;
+                        if (!a.completedAll && b.completedAll) return 1;
+                        
+                        // If both have the same completion status, sort by the rank given by the API.
+                        // The API is responsible for determining the *first* finisher and giving them rank 1.
+                        return (a.rank || 999) - (b.rank || 999);
+                    });
+
                     let tableHTML = '<p>لوحة الصدارة فارغة حاليًا!</p>';
-                    const { leaderboard } = response;
-                    if (leaderboard && leaderboard.length > 0) {
-                         tableHTML = `<table class="leaderboard-table" style="width:100%; text-align:right; border-collapse: collapse;">
+                    if (players.length > 0) {
+                        tableHTML = `<table class="leaderboard-table" style="width:100%; text-align:right; border-collapse: collapse;">
                             <thead style="font-weight:bold;"><tr>
                                 <th style="padding:8px;">الترتيب</th>
                                 <th style="padding:8px;">الاسم</th>
@@ -2183,10 +2215,15 @@
                                 <th style="padding:8px;">المحاولات</th>
                             </tr></thead><tbody>`;
 
-                        leaderboard.forEach((row, index) => {
-                            tableHTML += `<tr style="${index === 0 ? 'background-color: rgba(255, 215, 0, 0.1);' : ''}">
+                        players.forEach((row, index) => {
+                             // The first player who completed the quiz gets a crown.
+                            const isFirstFinisher = row.completedAll && index === 0;
+                            const finisherIcon = isFirstFinisher ? '👑' : '';
+                            const rowStyle = isFirstFinisher ? 'background-color: rgba(255, 215, 0, 0.2); font-weight: bold;' : '';
+                            
+                            tableHTML += `<tr style="${rowStyle}">
                                 <td style="padding:8px;">${row.rank || index + 1}</td>
-                                <td style="padding:8px;">${row.name || 'غير معروف'}</td>
+                                <td style="padding:8px;">${row.name || 'غير معروف'} ${finisherIcon}</td>
                                 <td style="padding:8px;">${row.level || 'N/A'}</td>
                                 <td style="padding:8px;">${this.formatNumber(row.attempts || 0)}</td>
                             </tr>`;
@@ -2194,13 +2231,15 @@
                         tableHTML += `</tbody></table>`;
                     }
                     contentDiv.innerHTML = tableHTML;
-                } else { contentDiv.innerHTML = '<p>حدث خطأ في تحميل لوحة الصدارة.</p>'; }
+                } else {
+                    contentDiv.innerHTML = '<p>حدث خطأ في تحميل لوحة الصدارة.</p>';
+                }
             } catch (error) {
                 console.error("Error loading leaderboard:", error);
                 contentDiv.innerHTML = '<p>حدث خطأ في تحميل لوحة الصدارة.</p>';
             }
         }
-        
+
         getShareText() {
             const performanceRating = this.calculatePerformanceRating();
             return `🏆 النتائج النهائية 🏆\n\n` + 
@@ -2263,4 +2302,3 @@
     <div class="sr-only" aria-live="polite" id="liveAnnouncements"></div>
 </body>
 </html>
-
