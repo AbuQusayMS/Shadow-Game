@@ -1377,7 +1377,7 @@
             this.HELPER_COSTS = {
                 fiftyFifty: 100,
                 freezeTime: 100,
-                skipQuestion: 1 // Base cost
+                skipQuestion: 30 // Base cost - غير التكلفة الأساسية هنا
             };
             
             this.isTimeFrozen = false;
@@ -1913,13 +1913,8 @@
             const type = btn.dataset.type;
             const isDev = this.isDeveloper();
             
-            if (!isDev && this.LEVELS[this.gameState.level].name === 'impossible') {
-                 this.showToast("المساعدات معطلة في هذا المستوى!", "error");
-                 return;
-            }
-
             let cost = (type === 'skipQuestion')
-                ? this.HELPER_COSTS.skipQuestion + (this.gameState.skips * 1)
+                ? this.HELPER_COSTS.skipQuestion + (this.gameState.skips * 10) // غير القيمة المتزايدة هنا
                 : this.HELPER_COSTS[type];
 
             if (!isDev && this.currentScoreValue < cost) {
@@ -2006,7 +2001,7 @@
 
             const skipCostSpan = document.getElementById('skipCost');
             if (skipCostSpan) {
-                const currentSkipCost = this.HELPER_COSTS.skipQuestion + (this.gameState.skips * 1);
+                const currentSkipCost = this.HELPER_COSTS.skipQuestion + (this.gameState.skips * 10); // غير القيمة المتزايدة هنا أيضاً لتحديث الواجهة
                 skipCostSpan.textContent = `(${currentSkipCost})`;
             }
 
@@ -2304,3 +2299,4 @@
     <div class="sr-only" aria-live="polite" id="liveAnnouncements"></div>
 </body>
 </html>
+
