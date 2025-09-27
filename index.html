@@ -1153,7 +1153,7 @@
 
                 <button class="helper-btn" data-type="skipQuestion" aria-describedby="skipQuestionDesc">
                     ⏭️ تخطي
-                    <span id="skipCost" class="helper-cost">(1)</span>
+                    <span id="skipCost" class="helper-cost">(20)</span>
                 </button>
                 <div id="skipQuestionDesc" class="sr-only">تخطي السؤال الحالي</div>
             </div>
@@ -1377,7 +1377,7 @@
             this.HELPER_COSTS = {
                 fiftyFifty: 100,
                 freezeTime: 100,
-                skipQuestion: 20 // Base cost
+                skipQuestion: 1 // Base cost
             };
             
             this.isTimeFrozen = false;
@@ -2006,7 +2006,7 @@
 
             const skipCostSpan = document.getElementById('skipCost');
             if (skipCostSpan) {
-                const currentSkipCost = this.HELPER_COSTS.skipQuestion + (this.gameState.skips * 20);
+                const currentSkipCost = this.HELPER_COSTS.skipQuestion + (this.gameState.skips * 1);
                 skipCostSpan.textContent = `(${currentSkipCost})`;
             }
 
