@@ -203,6 +203,7 @@
       box-shadow: var(--shadow-xl);
       text-align: center;
       border: 1px solid var(--border-color);
+      position: relative;
     }
 
     .screen-header {
@@ -237,6 +238,13 @@
       flex-direction: column;
       gap: var(--space-4);
       margin-top: var(--space-6);
+    }
+    
+    .level-selection-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--space-4);
+        margin-top: var(--space-6);
     }
 
     .btn-main {
@@ -811,6 +819,26 @@
       transform: scale(1.1);
     }
     
+    .dev-toggle-btn {
+        position: absolute;
+        bottom: var(--space-2);
+        right: var(--space-2);
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        opacity: 0.5;
+        transition: all var(--transition-fast);
+    }
+    .dev-toggle-btn:hover {
+        opacity: 1;
+        transform: rotate(15deg);
+    }
+    .dev-toggle-btn.active {
+        opacity: 1;
+        filter: drop-shadow(0 0 5px var(--gold-color));
+    }
+    
     #image-editor-container {
         width: 100%;
         max-width: 400px;
@@ -918,6 +946,7 @@
                     لوحة الصدارة
                 </button>
             </div>
+            <button id="devModeToggle" class="dev-toggle-btn" title="تبديل وضع المطور">⚙️</button>
         </div>
     </div>
     
@@ -1028,6 +1057,22 @@
             </div>
         </div>
     </div>
+
+    <!-- New Level Selection Screen for Developers -->
+    <div id="levelSelectScreen" class="screen" aria-hidden="true">
+        <div class="content-box">
+            <header class="screen-header">
+                <h2>اختر مستوى للبدء (وضع المطور)</h2>
+            </header>
+            <div class="level-selection-grid">
+                <button class="btn-secondary" data-level-index="0">سهل</button>
+                <button class="btn-secondary" data-level-index="1">متوسط</button>
+                <button class="btn-secondary" data-level-index="2">صعب</button>
+                <button class="btn-secondary" data-level-index="3">مستحيل</button>
+            </div>
+        </div>
+    </div>
+
 
     <main id="gameContainer" class="screen" aria-hidden="true">
         <div class="top-bar">
@@ -1258,8 +1303,14 @@
     class QuizGame {
         constructor() {
             // =================================================================
-            // !!!  API Configuration - Update if needed !!!
+            // !!!  Game Configuration !!!
             // =================================================================
+            this.config = {
+                developer_mode: false,
+                developerName: "AbuQusay",
+                randomize_questions: true,
+                randomize_answers: true,
+            };
             this.API_URL = "https://script.google.com/macros/s/AKfycbwSieydP8pgaTKpqzlDBYDEjeuMSYu85eVLwUlMepwkbGOi4toI5-Lc-lpeK8T6rRdg/exec";
             this.API_KEY = "AbuQusay2025_SecretKey";
             // =================================================================
@@ -1279,11 +1330,10 @@
 
             this.HELPER_COSTS = {
                 fiftyFifty: 100,
-                freezeTime: 100
+                freezeTime: 100,
+                skipQuestion: 100
             };
-            this.initialSkipCost = 100;
-            this.currentSkipCost = this.initialSkipCost;
-
+            
             this.isTimeFrozen = false;
             this.gameState = {};
             this.currentScoreValue = this.STARTING_SCORE;
@@ -1339,6 +1389,7 @@
                     avatar: document.getElementById('avatarScreen'),
                     nameEntry: document.getElementById('nameEntry'),
                     instructions: document.getElementById('instructionsScreen'),
+                    levelSelect: document.getElementById('levelSelectScreen'),
                     game: document.getElementById('gameContainer'),
                     levelComplete: document.getElementById('levelCompleteScreen'),
                     end: document.getElementById('endScreen'),
@@ -1354,11 +1405,10 @@
                 themeToggleBtn: document.querySelector('.theme-toggle-btn'),
                 confirmExitModal: document.getElementById('confirmExitModal'),
                 reportErrorFab: document.getElementById('reportErrorFab'),
-                // New advanced report modal elements
+                devModeToggleBtn: document.getElementById('devModeToggle'),
                 advancedReportModal: document.getElementById('advancedReportModal'),
                 reportProblemForm: document.getElementById('reportProblemForm'),
                 cancelReportBtn: document.getElementById('cancelReportBtn'),
-                // Avatar editor modal elements
                 avatarEditorModal: document.getElementById('avatarEditorModal'),
                 imageToCrop: document.getElementById('image-to-crop'),
                 saveCroppedImageBtn: document.getElementById('saveCroppedImage'),
@@ -1369,8 +1419,8 @@
         bindEventListeners() {
             document.getElementById('startPlayBtn').addEventListener('click', () => this.showScreen('avatar'));
             this.domElements.confirmAvatarBtn.addEventListener('click', () => this.showScreen('nameEntry'));
-            this.domElements.confirmNameBtn.addEventListener('click', () => this.showScreen('instructions'));
-            document.getElementById('instructionsConfirmBtn').addEventListener('click', () => this.startGame());
+            this.domElements.confirmNameBtn.addEventListener('click', this.handleNameConfirmation.bind(this));
+            document.getElementById('instructionsConfirmBtn').addEventListener('click', this.postInstructionsStart.bind(this));
             document.getElementById('showLeaderboardBtn').addEventListener('click', () => this.displayLeaderboard());
             document.getElementById('backToStartBtn').addEventListener('click', () => this.showScreen('start'));
             this.domElements.themeToggleBtn.addEventListener('click', () => this.toggleTheme());
@@ -1385,22 +1435,43 @@
             document.getElementById('shareXBtn').addEventListener('click', () => this.shareOnX());
             document.getElementById('shareInstagramBtn').addEventListener('click', () => this.shareOnInstagram());
             
-            // Name validation listener
             this.domElements.nameInput.addEventListener('input', () => this.validateNameInput());
             this.domElements.nameInput.addEventListener('keypress', (e) => { 
-                if (e.key === 'Enter' && !this.domElements.confirmNameBtn.disabled) {
-                    this.showScreen('instructions');
-                }
+                if (e.key === 'Enter') this.handleNameConfirmation();
             });
-
-            // New listeners for advanced report feature
+            
             this.domElements.reportErrorFab.addEventListener('click', () => this.showAdvancedReportModal());
             this.domElements.reportProblemForm.addEventListener('submit', (e) => this.handleReportSubmit(e));
             this.domElements.cancelReportBtn.addEventListener('click', () => this.hideAdvancedReportModal());
             
-            // New listeners for avatar editor
             this.domElements.saveCroppedImageBtn.addEventListener('click', () => this.saveCroppedAvatar());
             this.domElements.cancelCropBtn.addEventListener('click', () => this.hideAvatarEditor());
+
+            this.domElements.devModeToggleBtn.addEventListener('click', this.toggleDeveloperMode.bind(this));
+
+            this.domElements.screens.levelSelect.querySelectorAll('button').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const levelIndex = parseInt(e.target.dataset.levelIndex, 10);
+                    this.startGameFlow(levelIndex);
+                });
+            });
+        }
+        
+        handleNameConfirmation() {
+            this.validateNameInput();
+            if (!this.domElements.confirmNameBtn.disabled) {
+                this.gameState.name = this.domElements.nameInput.value.trim();
+                this.showScreen('instructions');
+            }
+        }
+
+        postInstructionsStart() {
+            this.setupInitialGameState();
+            if (this.isDeveloper()) {
+                this.showScreen('levelSelect');
+            } else {
+                this.startGameFlow(0); // Start normal players at level 0
+            }
         }
         
         validateNameInput() {
@@ -1418,9 +1489,8 @@
         
         populateAvatarGrid() {
             const avatarGrid = document.querySelector('.avatar-grid');
-            avatarGrid.innerHTML = ''; // Clear previous avatars
+            avatarGrid.innerHTML = ''; 
 
-            // Add upload button
             const uploadContainer = document.createElement('div');
             uploadContainer.classList.add('avatar-upload-btn');
             uploadContainer.innerHTML = `<span>+</span><label for="avatarUploadInput" class="sr-only">رفع صورة</label>`;
@@ -1436,19 +1506,12 @@
             uploadContainer.addEventListener('click', () => uploadInput.click());
 
             const avatarUrls = [
-                // A diverse set of emoji avatars
-                "https://em-content.zobj.net/thumbs/120/apple/354/woman_1f469.png",
-                "https://em-content.zobj.net/thumbs/120/apple/354/man_1f468.png",
-                "https://em-content.zobj.net/thumbs/120/apple/354/person-beard_1f9d4.png",
-                "https://em-content.zobj.net/thumbs/120/apple/354/old-man_1f474.png",
-                "https://em-content.zobj.net/thumbs/120/apple/354/student_1f9d1-200d-1f393.png",
-                "https://em-content.zobj.net/thumbs/120/apple/354/teacher_1f9d1-200d-1f3eb.png",
-                "https://em-content.zobj.net/thumbs/120/apple/354/scientist_1f9d1-200d-1f52c.png",
-                "https://em-content.zobj.net/thumbs/120/apple/354/artist_1f9d1-200d-1f3a8.png",
-                "https://em-content.zobj.net/thumbs/120/apple/354/astronaut_1f9d1-200d-1f680.png",
-                "https://em-content.zobj.net/thumbs/120/apple/354/police-officer_1f46e.png",
-                "https://em-content.zobj.net/thumbs/120/apple/354/superhero_1f9b8.png",
-                "https://em-content.zobj.net/thumbs/120/apple/354/mage_1f9d9.png",
+                "https://em-content.zobj.net/thumbs/120/apple/354/woman_1f469.png", "https://em-content.zobj.net/thumbs/120/apple/354/man_1f468.png",
+                "https://em-content.zobj.net/thumbs/120/apple/354/person-beard_1f9d4.png", "https://em-content.zobj.net/thumbs/120/apple/354/old-man_1f474.png",
+                "https://em-content.zobj.net/thumbs/120/apple/354/student_1f9d1-200d-1f393.png", "https://em-content.zobj.net/thumbs/120/apple/354/teacher_1f9d1-200d-1f3eb.png",
+                "https://em-content.zobj.net/thumbs/120/apple/354/scientist_1f9d1-200d-1f52c.png", "https://em-content.zobj.net/thumbs/120/apple/354/artist_1f9d1-200d-1f3a8.png",
+                "https://em-content.zobj.net/thumbs/120/apple/354/astronaut_1f9d1-200d-1f680.png", "https://em-content.zobj.net/thumbs/120/apple/354/police-officer_1f46e.png",
+                "https://em-content.zobj.net/thumbs/120/apple/354/superhero_1f9b8.png", "https://em-content.zobj.net/thumbs/120/apple/354/mage_1f9d9.png",
             ];
 
             avatarUrls.forEach((url, index) => {
@@ -1456,7 +1519,6 @@
                 img.src = url;
                 img.alt = `صورة رمزية ${index + 1}`;
                 img.classList.add('avatar-option');
-                
                 img.addEventListener('click', (e) => this.selectAvatar(e.target));
                 avatarGrid.appendChild(img);
             });
@@ -1467,11 +1529,8 @@
             element.classList.add('selected');
             this.gameState.avatar = element.tagName === 'IMG' ? element.src : element.dataset.src;
             this.domElements.confirmAvatarBtn.disabled = false;
-
             element.classList.add('clicked');
-            setTimeout(() => {
-                element.classList.remove('clicked');
-            }, 300);
+            setTimeout(() => element.classList.remove('clicked'), 300);
         }
 
         handleAvatarUpload(event) {
@@ -1488,62 +1547,44 @@
 
         showAvatarEditor() {
             this.domElements.avatarEditorModal.classList.add('active');
-            // Delay cropper initialization to ensure image is loaded and modal is visible
             setTimeout(() => {
-                if (this.cropper) {
-                    this.cropper.destroy();
-                }
+                if (this.cropper) this.cropper.destroy();
                 this.cropper = new Cropper(this.domElements.imageToCrop, {
-                    aspectRatio: 1,
-                    viewMode: 1,
-                    background: false,
-                    responsive: true,
-                    autoCropArea: 1,
-                    zoomable: true,
-                    movable: true,
+                    aspectRatio: 1, viewMode: 1, background: false, responsive: true,
+                    autoCropArea: 1, zoomable: true, movable: true,
                 });
             }, 300);
         }
         
         hideAvatarEditor() {
-            if (this.cropper) {
-                this.cropper.destroy();
-                this.cropper = null;
-            }
+            if (this.cropper) { this.cropper.destroy(); this.cropper = null; }
             this.domElements.avatarEditorModal.classList.remove('active');
         }
 
         saveCroppedAvatar() {
             if (!this.cropper) return;
-            const croppedCanvas = this.cropper.getCroppedCanvas({
-                width: 256,
-                height: 256,
-                imageSmoothingQuality: 'high',
-            });
-            const croppedImageDataUrl = croppedCanvas.toDataURL('image/png');
+            const croppedImageDataUrl = this.cropper.getCroppedCanvas({
+                width: 256, height: 256, imageSmoothingQuality: 'high',
+            }).toDataURL('image/png');
             
-            // Update the UI to show the new avatar
-            const uploadBtn = document.querySelector('.avatar-upload-btn');
-            const newAvatarImg = document.createElement('img');
-            newAvatarImg.src = croppedImageDataUrl;
-            newAvatarImg.classList.add('avatar-option');
-            
-            // Remove previous custom avatar if exists
             const existingCustom = document.getElementById('custom-avatar');
             if(existingCustom) existingCustom.remove();
             
+            const newAvatarImg = document.createElement('img');
+            newAvatarImg.src = croppedImageDataUrl;
+            newAvatarImg.classList.add('avatar-option');
             newAvatarImg.id = 'custom-avatar';
+            
+            const uploadBtn = document.querySelector('.avatar-upload-btn');
             uploadBtn.parentElement.insertBefore(newAvatarImg, uploadBtn.nextSibling);
 
             newAvatarImg.addEventListener('click', (e) => this.selectAvatar(e.target));
             this.selectAvatar(newAvatarImg);
-
             this.hideAvatarEditor();
         }
 
         showScreen(screenName) {
             if (document.activeElement) document.activeElement.blur();
-            
             Object.values(this.domElements.screens).forEach(screen => {
                 screen.classList.remove('active');
                 screen.setAttribute('aria-hidden', 'true');
@@ -1557,19 +1598,11 @@
             }
         }
 
-        hideLoader() {
-            this.domElements.screens.loader.classList.remove('active');
-        }
+        hideLoader() { this.domElements.screens.loader.classList.remove('active'); }
 
-        async startGame() {
-            // Final validation check before starting
-            this.validateNameInput();
-            if (this.domElements.confirmNameBtn.disabled) return;
-            const name = this.domElements.nameInput.value.trim();
-
+        setupInitialGameState() {
             this.gameState = {
-                name: name,
-                avatar: this.gameState.avatar,
+                ...this.gameState, // keeps name and avatar
                 playerId: this.generatePlayerId(),
                 deviceId: this.generateDeviceId(),
                 level: 0,
@@ -1580,18 +1613,17 @@
                 startTime: new Date(),
                 helpersUsed: { fiftyFifty: false, freezeTime: false },
             };
-
-            this.currentSkipCost = this.initialSkipCost;
-
+        }
+        
+        startGameFlow(levelIndex = 0) {
+            this.gameState.level = levelIndex;
             this.updateScore(this.STARTING_SCORE);
             this.setupGameUI();
             this.showScreen('game');
             this.startLevel();
         }
 
-        generatePlayerId() {
-            return `P${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
-        }
+        generatePlayerId() { return `P${Math.random().toString(36).substr(2, 9).toUpperCase()}`; }
         
         generateDeviceId() {
             let deviceId = localStorage.getItem('quizGameDeviceId');
@@ -1607,18 +1639,14 @@
             document.body.setAttribute('data-level', currentLevel.name);
             document.getElementById('currentLevelBadge').textContent = currentLevel.label;
             
-            // Disable helpers on impossible level
             const isImpossible = currentLevel.name === 'impossible';
-            document.querySelectorAll('.helper-btn').forEach(btn => {
-                btn.disabled = isImpossible;
-            });
-            if(isImpossible){
+            document.querySelectorAll('.helper-btn').forEach(btn => { btn.disabled = isImpossible; });
+            if(isImpossible && !this.isDeveloper()){
                 this.showToast("المساعدات معطلة في المستوى المستحيل!", "info");
             }
 
-
             let levelQuestions = [...this.QUESTIONS[currentLevel.name]];
-            if (currentLevel.name !== 'impossible') {
+            if (this.config.randomize_questions && currentLevel.name !== 'impossible') {
                 this.shuffleArray(levelQuestions);
             }
             this.gameState.shuffledQuestions = levelQuestions;
@@ -1638,18 +1666,11 @@
 
         fetchQuestion() {
             const questions = this.gameState.shuffledQuestions;
-        
             if (!questions || this.gameState.question >= questions.length) {
                 const isLastLevel = this.gameState.level >= this.LEVELS.length - 1;
-        
-                if (isLastLevel) {
-                    this.endGame(true); // `true` indicates all levels completed
-                } else {
-                    this.levelComplete();
-                }
+                this.endGame(isLastLevel);
                 return; 
             }
-    
             const questionData = questions[this.gameState.question];
             this.displayQuestion(questionData);
         }
@@ -1659,7 +1680,9 @@
             
             const correctAnswerText = questionData.options[questionData.correct];
             let shuffledOptions = [...questionData.options];
-            this.shuffleArray(shuffledOptions);
+            if (this.config.randomize_answers) {
+                this.shuffleArray(shuffledOptions);
+            }
 
             const totalQuestionsInLevel = this.gameState.shuffledQuestions.length;
             document.getElementById('questionCounter').textContent = `السؤال ${this.gameState.question + 1} من ${totalQuestionsInLevel}`;
@@ -1671,14 +1694,8 @@
                 const button = document.createElement('button');
                 button.className = 'option-btn';
                 button.textContent = optionText;
-                
-                const isCorrect = optionText === correctAnswerText;
-                if (isCorrect) {
-                    button.dataset.correct = 'true';
-                }
-                
-                button.addEventListener('click', () => this.checkAnswer(isCorrect, button));
-                
+                if (optionText === correctAnswerText) { button.dataset.correct = 'true'; }
+                button.addEventListener('click', () => this.checkAnswer(button.dataset.correct === 'true', button));
                 this.domElements.optionsGrid.appendChild(button);
             });
 
@@ -1689,7 +1706,6 @@
         checkAnswer(isCorrect, selectedButton) {
             if (this.answerSubmitted) return;
             this.answerSubmitted = true;
-    
             clearInterval(this.timerInterval);
             document.querySelectorAll('.option-btn').forEach(b => b.classList.add('disabled'));
 
@@ -1700,12 +1716,8 @@
                 this.showToast("إجابة صحيحة! +100 نقطة", "success");
             } else {
                 selectedButton.classList.add('wrong');
-        
                 const correctButton = this.domElements.optionsGrid.querySelector('[data-correct="true"]');
-                if (correctButton) {
-                    correctButton.classList.add('correct');
-                }
-        
+                if (correctButton) correctButton.classList.add('correct');
                 this.gameState.wrongAnswers++;
                 this.updateScore(this.currentScoreValue - 100);
                 this.showToast("إجابة خاطئة! -100 نقطة", "error");
@@ -1714,43 +1726,33 @@
             this.gameState.question++;
             this.updateUI();
 
-            const isGameOver = this.gameState.wrongAnswers >= this.MAX_WRONG_ANSWERS;
-    
+            const isGameOver = this.gameState.wrongAnswers >= this.MAX_WRONG_ANSWERS && !this.isDeveloper();
             setTimeout(() => {
-                if (isGameOver) {
-                    this.endGame(false);
-                } else if (this.gameState.question >= this.gameState.shuffledQuestions.length) {
-                    const isLastLevel = this.gameState.level >= this.LEVELS.length - 1;
-                    if (isLastLevel) {
-                       this.endGame(true); // All levels completed
-                    } else {
-                       this.levelComplete();
-                    }
-                } else {
-                    this.fetchQuestion();
-                }
+                if (isGameOver) this.endGame(false);
+                else if (this.gameState.question >= this.gameState.shuffledQuestions.length) this.levelComplete();
+                else this.fetchQuestion();
             }, 2000);
         }
         
         levelComplete() {
+            const isLastLevel = this.gameState.level >= this.LEVELS.length - 1;
+            if (isLastLevel) {
+                this.endGame(true);
+                return;
+            }
             const currentLevel = this.LEVELS[this.gameState.level];
             document.getElementById('levelCompleteTitle').textContent = `🎉 أكملت المستوى ${currentLevel.label}!`;
             document.getElementById('levelScore').textContent = this.formatNumber(this.currentScoreValue);
             document.getElementById('levelErrors').textContent = this.gameState.wrongAnswers;
             document.getElementById('levelCorrect').textContent = this.gameState.correctAnswers;
-            
             this.showScreen('levelComplete');
         }
         
         nextLevel() {
             this.gameState.level++;
-            
-            if (this.gameState.level >= this.LEVELS.length) {
-                this.endGame(true); // All levels completed
-            } else {
-                this.showScreen('game');
-                this.startLevel();
-            }
+            if (this.gameState.level >= this.LEVELS.length) this.endGame(true);
+            else this.startLevel();
+            this.showScreen('game');
         }
 
         endGame(completedAllLevels = false) {
@@ -1760,7 +1762,6 @@
             const totalTimeSeconds = (new Date() - this.gameState.startTime) / 1000;
             const currentLevel = this.LEVELS[Math.min(this.gameState.level, this.LEVELS.length - 1)];
             const totalAnswered = this.gameState.correctAnswers + this.gameState.wrongAnswers;
-    
             const accuracy = totalAnswered > 0 ? parseFloat(((this.gameState.correctAnswers / totalAnswered) * 100).toFixed(1)) : 0.0;
             const avgTime = totalAnswered > 0 ? parseFloat((totalTimeSeconds / totalAnswered).toFixed(1)) : 0;
             const performanceRating = this.calculatePerformanceRating();
@@ -1777,42 +1778,24 @@
             document.getElementById('finalAvgTime').textContent = `${this.formatTime(avgTime)} / سؤال`;
             document.getElementById('performanceText').textContent = performanceRating;
 
-            const resultsData = {
-                name: this.gameState.name,
-                deviceId: this.gameState.deviceId,
-                playerId: this.gameState.playerId,
-                correct: this.gameState.correctAnswers,
-                wrong: this.gameState.wrongAnswers,
-                level: currentLevel.label,
-                score: Number(this.currentScoreValue) || 0,
-                accuracy: accuracy,
-                totalTime: Math.round(totalTimeSeconds),
-                avgTime: avgTime,
-                skips: this.gameState.skips,
-                usedFiftyFifty: this.gameState.helpersUsed.fiftyFifty,
-                usedFreezeTime: this.gameState.helpersUsed.freezeTime,
-                completedAll: completedAllLevels
-            };
-    
-            this.saveResults(resultsData);
-    
+            if (!this.isDeveloper()) {
+                this.saveResults({
+                    name: this.gameState.name, deviceId: this.gameState.deviceId, playerId: this.gameState.playerId,
+                    correct: this.gameState.correctAnswers, wrong: this.gameState.wrongAnswers, level: currentLevel.label,
+                    score: Number(this.currentScoreValue) || 0, accuracy: accuracy, totalTime: Math.round(totalTimeSeconds),
+                    avgTime: avgTime, skips: this.gameState.skips, usedFiftyFifty: this.gameState.helpersUsed.fiftyFifty,
+                    usedFreezeTime: this.gameState.helpersUsed.freezeTime, completedAll: completedAllLevels
+                });
+            }
             this.showScreen('end');
         }
 
         async saveResults(resultsData) {
             console.log("إرسال البيانات إلى السكربت:", resultsData);
             try {
-                const response = await this.apiCall({
-                    action: 'endGame',
-                    ...resultsData
-                });
-
-                if (response.success) {
-                    this.showToast("تم حفظ نتيجتك بنجاح!", "success");
-                    console.log("GAS Response:", response);
-                } else {
-                    throw new Error(response.error || "خطأ غير معروف من الخادم");
-                }
+                const response = await this.apiCall({ action: 'endGame', ...resultsData });
+                if (response.success) this.showToast("تم حفظ نتيجتك بنجاح!", "success");
+                else throw new Error(response.error || "خطأ غير معروف من الخادم");
             } catch (error) {
                 console.error("فشل إرسال النتائج:", error);
                 this.showToast("حدث خطأ أثناء حفظ النتيجة.", "error");
@@ -1822,9 +1805,7 @@
         calculatePerformanceRating() {
             const totalQuestions = this.gameState.correctAnswers + this.gameState.wrongAnswers;
             if (totalQuestions === 0) return "لم يتم الإجابة على أي سؤال";
-            
             const accuracy = (this.gameState.correctAnswers / totalQuestions) * 100;
-            
             if (accuracy >= 90) return "ممتاز 🏆";
             if (accuracy >= 75) return "جيد جدًا ⭐";
             if (accuracy >= 60) return "جيد 👍";
@@ -1835,52 +1816,39 @@
         useHelper(event) {
             const btn = event.currentTarget;
             const type = btn.dataset.type;
-
-            if (this.LEVELS[this.gameState.level].name === 'impossible') {
+            const isDev = this.isDeveloper();
+            
+            if (!isDev && this.LEVELS[this.gameState.level].name === 'impossible') {
                  this.showToast("المساعدات معطلة في هذا المستوى!", "error");
                  return;
             }
 
+            const cost = this.HELPER_COSTS[type];
+            if (!isDev && this.currentScoreValue < cost) {
+                this.showToast("نقاطك غير كافية!", "error");
+                return;
+            }
+
+            if (!isDev) {
+                this.updateScore(this.currentScoreValue - cost);
+                this.showToast(`تم استخدام المساعدة! -${cost} نقطة`, "success");
+            } else {
+                this.showToast(`مساعدة المطور (${type})`, "info");
+            }
+
             if (type === 'skipQuestion') {
-                if (this.currentScoreValue < this.currentSkipCost) {
-                    this.showToast("نقاطك غير كافية لاستخدام التخطي!", "error");
-                    return;
-                }
-                
-                this.updateScore(this.currentScoreValue - this.currentSkipCost);
-                this.showToast(`تم التخطي! -${this.currentSkipCost} نقطة`, "success");
-                
                 this.gameState.skips++;
                 this.gameState.question++;
                 this.updateUI();
                 this.fetchQuestion();
-
             } else {
-                if (this.gameState.helpersUsed[type]) {
-                    this.showToast("لقد استخدمت هذه المساعدة بالفعل!", "info");
-                    return;
-                }
-
-                const cost = this.HELPER_COSTS[type];
-                if (this.currentScoreValue < cost) {
-                    this.showToast("نقاطك غير كافية لهذه المساعدة!", "error");
-                    return;
-                }
-
-                this.updateScore(this.currentScoreValue - cost);
-                this.gameState.helpersUsed[type] = true;
+                if (!isDev) this.gameState.helpersUsed[type] = true;
                 this.updateUI();
-                this.showToast(`تم استخدام المساعدة! -${cost} نقطة`, "success");
-
                 if (type === 'fiftyFifty') {
                     const options = Array.from(this.domElements.optionsGrid.querySelectorAll('.option-btn'));
                     let wrongOptions = options.filter(btn => btn.dataset.correct !== 'true');
-                    
-                    wrongOptions.sort(() => 0.5 - Math.random());
-                    if(wrongOptions.length > 1) {
-                        wrongOptions[0].classList.add('hidden');
-                        wrongOptions[1].classList.add('hidden');
-                    }
+                    this.shuffleArray(wrongOptions);
+                    wrongOptions.slice(0, 2).forEach(btn => btn.classList.add('hidden'));
                 } else if (type === 'freezeTime') {
                     this.isTimeFrozen = true;
                     document.querySelector('.timer-bar').classList.add('frozen');
@@ -1897,13 +1865,11 @@
             let timeLeft = this.QUESTION_TIME;
             const timerBar = document.querySelector('.timer-bar');
             const timerDisplay = document.querySelector('.timer-text');
-
             timerDisplay.textContent = timeLeft;
             timerBar.style.width = '100%';
 
             this.timerInterval = setInterval(() => {
                 if (this.isTimeFrozen) return;
-
                 timeLeft--;
                 timerDisplay.textContent = timeLeft;
                 timerBar.style.width = `${(timeLeft / this.QUESTION_TIME) * 100}%`;
@@ -1914,28 +1880,19 @@
                     this.gameState.wrongAnswers++;
                     this.updateScore(this.currentScoreValue - 100);
                     document.querySelectorAll('.option-btn').forEach(b => b.classList.add('disabled'));
-                    
                     const correctButton = this.domElements.optionsGrid.querySelector('[data-correct="true"]');
-                    if (correctButton) {
-                        correctButton.classList.add('correct');
-                    }
-                    
+                    if (correctButton) correctButton.classList.add('correct');
                     this.updateUI();
-                    
                     setTimeout(() => {
-                        if (this.gameState.wrongAnswers >= this.MAX_WRONG_ANSWERS) {
-                            this.endGame(false);
-                        } else {
-                            this.gameState.question++;
-                            this.fetchQuestion();
-                        }
+                        if (this.gameState.wrongAnswers >= this.MAX_WRONG_ANSWERS && !this.isDeveloper()) this.endGame(false);
+                        else { this.gameState.question++; this.fetchQuestion(); }
                     }, 2000);
                 }
             }, 1000);
         }
         
         updateScore(newScore) {
-            this.currentScoreValue = newScore;
+            this.currentScoreValue = this.isDeveloper() ? this.currentScoreValue : newScore;
             this.domElements.scoreDisplay.textContent = this.formatNumber(this.currentScoreValue);
             this.updateUI();
         }
@@ -1945,17 +1902,16 @@
             document.getElementById('skipCount').textContent = this.gameState.skips;
 
             const skipCostSpan = document.getElementById('skipCost');
-            if (skipCostSpan) {
-                skipCostSpan.textContent = `(${this.currentSkipCost})`;
-            }
+            if (skipCostSpan) skipCostSpan.textContent = `(${this.HELPER_COSTS.skipQuestion})`;
 
             const isImpossible = this.gameState.level !== undefined && this.LEVELS[this.gameState.level].name === 'impossible';
             document.querySelectorAll('.helper-btn').forEach(btn => {
                 const type = btn.dataset.type;
-                if (isImpossible) {
-                    btn.disabled = true;
-                } else if (type !== 'skipQuestion') {
-                    btn.disabled = this.gameState.helpersUsed[type];
+                if (!this.isDeveloper()) {
+                     if (isImpossible) btn.disabled = true;
+                     else if (type !== 'skipQuestion') btn.disabled = this.gameState.helpersUsed[type];
+                } else {
+                    btn.disabled = false; // Devs have unlimited helpers
                 }
             });
         }
@@ -1965,6 +1921,16 @@
             document.getElementById('playerName').textContent = this.gameState.name;
             document.getElementById('playerId').textContent = this.gameState.playerId;
         }
+        
+        isDeveloper() {
+            return this.config.developer_mode && this.gameState.name === this.config.developerName;
+        }
+
+        toggleDeveloperMode() {
+            this.config.developer_mode = !this.config.developer_mode;
+            this.domElements.devModeToggleBtn.classList.toggle('active', this.config.developer_mode);
+            this.showToast(`وضع المطور: ${this.config.developer_mode ? 'مُفعّل' : 'مُعطّل'}`, 'info');
+        }
 
         toggleTheme() {
             const newTheme = document.body.dataset.theme === 'dark' ? 'light' : 'dark';
@@ -1973,18 +1939,9 @@
             this.domElements.themeToggleBtn.textContent = newTheme === 'dark' ? '☀️' : '🌙';
         }
 
-        showConfirmExit() {
-            this.domElements.confirmExitModal.classList.add('active');
-        }
-
-        hideConfirmExit() {
-            this.domElements.confirmExitModal.classList.remove('active');
-        }
-
-        showAdvancedReportModal() {
-            this.domElements.advancedReportModal.classList.add('active');
-        }
-
+        showConfirmExit() { this.domElements.confirmExitModal.classList.add('active'); }
+        hideConfirmExit() { this.domElements.confirmExitModal.classList.remove('active'); }
+        showAdvancedReportModal() { this.domElements.advancedReportModal.classList.add('active'); }
         hideAdvancedReportModal() {
             this.domElements.advancedReportModal.classList.remove('active');
             this.domElements.reportProblemForm.reset();
@@ -2000,50 +1957,32 @@
             this.hideAdvancedReportModal();
 
             if (file && file.size > 0) {
-                try {
-                    screenshotBase64 = await this.fileToBase64(file);
-                } catch (error) {
-                    console.error("Error converting file to Base64:", error);
-                    this.showToast("خطأ في معالجة الصورة.", "error");
-                    return;
-                }
+                try { screenshotBase64 = await this.fileToBase64(file); } 
+                catch (error) { this.showToast("خطأ في معالجة الصورة.", "error"); return; }
             }
 
             const reportData = {
-                type: formData.get('problemType'),
-                description: formData.get('problemDescription'),
-                screenshot: screenshotBase64,
-                playerName: this.gameState.name || 'N/A',
-                playerId: this.gameState.playerId || 'N/A',
+                type: formData.get('problemType'), description: formData.get('problemDescription'),
+                screenshot: screenshotBase64, playerName: this.gameState.name || 'N/A', playerId: this.gameState.playerId || 'N/A',
                 currentLevel: this.gameState.level !== undefined ? this.LEVELS[this.gameState.level].label : 'N/A',
                 timestamp: new Date().toISOString()
             };
 
             try {
-                const response = await this.apiCall({
-                    action: 'submitReport',
-                    data: reportData
-                });
-                if (response.success) {
-                    this.showToast("تم إرسال بلاغك بنجاح. شكراً لك!", "success");
-                } else {
-                    throw new Error(response.error || "فشل إرسال البلاغ");
-                }
-            } catch (error) {
-                console.error("فشل إرسال البلاغ:", error);
-                this.showToast("حدث خطأ أثناء إرسال البلاغ.", "error");
-            }
+                const response = await this.apiCall({ action: 'submitReport', data: reportData });
+                if (response.success) this.showToast("تم إرسال بلاغك بنجاح. شكراً لك!", "success");
+                else throw new Error(response.error || "فشل إرسال البلاغ");
+            } catch (error) { this.showToast("حدث خطأ أثناء إرسال البلاغ.", "error"); }
         }
         
         fileToBase64(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.readAsDataURL(file);
-                reader.onload = () => resolve(reader.result.split(',')[1]); // Get only the Base64 part
+                reader.onload = () => resolve(reader.result.split(',')[1]);
                 reader.onerror = error => reject(error);
             });
         }
-
 
         showToast(message, type = 'info') {
             const toastContainer = document.getElementById('toast-container');
@@ -2056,23 +1995,14 @@
         }
 
         async apiCall(payload) {
-            const payloadWithKey = {
-                apiKey: this.API_KEY,
-                ...payload
-            };
-
+            const payloadWithKey = { apiKey: this.API_KEY, ...payload };
             try {
                 const response = await fetch(this.API_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify(payloadWithKey),
-                    mode: 'cors'
+                    method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payloadWithKey), mode: 'cors'
                 });
                 return await response.json();
-            } catch (error) {
-                console.error('API Error:', error);
-                throw error;
-            }
+            } catch (error) { console.error('API Error:', error); throw error; }
         }
         
         async displayLeaderboard() {
@@ -2085,32 +2015,23 @@
                 if (response && response.success) {
                     let tableHTML = '<p>لوحة الصدارة فارغة حاليًا!</p>';
                     const { firstWinner, leaderboard } = response;
-                    
                     if (firstWinner || (leaderboard && leaderboard.length > 0)) {
                          tableHTML = `<table class="leaderboard-table" style="width:100%; text-align:right; border-collapse: collapse;">
                             <thead style="font-weight:bold;"><tr>
-                                <th style="padding:8px;">الترتيب</th>
-                                <th style="padding:8px;">الاسم</th>
-                                <th style="padding:8px;">النقاط</th>
-                                <th style="padding:8px;">المستوى</th>
+                                <th style="padding:8px;">الترتيب</th> <th style="padding:8px;">الاسم</th>
+                                <th style="padding:8px;">النقاط</th> <th style="padding:8px;">المستوى</th>
                             </tr></thead><tbody>`;
-
-                        // Display the first winner at the top
                         if (firstWinner) {
-                            tableHTML += `
-                                <tr style="background-color: rgba(255, 215, 0, 0.1);">
+                            tableHTML += `<tr style="background-color: rgba(255, 215, 0, 0.1);">
                                     <td style="padding:8px;">🎖️ 1</td>
                                     <td style="padding:8px;">${firstWinner.name || 'غير معروف'}</td>
                                     <td style="padding:8px;">${this.formatNumber(firstWinner.score)}</td>
                                     <td style="padding:8px;">${firstWinner.level || 'N/A'}</td>
                                 </tr>`;
                         }
-                        
-                        // Display the rest of the leaderboard
                         if (leaderboard) {
                             leaderboard.forEach((row, index) => {
-                                tableHTML += `
-                                    <tr>
+                                tableHTML += `<tr>
                                         <td style="padding:8px;">${['🥇', '🥈', '🥉'][index] || index + 1}</td>
                                         <td style="padding:8px;">${row.name || 'غير معروف'}</td>
                                         <td style="padding:8px;">${this.formatNumber(row.score)}</td>
@@ -2118,13 +2039,10 @@
                                     </tr>`;
                             });
                         }
-                        
                         tableHTML += `</tbody></table>`;
                     }
                     contentDiv.innerHTML = tableHTML;
-                } else {
-                    contentDiv.innerHTML = '<p>حدث خطأ في تحميل لوحة الصدارة.</p>';
-                }
+                } else { contentDiv.innerHTML = '<p>حدث خطأ في تحميل لوحة الصدارة.</p>'; }
             } catch (error) {
                 console.error("Error loading leaderboard:", error);
                 contentDiv.innerHTML = '<p>حدث خطأ في تحميل لوحة الصدارة.</p>';
@@ -2133,28 +2051,22 @@
         
         getShareText() {
             const performanceRating = this.calculatePerformanceRating();
-            return `🧠 نتائجي في مسابقة المعلومات 🧠\n` +
-                   `الاسم: ${this.gameState.name}\n` +
-                   `النقاط: ${this.formatNumber(this.currentScoreValue)}\n` +
-                   `المستوى: ${this.LEVELS[Math.min(this.gameState.level, this.LEVELS.length - 1)].label}\n` +
-                   `التقييم: ${performanceRating}\n\n` +
-                   `🔗 جرب تحديك أنت أيضاً!`;
+            return `🧠 نتائجي في مسابقة المعلومات 🧠\n` + `الاسم: ${this.gameState.name}\n` +
+                   `النقاط: ${this.formatNumber(this.currentScoreValue)}\n` + `المستوى: ${this.LEVELS[Math.min(this.gameState.level, this.LEVELS.length - 1)].label}\n` +
+                   `التقييم: ${performanceRating}\n\n` + `🔗 جرب تحديك أنت أيضاً!`;
         }
         
         shareOnX() {
-            const text = encodeURIComponent(this.getShareText());
-            window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
+            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(this.getShareText())}`, '_blank');
         }
 
         shareOnInstagram() {
             navigator.clipboard.writeText(this.getShareText())
-                .then(() => this.showToast("تم نسخ النتيجة! الصقها في قصتك أو رسائلك على إنستغرام.", "success"))
+                .then(() => this.showToast("تم نسخ النتيجة!", "success"))
                 .catch(() => this.showToast("فشل نسخ النتيجة.", "error"));
         }
 
-        resetGame() {
-            this.showScreen('start');
-        }
+        resetGame() { window.location.reload(); }
         
         formatTime(totalSeconds) {
             const total = Math.floor(totalSeconds);
@@ -2163,15 +2075,12 @@
             return `${minutes}:${seconds.toString().padStart(2, '0')}`;
         }
 
-        formatNumber(num) {
-            return new Intl.NumberFormat('ar-EG').format(num);
-        }
+        formatNumber(num) { return new Intl.NumberFormat('ar-EG').format(num); }
     }
 
     document.addEventListener('DOMContentLoaded', () => {
         const savedTheme = localStorage.getItem('theme') || 'dark';
         document.body.dataset.theme = savedTheme;
-        
         new QuizGame();
     });
 </script>
@@ -2179,3 +2088,4 @@
     <div class="sr-only" aria-live="polite" id="liveAnnouncements"></div>
 </body>
 </html>
+
