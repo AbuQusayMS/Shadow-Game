@@ -1377,7 +1377,12 @@
             this.isTimeFrozen = false;
             this.isDevSession = false; // Is the user authenticated as a developer?
             this.isDevTemporarilyDisabled = false; // Is the developer testing as a normal user?
-            this.gameState = {};
+            
+            // Initialize gameState with a default structure to prevent errors
+            this.gameState = {
+                helpersUsed: { fiftyFifty: false, freezeTime: false }
+            };
+            
             this.currentScoreValue = this.STARTING_SCORE;
             this.timerInterval = null;
             this.answerSubmitted = false;
@@ -1976,6 +1981,9 @@
         }
 
         updateUI() {
+            // Early exit if gameState is not fully initialized
+            if (!this.gameState.helpersUsed) return;
+
             document.getElementById('wrongAnswersCount').textContent = `${this.gameState.wrongAnswers} / ${this.MAX_WRONG_ANSWERS}`;
             document.getElementById('skipCount').textContent = this.gameState.skips;
 
@@ -2074,6 +2082,7 @@
         }
 
         hideModal(modalElement) {
+            if (document.activeElement) document.activeElement.blur();
             modalElement.classList.remove('active');
             modalElement.setAttribute('aria-hidden', 'true');
             if (modalElement === this.domElements.advancedReportModal) {
