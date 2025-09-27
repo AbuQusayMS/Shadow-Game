@@ -1215,7 +1215,7 @@
                 <p>📈 المستوى الذي وصلت إليه: <strong id="finalLevel"></strong></p>                
                 <p>🎯 نسبة الدقة: <strong id="finalAccuracy"></strong></p>
                 <p>⏳ متوسط وقت الإجابة: <strong id="finalAvgTime"></strong></p>
-    
+        
                 <div class="performance-rating">
                     <span>أداؤك: </span>
                     <strong id="performanceText"></strong>
@@ -1377,7 +1377,7 @@
             this.HELPER_COSTS = {
                 fiftyFifty: 100,
                 freezeTime: 100,
-                skipQuestion: 1 // Base cost
+                skipQuestion: 20 // Base cost
             };
             
             this.isTimeFrozen = false;
@@ -1919,7 +1919,7 @@
             }
 
             let cost = (type === 'skipQuestion')
-                ? this.HELPER_COSTS.skipQuestion + (this.gameState.skips * 1)
+                ? this.HELPER_COSTS.skipQuestion + (this.gameState.skips * 20)
                 : this.HELPER_COSTS[type];
 
             if (!isDev && this.currentScoreValue < cost) {
@@ -2192,16 +2192,15 @@
                     let players = response.leaderboard;
 
                     // *** NEW FEATURE: Enhanced Leaderboard Sorting ***
-                    // This logic sorts the players to prioritize those who have completed the entire quiz.
+                    // This logic sorts players to prioritize those who have completed the entire quiz.
                     // It assumes the API provides a 'completedAll' boolean for each player.
-                    // The first player in the sorted list who has 'completedAll' is considered the winner.
                     players.sort((a, b) => {
                         // A player who completed (`a.completedAll`) always comes before one who hasn't.
                         if (a.completedAll && !b.completedAll) return -1;
                         if (!a.completedAll && b.completedAll) return 1;
                         
                         // If both have the same completion status, sort by the rank given by the API.
-                        // The API is responsible for determining the *first* finisher and giving them rank 1.
+                        // The backend is responsible for determining the *first* finisher.
                         return (a.rank || 999) - (b.rank || 999);
                     });
 
@@ -2214,16 +2213,19 @@
                                 <th style="padding:8px;">أعلى مستوى</th>
                                 <th style="padding:8px;">المحاولات</th>
                             </tr></thead><tbody>`;
-
+                        
+                        // *** NEW FEATURE: Leaderboard Highlighting ***
+                        // This logic adds special icons and styling for the first player to complete the quiz.
                         players.forEach((row, index) => {
-                             // The first player who completed the quiz gets a crown.
                             const isFirstFinisher = row.completedAll && index === 0;
-                            const finisherIcon = isFirstFinisher ? '👑' : '';
+                            const finisherIcon = isFirstFinisher ? '🎖️' : '';
+                            const rankDisplay = isFirstFinisher ? '🥇' : (row.rank || index + 1);
+                            const nameDisplay = `${row.name || 'غير معروف'} ${finisherIcon}`;
                             const rowStyle = isFirstFinisher ? 'background-color: rgba(255, 215, 0, 0.2); font-weight: bold;' : '';
                             
                             tableHTML += `<tr style="${rowStyle}">
-                                <td style="padding:8px;">${row.rank || index + 1}</td>
-                                <td style="padding:8px;">${row.name || 'غير معروف'} ${finisherIcon}</td>
+                                <td style="padding:8px;">${rankDisplay}</td>
+                                <td style="padding:8px;">${nameDisplay}</td>
                                 <td style="padding:8px;">${row.level || 'N/A'}</td>
                                 <td style="padding:8px;">${this.formatNumber(row.attempts || 0)}</td>
                             </tr>`;
