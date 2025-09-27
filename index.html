@@ -1595,7 +1595,7 @@
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     this.domElements.imageToCrop.src = e.target.result;
-                    this.showModal(this.domElements.avatarEditorModal);
+                    this.showModal(this.domElements.avatarEditorModal, true);
                 };
                 reader.readAsDataURL(file);
             }
@@ -1652,24 +1652,16 @@
                 skips: 0,
                 startTime: new Date(),
                 helpersUsed: { fiftyFifty: false, freezeTime: false },
+                attemptNumber: 'N/A' // Will be set by the server
             };
         }
         
         startGameFlow(levelIndex = 0) {
-            if(!this.isDevSession) {
-                this.incrementAttemptCount();
-            }
             this.gameState.level = levelIndex;
             this.updateScore(this.STARTING_SCORE, true);
             this.setupGameUI();
             this.showScreen('game');
             this.startLevel();
-        }
-        
-        incrementAttemptCount(){
-            this.apiCall({ action: 'recordAttempt', deviceId: this.generateDeviceId() })
-                .then(res => console.log("Attempt recorded:", res))
-                .catch(err => console.error("Failed to record attempt", err));
         }
 
         generatePlayerId() { return `P${Math.random().toString(36).substr(2, 9).toUpperCase()}`; }
@@ -1805,7 +1797,7 @@
             this.showScreen('game');
         }
 
-        endGame(completedAllLevels = false) {
+        async endGame(completedAllLevels = false) {
             clearInterval(this.timerInterval);
             this.hideModal(this.domElements.confirmExitModal);
 
@@ -1816,40 +1808,70 @@
             const avgTime = totalAnswered > 0 ? parseFloat((totalTimeSeconds / totalAnswered).toFixed(1)) : 0;
             const performanceRating = this.calculatePerformanceRating();
 
-            document.getElementById('finalName').textContent = this.gameState.name;
-            document.getElementById('finalId').textContent = this.gameState.playerId;
-            document.getElementById('finalAttemptNumber').textContent = this.gameState.attemptNumber;
-            document.getElementById('finalCorrect').textContent = this.gameState.correctAnswers;
-            document.getElementById('finalWrong').textContent = this.gameState.wrongAnswers;
-            document.getElementById('finalSkips').textContent = this.gameState.skips;
-            document.getElementById('finalScore').textContent = this.formatNumber(this.currentScoreValue);
-            document.getElementById('totalTime').textContent = this.formatTime(totalTimeSeconds);
-            document.getElementById('finalLevel').textContent = currentLevel.label;
-            document.getElementById('finalAccuracy').textContent = `${accuracy}%`;
-            document.getElementById('finalAvgTime').textContent = `${this.formatTime(avgTime)} / سؤال`;
-            document.getElementById('performanceText').textContent = performanceRating;
+            let finalResults = {
+                name: this.gameState.name,
+                playerId: this.gameState.playerId,
+                correctAnswers: this.gameState.correctAnswers,
+                wrongAnswers: this.gameState.wrongAnswers,
+                skips: this.gameState.skips,
+                score: this.currentScoreValue,
+                totalTime: totalTimeSeconds,
+                level: currentLevel.label,
+                accuracy: accuracy,
+                avgTime: avgTime,
+                performanceRating: performanceRating,
+            };
 
-            if (!this.isDevSession) { // Save results for any non-developer session
-                this.saveResults({
-                    name: this.gameState.name, deviceId: this.gameState.deviceId, playerId: this.gameState.playerId,
-                    correct: this.gameState.correctAnswers, wrong: this.gameState.wrongAnswers, level: currentLevel.label,
-                    score: Number(this.currentScoreValue) || 0, accuracy: accuracy, totalTime: totalTimeSeconds,
-                    avgTime: avgTime, skips: this.gameState.skips, usedFiftyFifty: this.gameState.helpersUsed.fiftyFifty,
-                    usedFreezeTime: this.gameState.helpersUsed.freezeTime, completedAll: completedAllLevels
+            if (!this.isDevSession) {
+                const response = await this.saveResults({
+                    ...this.gameState,
+                    score: this.currentScoreValue,
+                    level: currentLevel.label,
+                    accuracy: accuracy,
+                    totalTime: totalTimeSeconds,
+                    avgTime: avgTime,
+                    completedAll: completedAllLevels
                 });
+                if (response && response.success) {
+                    this.gameState.attemptNumber = response.attemptNumber;
+                    finalResults.attemptNumber = response.attemptNumber;
+                }
+            } else {
+                 finalResults.attemptNumber = 'DEV';
             }
+            
+            this.displayFinalStats(finalResults);
             this.showScreen('end');
+        }
+        
+        displayFinalStats(results) {
+            document.getElementById('finalName').textContent = results.name;
+            document.getElementById('finalId').textContent = results.playerId;
+            document.getElementById('finalAttemptNumber').textContent = results.attemptNumber;
+            document.getElementById('finalCorrect').textContent = results.correctAnswers;
+            document.getElementById('finalWrong').textContent = results.wrongAnswers;
+            document.getElementById('finalSkips').textContent = results.skips;
+            document.getElementById('finalScore').textContent = this.formatNumber(results.score);
+            document.getElementById('totalTime').textContent = this.formatTime(results.totalTime);
+            document.getElementById('finalLevel').textContent = results.level;
+            document.getElementById('finalAccuracy').textContent = `${results.accuracy}%`;
+            document.getElementById('finalAvgTime').textContent = `${this.formatTime(results.avgTime)} / سؤال`;
+            document.getElementById('performanceText').textContent = results.performanceRating;
         }
 
         async saveResults(resultsData) {
             console.log("إرسال البيانات إلى السكربت:", resultsData);
             try {
                 const response = await this.apiCall({ action: 'endGame', ...resultsData });
-                if (response.success) this.showToast("تم حفظ نتيجتك بنجاح!", "success");
+                if (response.success) {
+                    this.showToast("تم حفظ نتيجتك بنجاح!", "success");
+                    return response;
+                }
                 else throw new Error(response.error || "خطأ غير معروف من الخادم");
             } catch (error) {
                 console.error("فشل إرسال النتائج:", error);
                 this.showToast("حدث خطأ أثناء حفظ النتيجة.", "error");
+                return null;
             }
         }
         
@@ -2034,11 +2056,21 @@
 
         // --- Modal and Theme Helpers ---
 
-        showModal(modalElement) {
+        showModal(modalElement, isCropper = false) {
             modalElement.classList.add('active');
             modalElement.setAttribute('aria-hidden', 'false');
             const firstFocusable = modalElement.querySelector('button, [href], input, select, textarea');
             if(firstFocusable) setTimeout(() => firstFocusable.focus(), 100);
+
+            if(isCropper){
+                setTimeout(() => {
+                    if (this.cropper) this.cropper.destroy();
+                    this.cropper = new Cropper(this.domElements.imageToCrop, {
+                        aspectRatio: 1, viewMode: 1, background: false, responsive: true,
+                        autoCropArea: 1, zoomable: true, movable: true,
+                    });
+                }, 300);
+            }
         }
 
         hideModal(modalElement) {
@@ -2046,6 +2078,10 @@
             modalElement.setAttribute('aria-hidden', 'true');
             if (modalElement === this.domElements.advancedReportModal) {
                 this.domElements.reportProblemForm.reset();
+            }
+            if(modalElement === this.domElements.avatarEditorModal && this.cropper){
+                this.cropper.destroy();
+                this.cropper = null;
             }
         }
         
@@ -2218,5 +2254,4 @@
     <div class="sr-only" aria-live="polite" id="liveAnnouncements"></div>
 </body>
 </html>
-
 
