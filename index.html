@@ -1153,7 +1153,7 @@
 
                 <button class="helper-btn" data-type="skipQuestion" aria-describedby="skipQuestionDesc">
                     ⏭️ تخطي
-                    <span id="skipCost" class="helper-cost">(20)</span>
+                    <span id="skipCost" class="helper-cost">(1)</span>
                 </button>
                 <div id="skipQuestionDesc" class="sr-only">تخطي السؤال الحالي</div>
             </div>
@@ -1919,7 +1919,7 @@
             }
 
             let cost = (type === 'skipQuestion')
-                ? this.HELPER_COSTS.skipQuestion + (this.gameState.skips * 20)
+                ? this.HELPER_COSTS.skipQuestion + (this.gameState.skips * 1)
                 : this.HELPER_COSTS[type];
 
             if (!isDev && this.currentScoreValue < cost) {
