@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <meta name="description" content="مسابقة المعلومات - اختبر معلوماتك في مستويات متعددة">
-    <title>🧠 مسابقة المعلومات | Supabase Edition</title>
+    <title>🧠 مسابقة المعلومات | Hybrid Edition</title>
 
     <link rel="icon" type="image/png" href="https://em-content.zobj.net/thumbs/120/apple/354/brain_1f9e0.png">
     
@@ -1528,9 +1528,11 @@
                 randomize_answers: true, 
             };
             
-            // !!! هام: استبدل بالبيانات الخاصة بك من Supabase !!!
-            this.SUPABASE_URL = 'https://qffcnljopolajeufkrah.supabase.co'; // الصق رابط المشروع هنا
-            this.SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFmZmNubGpvcG9sYWpldWZrcmFoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkwNzkzNjMsImV4cCI6MjA3NDY1NTM2M30.0vst_km_pweyF2IslQ24JzMF281oYeaaeIEQM0aKkUg'; // الصق مفتاح الربط العام هنا
+            // !!! هام: استبدل بالبيانات الخاصة بك !!!
+            this.SUPABASE_URL = 'YOUR_SUPABASE_URL'; // الصق رابط المشروع هنا
+            this.SUPABASE_KEY = 'YOUR_SUPABASE_ANON_KEY'; // الصق مفتاح الربط العام هنا
+            this.APPS_SCRIPT_URL = 'YOUR_NEW_APPS_SCRIPT_URL'; // الصق رابط Apps Script هنا
+            
             this.supabase = null;
             // =================================================================
 
@@ -2027,7 +2029,7 @@
             };
 
             if (!this.isDevSession) {
-                const { attemptNumber, error } = await this.saveResults(finalResults);
+                const { attemptNumber, error } = await this.saveResultsToSupabase(finalResults);
                 if (error) {
                     this.showToast("فشل إرسال النتائج إلى السيرفر", "error");
                 } else {
@@ -2042,38 +2044,25 @@
         }
 
         // =============================================
-        //  Supabase Data Handling
+        //  Data Handling (Supabase + Apps Script)
         // =============================================
-        async saveResults(resultsData) {
+        async saveResultsToSupabase(resultsData) {
             try {
-                // 1. Get the current attempt number for this device
-                const { data: logEntries, error: countError } = await this.supabase
+                // 1. Get attempt number
+                const { count, error: countError } = await this.supabase
                     .from('log')
                     .select('id', { count: 'exact', head: true })
                     .eq('device_id', resultsData.device_id);
 
                 if (countError) throw countError;
+                const attemptNumber = (count || 0) + 1;
                 
-                const attemptNumber = (logEntries || []).length + 1;
-                
-                // 2. Prepare data for the log table
-                const logData = {
-                    ...resultsData,
-                    attempt_number: attemptNumber
-                };
-                // This field is only in the leaderboard table, remove it before inserting to log
-                delete logData.is_impossible_finisher; 
-                 // This field is also only in the leaderboard table
-                if ('updated_at' in logData) delete logData.updated_at;
-
-
+                // 2. Insert into log
+                const logData = { ...resultsData, attempt_number: attemptNumber };
                 const { error: logError } = await this.supabase.from('log').insert(logData);
-                if (logError) {
-                    console.error("Supabase log error:", logError);
-                    throw new Error(`فشل تسجيل المحاولة: ${logError.message}`);
-                }
+                if (logError) throw logError;
                 
-                // 3. Prepare data for the leaderboard table
+                // 3. Upsert into leaderboard
                 const leaderboardData = {
                     device_id: resultsData.device_id,
                     player_id: resultsData.player_id,
@@ -2092,17 +2081,12 @@
                     is_impossible_finisher: resultsData.completed_all && resultsData.level === 'مستحيل',
                     updated_at: new Date().toISOString()
                 };
-
-                // 4. Use 'upsert' to insert or update the leaderboard
                 const { error: leaderboardError } = await this.supabase.from('leaderboard').upsert(leaderboardData);
-                if (leaderboardError) {
-                    console.error("Supabase leaderboard error:", leaderboardError);
-                    throw new Error(`فشل تحديث لوحة الصدارة: ${leaderboardError.message}`);
-                }
+                if (leaderboardError) throw leaderboardError;
                 
                 this.showToast("تم حفظ نتيجتك بنجاح!", "success");
                 
-                // 5. Send notification via Edge Function
+                // 4. Send notification via Apps Script
                 this.sendTelegramNotification('gameResult', logData);
 
                 return { attemptNumber, error: null };
@@ -2367,13 +2351,23 @@
         }
         
         async sendTelegramNotification(type, data) {
+            // This function now sends data to Google Apps Script
+             if (!this.APPS_SCRIPT_URL || this.APPS_SCRIPT_URL === 'YOUR_NEW_APPS_SCRIPT_URL') {
+                console.warn("Apps Script URL is not configured. Skipping Telegram notification.");
+                return;
+            }
             try {
-                const { error } = await this.supabase.functions.invoke('telegram-notifier', {
-                    body: JSON.stringify({ type, data }),
+                const response = await fetch(this.APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors', // Use no-cors to avoid CORS issues with simple requests
+                    cache: 'no-cache',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type, data })
                 });
-                if (error) throw error;
+                // Note: With no-cors, we can't read the response, but the request is sent.
+                console.log("Telegram notification request sent.");
             } catch (error) {
-                console.error('Error invoking Telegram function:', error.message);
+                console.error('Error sending notification request to Apps Script:', error.message);
             }
         }
 
