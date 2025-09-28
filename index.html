@@ -1399,7 +1399,7 @@
                     <p>⏭️ مرات التخطي: <strong id="finalSkips"></strong></p>
                     <p>⭐ النقاط النهائية: <strong id="finalScore"></strong></p>
                     <p>⏱️ الوقت المستغرق: <strong id="totalTime"></strong></p>
-                    <p>📈 المستوى الذي وصلت إليه: <strong id="finalLevel"></strong></p>                  
+                    <p>📈 المستوى الذي وصلت إليه: <strong id="finalLevel"></strong></p>                      
                     <p>🎯 نسبة الدقة: <strong id="finalAccuracy"></strong></p>
                     <p>⏳ متوسط وقت الإجابة: <strong id="finalAvgTime"></strong></p>
             
@@ -1540,28 +1540,57 @@
         </div>
     </div>
 
-
+    <!-- Firebase SDK (using compat libraries for easier transition) -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore-compat.js"></script>
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
     <script>
+        
+    // =================================================================
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "firebase/app";
+        // TODO: Add SDKs for Firebase products that you want to use
+        // https://firebase.google.com/docs/web/setup#available-libraries
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+          apiKey: "AIzaSyAeyZ4hr7MKhh1Ouqp5sA4VV0DVqKtszp0",
+          authDomain: "project-1-4447a.firebaseapp.com",
+          projectId: "project-1-4447a",
+          storageBucket: "project-1-4447a.firebasestorage.app",
+          messagingSenderId: "748000954923",
+          appId: "1:748000954923:web:6ea9476aa29f6e2aeab86e"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+    // =================================================================
+        
+    const firebaseConfig = {
+      // apiKey: "...",
+      // authDomain: "...",
+      // projectId: "...",
+      // storageBucket: "...",
+      // messagingSenderId: "...",
+      // appId: "..."
+    };
+    // =================================================================
+    
     class QuizGame {
         constructor() {
             // =================================================================
-            // !!!  Game Configuration !!!
+            //                      Game Configuration
             // =================================================================
             this.config = {
                 developerName: "AbuQusay",
-                developerPassword: "AbuQusay", // The password for developer mode
+                developerPassword: "AbuQusay", 
                 randomize_questions: true,
                 randomize_answers: true, 
             };
             
-            // !!! تنبيه هام جداً !!!
-            // !!! الصق رابط النشر الجديد الذي نسخته من الخطوة 2 هنا !!!
-            this.API_URL = "https://script.google.com/macros/s/AKfycbw-O_X1rKUInS_41IpKuD01uYQyj4NZNdJbfKsDV-JH3hhcbgVlfl1buUjdBQNoAkhS6Q/exec"; 
+            this.db = null; // Will be initialized after firebase app
             
-            this.API_KEY = "AbuQusay2025_SecretKey";
-            // =================================================================
-
             this.QUESTION_TIME = 80;
             this.MAX_WRONG_ANSWERS = 3;
             this.STARTING_SCORE = 100;
@@ -1598,6 +1627,39 @@
             this.init();
         }
 
+        async init() {
+            this.cacheDomElements();
+            this.bindEventListeners();
+            this.populateAvatarGrid();
+            this.initFirebase();
+
+            const questionsLoaded = await this.loadQuestions();
+            
+            if (questionsLoaded) {
+                this.showScreen('start');
+                this.hideLoader();
+            } else {
+                this.domElements.screens.loader.querySelector('.spinner').style.display = 'none';
+                this.domElements.screens.loader.insertAdjacentHTML('beforeend', '<p style="text-align: center;">حدث خطأ في تحميل الأسئلة.<br>الرجاء تحديث الصفحة.</p>');
+            }
+        }
+
+        initFirebase() {
+          try {
+            if (firebaseConfig.apiKey) {
+              firebase.initializeApp(firebaseConfig);
+              this.db = firebase.firestore();
+              console.log("Firebase initialized successfully!");
+            } else {
+              console.error("Firebase config is missing. Please paste it into index.html");
+              this.showToast("خطأ: إعداد Firebase غير مكتمل!", "error");
+            }
+          } catch(e) {
+            console.error("Error initializing Firebase:", e);
+            this.showToast("خطأ في الاتصال بقاعدة البيانات.", "error");
+          }
+        }
+
         async loadQuestions() {
            try {
                 // Using cache busting to always get the latest version of questions.
@@ -1617,27 +1679,6 @@
             for (let i = array.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [array[i], array[j]] = [array[j], array[i]];
-            }
-        }
-
-        async init() {
-            this.cacheDomElements();
-            this.bindEventListeners();
-            this.populateAvatarGrid();
-
-            const questionsLoaded = await this.loadQuestions();
-            
-            if(this.API_URL.includes("!!!")){
-                this.showToast("خطأ: الرجاء تحديث رابط API_URL في ملف index.html", "error");
-                console.error("Please update the API_URL in your index.html file with your new Google Apps Script deployment URL.");
-            }
-            
-            if (questionsLoaded) {
-                this.showScreen('start');
-                this.hideLoader();
-            } else {
-                this.domElements.screens.loader.querySelector('.spinner').style.display = 'none';
-                this.domElements.screens.loader.insertAdjacentHTML('beforeend', '<p style="text-align: center;">حدث خطأ في تحميل الأسئلة.<br>الرجاء تحديث الصفحة.</p>');
             }
         }
 
@@ -2028,7 +2069,6 @@
             clearInterval(this.timerInterval);
             this.hideModal(this.domElements.modals.confirmExit);
 
-            // UX Improvement: Show spinner while saving results
             const exitBtn = this.domElements.confirmExitYesBtn;
             this.setButtonLoading(exitBtn, true);
             this.showScreen('end');
@@ -2055,27 +2095,19 @@
                 accuracy: accuracy,
                 avgTime: avgTime,
                 performanceRating: performanceRating,
+                completedAll: completedAllLevels,
+                helpersUsed: this.gameState.helpersUsed,
+                deviceId: this.gameState.deviceId,
+                timestamp: new Date()
             };
 
             if (!this.isDevSession) {
-                const response = await this.saveResults({
-                    ...this.gameState,
-                    score: this.currentScoreValue,
-                    level: currentLevel.label,
-                    accuracy: accuracy,
-                    totalTime: totalTimeSeconds,
-                    avgTime: avgTime,
-                    completedAll: completedAllLevels
-                });
-                if (response && response.success) {
-                    this.gameState.attemptNumber = response.attemptNumber;
-                    finalResults.attemptNumber = response.attemptNumber;
-                }
+                const attemptNumber = await this.saveResults(finalResults);
+                finalResults.attemptNumber = attemptNumber;
             } else {
                  finalResults.attemptNumber = 'DEV';
             }
             
-            // UX Improvement: Hide spinner and show final results
             this.setButtonLoading(exitBtn, false);
             this.domElements.endScreenSpinner.style.display = 'none';
             this.domElements.endScreenContent.style.display = 'block';
@@ -2098,18 +2130,55 @@
         }
 
         async saveResults(resultsData) {
-            console.log("إرسال البيانات إلى السكربت:", resultsData);
+            if (!this.db) {
+                this.showToast("خطأ في الاتصال بقاعدة البيانات.", "error");
+                return "N/A";
+            }
             try {
-                const response = await this.apiCall({ action: 'endGame', ...resultsData });
-                if (response.success) {
-                    this.showToast("تم حفظ نتيجتك بنجاح!", "success");
-                    return response;
+                // 1. Calculate attempt number
+                const logsRef = this.db.collection('logs');
+                const q = logsRef.where('deviceId', '==', resultsData.deviceId);
+                const querySnapshot = await q.get();
+                const attemptNumber = querySnapshot.size + 1;
+                resultsData.attemptNumber = attemptNumber;
+
+                // 2. Add the full result to the 'logs' collection
+                await logsRef.add(resultsData);
+
+                // 3. Update the 'leaderboard' collection
+                const leaderboardRef = this.db.collection('leaderboard').doc(resultsData.deviceId);
+                const doc = await leaderboardRef.get();
+
+                if (!doc.exists || doc.data().score < resultsData.score) {
+                    // This is a new best score, so we update the leaderboard
+                    const leaderboardEntry = {
+                        score: resultsData.score,
+                        name: resultsData.name,
+                        avatar: resultsData.avatar,
+                        playerId: resultsData.playerId,
+                        deviceId: resultsData.deviceId,
+                        level: resultsData.level,
+                        accuracy: resultsData.accuracy,
+                        totalTime: resultsData.totalTime,
+                        avgTime: resultsData.avgTime,
+                        correctAnswers: resultsData.correctAnswers,
+                        wrongAnswers: resultsData.wrongAnswers,
+                        skips: resultsData.skips,
+                        attemptNumber: resultsData.attemptNumber,
+                        performanceRating: resultsData.performanceRating,
+                        isImpossibleFinisher: doc.data()?.isImpossibleFinisher || (resultsData.level === 'مستحيل' && resultsData.completedAll), // Persist finisher status
+                        lastUpdated: new Date()
+                    };
+                    await leaderboardRef.set(leaderboardEntry, { merge: true });
                 }
-                else throw new Error(response.error || "خطأ غير معروف من الخادم");
+
+                this.showToast("تم حفظ نتيجتك بنجاح!", "success");
+                return attemptNumber;
+
             } catch (error) {
-                console.error("فشل إرسال النتائج:", error);
+                console.error("Error saving results to Firebase:", error);
                 this.showToast("حدث خطأ أثناء حفظ النتيجة.", "error");
-                return null;
+                return "N/A";
             }
         }
         
@@ -2328,58 +2397,39 @@
 
         async handleReportSubmit(event) {
             event.preventDefault();
+            if (!this.db) {
+                this.showToast("قاعدة البيانات غير متصلة.", "error");
+                return;
+            }
+
             const form = event.target;
             const submitBtn = form.querySelector('button[type="submit"]');
             this.setButtonLoading(submitBtn, true);
 
-            const formData = new FormData(form);
-            const file = formData.get('problemScreenshot');
-            let screenshotBase64 = null;
-
             this.showToast("جاري إرسال البلاغ...", "info");
             
-            if (file && file.size > 0) {
-                try { screenshotBase64 = await this.fileToBase64(file); } 
-                catch (error) { 
-                    this.showToast("خطأ في معالجة الصورة.", "error"); 
-                    this.setButtonLoading(submitBtn, false);
-                    return; 
-                }
-            }
-
             const reportData = {
-                type: formData.get('problemType'), description: formData.get('problemDescription'),
-                screenshot: screenshotBase64, 
+                type: form.problemType.value, 
+                description: form.problemDescription.value,
                 playerName: this.gameState.name || 'لم يبدأ اللعب',
                 playerId: this.gameState.playerId || 'N/A',
                 currentLevel: this.gameState.level !== undefined ? this.LEVELS[this.gameState.level].label : 'N/A',
                 currentQuestionText: this.domElements.questionText.textContent || 'لا يوجد',
-                timestamp: new Date().toISOString()
+                timestamp: new Date()
             };
 
             try {
-                const response = await this.apiCall({ action: 'submitReportWithPhoto', data: reportData });
-                if (response.success) {
-                    this.showToast("تم إرسال بلاغك بنجاح. شكراً لك!", "success");
-                    this.hideModal(this.domElements.modals.advancedReport);
-                }
-                else throw new Error(response.error || "فشل إرسال البلاغ");
+                await this.db.collection('reports').add(reportData);
+                this.showToast("تم إرسال بلاغك بنجاح. شكراً لك!", "success");
+                this.hideModal(this.domElements.modals.advancedReport);
             } catch (error) { 
+                console.error("Error submitting report:", error);
                 this.showToast("حدث خطأ أثناء إرسال البلاغ.", "error"); 
             } finally {
                 this.setButtonLoading(submitBtn, false);
             }
         }
         
-        fileToBase64(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = () => resolve(reader.result.split(',')[1]);
-                reader.onerror = error => reject(error);
-            });
-        }
-
         showToast(message, type = 'info') {
             const toastContainer = document.getElementById('toast-container');
             const toast = document.createElement('div');
@@ -2390,30 +2440,24 @@
             setTimeout(() => toast.remove(), 3000);
         }
 
-        async apiCall(payload) {
-            const payloadWithKey = { apiKey: this.API_KEY, ...payload };
-            try {
-                const response = await fetch(this.API_URL, {
-                    method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify(payloadWithKey), mode: 'cors'
-                });
-                return await response.json();
-            } catch (error) { console.error('API Error:', error); throw error; }
-        }
-        
         async displayLeaderboard() {
+            if (!this.db) {
+                this.showToast("قاعدة البيانات غير متصلة.", "error");
+                return;
+            }
             this.showScreen('leaderboard');
             const contentDiv = document.getElementById('leaderboardContent');
             contentDiv.innerHTML = '<div class="spinner"></div>';
 
             try {
-                const response = await this.apiCall({ action: 'getLeaderboard' });
-
-                if (!response || !response.success || !Array.isArray(response.leaderboard)) {
-                    throw new Error("بيانات لوحة الصدارة غير صالحة من الخادم.");
-                }
-
-                const players = response.leaderboard;
+                const leaderboardRef = this.db.collection('leaderboard');
+                const q = leaderboardRef.orderBy('score', 'desc').orderBy('accuracy', 'desc').orderBy('totalTime', 'asc').limit(100);
+                const querySnapshot = await q.get();
+                
+                const players = [];
+                querySnapshot.forEach((doc) => {
+                    players.push(doc.data());
+                });
 
                 if (players.length === 0) {
                     contentDiv.innerHTML = '<p>لوحة الصدارة فارغة حاليًا!</p>';
@@ -2481,6 +2525,7 @@
             } catch (error) {
                 console.error("Error loading leaderboard:", error);
                 contentDiv.innerHTML = '<p>حدث خطأ في تحميل لوحة الصدارة.</p>';
+                this.showToast("خطأ في تحميل لوحة الصدارة", "error");
             }
         }
         
@@ -2545,19 +2590,11 @@
 
         getShareText() {
             const performanceRating = this.calculatePerformanceRating();
-            return `🏆 النتائج النهائية 🏆\n\n` + 
-                `الاسم: ${this.gameState.name}\n` +
-                `المعرّف: ${this.gameState.playerId}\n` +
-                `رقم المحاولة: ${this.gameState.attemptNumber}\n` +
-                `الإجابات الصحيحة: ${this.gameState.correctAnswers}\n` +
-                `الإجابات الخاطئة: ${this.gameState.wrongAnswers}\n` +
-                `مرات التخطي: ${this.gameState.skips}\n` +
-                `النقاط النهائية: ${this.formatNumber(this.currentScoreValue)}\n` +
-                `الوقت المستغرق: ${this.formatTime((new Date() - this.gameState.startTime) / 1000)}\n` +
-                `المستوى الذي وصلت إليه: ${this.LEVELS[Math.min(this.gameState.level, this.LEVELS.length - 1)].label}\n` +
-                `نسبة الدقة: ${this.getFinalAccuracy()}%` +
-                `\nمتوسط وقت الإجابة: ${this.getFinalAvgTime()} / سؤال` +
-                `\nأداؤك: ${performanceRating}`;
+            return `🏆 حققت نتيجة رائعة في مسابقة المعلومات!\n\n` + 
+                   `⭐ النقاط: ${this.formatNumber(this.currentScoreValue)}\n` +
+                   `📈 الأداء: ${performanceRating}\n` +
+                   `🎯 الدقة: ${this.getFinalAccuracy()}%\n\n` +
+                   `هل يمكنك التفوق علي؟ 🤔`;
         }
         
         getFinalAccuracy() {
@@ -2573,13 +2610,13 @@
         }
 
         shareOnX() {
-            const textToShare = this.getShareText() + `\n\n🔗 جرب تحديك أنت أيضاً!\n${this.API_URL.replace("macros/s", "d")}`;
+            const textToShare = this.getShareText() + `\n\n🔗 جرب اللعبة الآن!\n${window.location.href}`;
             window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(textToShare)}`, '_blank');
         }
 
         shareOnInstagram() {
             navigator.clipboard.writeText(this.getShareText())
-                .then(() => this.showToast("تم نسخ النتيجة لمشاركتها!", "success"))
+                .then(() => this.showToast("تم نسخ النتيجة لمشاركتها في الستوري!", "success"))
                 .catch(() => this.showToast("فشل نسخ النتيجة.", "error"));
         }
 
