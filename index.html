@@ -1585,7 +1585,13 @@
                     developerName: "AbuQusay",
                     developerPassword: "AbuQusay", 
                     randomize_questions: true,
-                    randomize_answers: true, 
+                    randomize_answers: true,
+                    // [NEW] Telegram Bot and API Keys
+                    // ملاحظة: وضع المفاتيح السرية هنا ليس آمنًا في بيئة الإنتاج
+                    // من الأفضل استخدام وظائف سحابية (Cloud Function) للتعامل معها
+                    API_KEY: "AbuQusay2025_SecretKey", // مفتاح واجهة برمجة التطبيقات الخاص بك
+                    TELEGRAM_BOT_TOKEN: "7164313376:AAF8S_ZtCxqc8wopOR0uEy4wP-5N1sjoBDE",
+                    TELEGRAM_CHAT_ID: "6082610560", 
                 };
                 
                 // Firebase services
@@ -2422,6 +2428,10 @@
                     await addDoc(collection(this.db, 'reports'), reportData);
                     this.showToast("تم إرسال بلاغك بنجاح. شكراً لك!", "success");
                     this.hideModal(this.domElements.modals.advancedReport);
+
+                    // [NEW] Send notification to Telegram after successful report
+                    await this.sendTelegramNotification(reportData);
+
                 } catch (error) { 
                     console.error("Error submitting report:", error);
                     this.showToast("حدث خطأ أثناء إرسال البلاغ.", "error"); 
@@ -2430,6 +2440,54 @@
                 }
             }
             
+            // [NEW] Function to send a message via Telegram bot
+            async sendTelegramNotification(reportData) {
+                const { TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID } = this.config;
+                if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
+                    console.warn("Telegram bot token or chat ID is not configured.");
+                    return;
+                }
+
+                const message = `
+⚠️ *بلاغ جديد في مسابقة المعلومات* ⚠️
+
+*النوع:* ${reportData.type}
+*اللاعب:* ${reportData.playerName} (${reportData.playerId})
+*المستوى الحالي:* ${reportData.currentLevel}
+*نص السؤال:* ${reportData.currentQuestionText}
+
+*الوصف:*
+${reportData.description}
+                `;
+
+                const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+                
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            chat_id: TELEGRAM_CHAT_ID,
+                            text: message,
+                            parse_mode: 'Markdown'
+                        })
+                    });
+
+                    const result = await response.json();
+                    if (result.ok) {
+                        console.log("Telegram notification sent successfully.");
+                        this.showToast("تم إشعار المطور.", "success");
+                    } else {
+                        console.error("Failed to send Telegram notification:", result.description);
+                        this.showToast("فشل إشعار المطور.", "error");
+                    }
+                } catch (error) {
+                    console.error("Error sending Telegram notification:", error);
+                }
+            }
+
             showToast(message, type = 'info') {
                 const toastContainer = document.getElementById('toast-container');
                 const toast = document.createElement('div');
@@ -2654,3 +2712,4 @@
     <div class="sr-only" aria-live="polite" id="liveAnnouncements"></div>
 </body>
 </html>
+
