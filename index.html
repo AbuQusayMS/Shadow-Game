@@ -1456,7 +1456,6 @@
                     <label for="problemDescription">وصف المشكلة:</label>
                     <textarea id="problemDescription" name="problemDescription" placeholder="يرجى تقديم تفاصيل دقيقة قدر الإمكان..." required></textarea>
                 </div>
-                <!-- **ملاحظة:** إرفاق الصور مع البلاغات في Supabase يتطلب إعدادات تخزين (Storage) إضافية، تم تبسيطها حالياً -->
                 <div class="modal-buttons">
                     <button type="submit" class="btn-main">إرسال البلاغ</button>
                     <button type="button" id="cancelReportBtn" class="btn-secondary">إلغاء</button>
@@ -1529,7 +1528,6 @@
             this.SUPABASE_URL = 'https://qffcnljopolajeufkrah.supabase.co'; // الصق رابط المشروع هنا
             this.SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFmZmNubGpvcG9sYWpldWZrcmFoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkwNzkzNjMsImV4cCI6MjA3NDY1NTM2M30.0vst_km_pweyF2IslQ24JzMF281oYeaaeIEQM0aKkUg'; // الصق مفتاح الربط العام هنا
             
-            // **تغيير:** تهيئة عميل Supabase
             this.supabase = null;
             if (this.SUPABASE_URL !== 'YOUR_SUPABASE_URL' && this.SUPABASE_KEY !== 'YOUR_SUPABASE_ANON_KEY') {
                 this.supabase = supabase.createClient(this.SUPABASE_URL, this.SUPABASE_KEY);
@@ -1820,7 +1818,6 @@
         }
 
         showScreen(screenName) {
-            // **ميزة جديدة:** إلغاء الاشتراك في لوحة الصدارة عند مغادرة الشاشة لتوفير الموارد
             if (this.leaderboardSubscription && screenName !== 'leaderboard') {
                 this.leaderboardSubscription.unsubscribe();
                 this.leaderboardSubscription = null;
@@ -1938,10 +1935,15 @@
                 button.className = 'option-btn';
                 button.textContent = optionText;
                 button.dataset.correct = (optionText === correctAnswerText).toString();
-                button.addEventListener('click', () => this.checkAnswer(button.dataset.correct === 'true', button));
                 fragment.appendChild(button);
             });
             this.domElements.optionsGrid.appendChild(fragment);
+            // Use event delegation for better performance
+            this.domElements.optionsGrid.onclick = (e) => {
+                if(e.target.classList.contains('option-btn')) {
+                    this.checkAnswer(e.target.dataset.correct === 'true', e.target);
+                }
+            };
 
             this.updateUI();
             this.startTimer();
@@ -1951,6 +1953,7 @@
             if (this.answerSubmitted) return;
             this.answerSubmitted = true;
             clearInterval(this.timerInterval);
+            this.domElements.optionsGrid.onclick = null; // Disable further clicks
             document.querySelectorAll('.option-btn').forEach(b => b.classList.add('disabled'));
 
             if (isCorrect) {
@@ -2012,26 +2015,29 @@
 
             const finalResults = {
                 name: this.gameState.name,
-                playerId: this.gameState.playerId,
+                player_id: this.gameState.playerId,
+                device_id: this.gameState.deviceId,
                 avatar: this.gameState.avatar,
-                correctAnswers: this.gameState.correctAnswers,
-                wrongAnswers: this.gameState.wrongAnswers,
+                correct_answers: this.gameState.correctAnswers,
+                wrong_answers: this.gameState.wrongAnswers,
                 skips: this.gameState.skips,
                 score: this.currentScoreValue,
-                totalTime: totalTimeSeconds,
+                total_time: totalTimeSeconds,
                 level: currentLevel.label,
                 accuracy: accuracy,
-                avgTime: avgTime,
-                performanceRating: performanceRating,
-                isImpossibleFinisher: completedAllLevels
+                avg_time: avgTime,
+                performance_rating: performanceRating,
+                completed_all: completedAllLevels,
+                used_fifty_fifty: this.gameState.helpersUsed.fiftyFifty,
+                used_freeze_time: this.gameState.helpersUsed.freezeTime
             };
 
             if (!this.isDevSession) {
                 const attemptNumber = await this.saveResults(finalResults);
                 this.gameState.attemptNumber = attemptNumber;
-                finalResults.attemptNumber = attemptNumber;
+                finalResults.attempt_number = attemptNumber;
             } else {
-                 finalResults.attemptNumber = 'DEV';
+                 finalResults.attempt_number = 'DEV';
             }
             
             this.displayFinalStats(finalResults);
@@ -2041,20 +2047,19 @@
         displayFinalStats(results) {
             const set = (id, value) => document.getElementById(id).textContent = value;
             set('finalName', results.name);
-            set('finalId', results.playerId);
-            set('finalAttemptNumber', results.attemptNumber);
-            set('finalCorrect', results.correctAnswers);
-            set('finalWrong', results.wrongAnswers);
+            set('finalId', results.player_id);
+            set('finalAttemptNumber', results.attempt_number);
+            set('finalCorrect', results.correct_answers);
+            set('finalWrong', results.wrong_answers);
             set('finalSkips', results.skips);
             set('finalScore', this.formatNumber(results.score));
-            set('totalTime', this.formatTime(results.totalTime));
+            set('totalTime', this.formatTime(results.total_time));
             set('finalLevel', results.level);
             set('finalAccuracy', `${results.accuracy}%`);
-            set('finalAvgTime', `${this.formatTime(results.avgTime)} / سؤال`);
-            set('performanceText', results.performanceRating);
+            set('finalAvgTime', `${this.formatTime(results.avg_time)} / سؤال`);
+            set('performanceText', results.performance_rating);
         }
 
-        // **تغيير:** دالة حفظ النتائج تتواصل مع Supabase
         async saveResults(resultsData) {
             if (!this.supabase) return 'N/A';
             try {
@@ -2065,46 +2070,58 @@
                     .eq('device_id', this.gameState.deviceId)
                     .single();
 
-                if(fetchError && fetchError.code !== 'PGRST116') { // PGRST116 means no rows found, which is fine
+                if(fetchError && fetchError.code !== 'PGRST116') { // PGRST116 means no rows found
                     throw fetchError;
                 }
                 
                 const attemptNumber = (existingData?.attempt_number || 0) + 1;
-                const existingScore = existingData?.score || -Infinity;
+                resultsData.attempt_number = attemptNumber;
 
-                // 2. احفظ النتيجة فقط إذا كانت أفضل من النتيجة الحالية
+                // 2. سجل المحاولة الحالية في جدول السجل (log)
+                const { error: logError } = await this.supabase.from('log').insert({
+                    ...resultsData, 
+                    is_impossible_finisher: resultsData.completed_all // Adjust field name for log
+                });
+                if(logError) throw logError;
+
+                // 3. احفظ النتيجة في لوحة الصدارة فقط إذا كانت أفضل
+                const existingScore = existingData?.score || -Infinity;
                 if (resultsData.score > existingScore) {
                     const { error: upsertError } = await this.supabase
                         .from('leaderboard')
                         .upsert({
-                            device_id: this.gameState.deviceId,
-                            player_id: resultsData.playerId,
+                            device_id: resultsData.device_id,
+                            player_id: resultsData.player_id,
                             name: resultsData.name,
                             avatar: resultsData.avatar,
                             score: resultsData.score,
                             level: resultsData.level,
                             accuracy: resultsData.accuracy,
-                            total_time: resultsData.totalTime,
-                            avg_time: resultsData.avgTime,
-                            correct_answers: resultsData.correctAnswers,
-                            wrong_answers: resultsData.wrongAnswers,
+                            total_time: resultsData.total_time,
+                            avg_time: resultsData.avg_time,
+                            correct_answers: resultsData.correct_answers,
+                            wrong_answers: resultsData.wrong_answers,
                             skips: resultsData.skips,
                             attempt_number: attemptNumber,
-                            performance_rating: resultsData.performanceRating,
-                            is_impossible_finisher: resultsData.isImpossibleFinisher,
+                            performance_rating: resultsData.performance_rating,
+                            is_impossible_finisher: resultsData.completed_all,
                             updated_at: new Date().toISOString()
                         });
-
                     if (upsertError) throw upsertError;
-                    this.showToast("تم حفظ نتيجتك الجديدة في لوحة الصدارة!", "success");
+                    this.showToast("تم تحديث نتيجتك في لوحة الصدارة!", "success");
                 } else {
-                     this.showToast("نتيجتك الحالية لم تتجاوز أفضل نتيجة لك.", "info");
+                     this.showToast("تم حفظ المحاولة. نتيجتك الحالية لم تتجاوز أفضل نتيجة لك.", "info");
                 }
                 
+                // 4. استدعاء الـ Function لإرسال إشعار Telegram
+                this.supabase.functions.invoke('telegram-notifier', {
+                    body: { type: 'new_result', data: resultsData }
+                });
+
                 return attemptNumber;
 
             } catch (error) {
-                console.error("فشل إرسال النتائج إلى Supabase:", error);
+                console.error("فشل إرسال النتائج إلى Supabase:", error.message);
                 this.showToast("حدث خطأ أثناء حفظ النتيجة.", "error");
                 return existingData?.attempt_number || 1;
             }
@@ -2323,7 +2340,6 @@
             this.domElements.themeToggleBtn.textContent = newTheme === 'dark' ? '☀️' : '🌙';
         }
 
-        // **تغيير:** دالة إرسال البلاغات تتواصل مع Supabase
         async handleReportSubmit(event) {
             event.preventDefault();
             if (!this.supabase) {
@@ -2336,9 +2352,9 @@
             
             const formData = new FormData(event.target);
             const reportData = {
-                problem_type: formData.get('problemType'),
+                type: formData.get('problemType'),
                 description: formData.get('problemDescription'),
-                player_name: this.gameState.name || 'لم يبدأ اللعب',
+                name: this.gameState.name || 'لم يبدأ اللعب',
                 player_id: this.gameState.playerId || 'N/A',
                 question_text: this.domElements.questionText.textContent || 'لا يوجد'
             };
@@ -2350,18 +2366,13 @@
                 this.showToast("حدث خطأ أثناء إرسال البلاغ.", "error");
             } else {
                 this.showToast("تم إرسال بلاغك بنجاح. شكراً لك!", "success");
+                // استدعاء الـ Function لإرسال إشعار Telegram بالبلاغ
+                this.supabase.functions.invoke('telegram-notifier', {
+                    body: { type: 'new_report', data: reportData }
+                });
             }
         }
         
-        fileToBase64(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = () => resolve(reader.result.split(',')[1]);
-                reader.onerror = error => reject(error);
-            });
-        }
-
         showToast(message, type = 'info') {
             const toastContainer = document.getElementById('toast-container');
             const toast = document.createElement('div');
@@ -2372,7 +2383,6 @@
             setTimeout(() => toast.remove(), 3000);
         }
         
-        // **تغيير:** دالة عرض لوحة الصدارة تتواصل مع Supabase
         async displayLeaderboard() {
             if (!this.supabase) {
                 this.showToast("خدمة لوحة الصدارة غير متاحة حالياً.", "error");
@@ -2399,19 +2409,16 @@
             
             this.renderLeaderboard(players);
 
-            // **ميزة جديدة:** الاشتراك في التحديثات الفورية للوحة الصدارة
             if (!this.leaderboardSubscription) {
                 this.leaderboardSubscription = this.supabase
                     .channel('public:leaderboard')
                     .on('postgres_changes', { event: '*', schema: 'public', table: 'leaderboard' }, payload => {
-                        console.log('Change received!', payload);
-                        this.displayLeaderboard(); // أعد تحميل اللوحة عند أي تغيير
+                        this.displayLeaderboard();
                     })
                     .subscribe();
             }
         }
 
-        // **دالة جديدة:** لعرض بيانات لوحة الصدارة
         renderLeaderboard(players) {
             const contentDiv = document.getElementById('leaderboardContent');
             if (!players || players.length === 0) {
