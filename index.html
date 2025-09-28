@@ -265,6 +265,7 @@
       transition: all var(--transition-fast);
       border: 2px solid var(--gold-color);
       box-shadow: var(--shadow-md);
+      position: relative; /* For spinner */
     }
     .btn-main:hover:not(:disabled) {
       background-color: transparent;
@@ -800,6 +801,26 @@
       animation: spin 1s linear infinite;
       margin: 0 auto;
     }
+    /* Spinner inside a button */
+    .btn-main .spinner {
+        position: absolute;
+        width: 1.5rem;
+        height: 1.5rem;
+        border-width: 3px;
+        top: 50%;
+        left: 50%;
+        margin-top: -0.75rem;
+        margin-left: -0.75rem;
+        display: none; /* Hidden by default */
+    }
+    .btn-main.loading .spinner {
+        display: block;
+    }
+    .btn-main.loading .btn-text {
+        visibility: hidden;
+    }
+
+
     @keyframes spin {
       100% { transform: rotate(360deg); }
     }
@@ -1115,7 +1136,7 @@
             
             <div class="button-group">
                 <button id="startPlayBtn" class="btn-main">
-                    ابدأ اللعب
+                    <span class="btn-text">ابدأ اللعب</span>
                 </button>
                 <button id="showLeaderboardBtn" class="btn-secondary">
                     لوحة الصدارة
@@ -1139,7 +1160,7 @@
             
             <div class="button-group">
                 <button id="confirmAvatarBtn" class="btn-main" disabled>
-                    التالي
+                    <span class="btn-text">التالي</span>
                     <span class="sr-only">اختيار الصورة الرمزية المحددة</span>
                 </button>
             </div>
@@ -1168,7 +1189,7 @@
             
             <div class="button-group">
                 <button id="confirmNameBtn" class="btn-main" disabled>
-                    تأكيد الإسم
+                    <span class="btn-text">تأكيد الإسم</span>
                 </button>
             </div>
         </div>
@@ -1235,7 +1256,7 @@
 
             
             <div class="button-group">
-                <button id="instructionsConfirmBtn" class="btn-main">حسناً، فهمت</button>
+                <button id="instructionsConfirmBtn" class="btn-main"><span class="btn-text">حسناً، فهمت</span></button>
             </div>
         </div>
     </div>
@@ -1350,7 +1371,7 @@
             </div>
             
             <div class="button-group">
-                <button id="nextLevelBtn" class="btn-main">المستوى التالي</button>
+                <button id="nextLevelBtn" class="btn-main"><span class="btn-text">المستوى التالي</span></button>
                 <button id="quitLevelBtn" class="btn-secondary">الانسحاب وعرض النتائج</button>
             </div>
         </div>
@@ -1362,41 +1383,48 @@
                 <h2>🏆 النتائج النهائية 🏆</h2>
             </header>
             
-            <div class="final-stats" aria-labelledby="finalStatsHeading">
-                <h3 id="finalStatsHeading" class="sr-only">الإحصائيات النهائية</h3>
-                <p>✍️ الاسم: <strong id="finalName"></strong></p>
-                <p>🆔 المعرّف: <strong id="finalId"></strong></p>
-                <p>🔢 رقم المحاولة: <strong id="finalAttemptNumber"></strong></p>
-                <p>✅ الإجابات الصحيحة: <strong id="finalCorrect"></strong></p>
-                <p>❌ الإجابات الخاطئة: <strong id="finalWrong"></strong></p>
-                <p>⏭️ مرات التخطي: <strong id="finalSkips"></strong></p>
-                <p>⭐ النقاط النهائية: <strong id="finalScore"></strong></p>
-                <p>⏱️ الوقت المستغرق: <strong id="totalTime"></strong></p>
-                <p>📈 المستوى الذي وصلت إليه: <strong id="finalLevel"></strong></p>                
-                <p>🎯 نسبة الدقة: <strong id="finalAccuracy"></strong></p>
-                <p>⏳ متوسط وقت الإجابة: <strong id="finalAvgTime"></strong></p>
-        
-                <div class="performance-rating">
-                    <span>أداؤك: </span>
-                    <strong id="performanceText"></strong>
-                </div>
+            <div id="endScreenSpinner" style="display: none; margin: 2rem 0;">
+                <div class="spinner"></div>
+                <p>جاري حفظ نتيجتك...</p>
             </div>
             
-            <section class="share-section" aria-labelledby="shareHeading">
-                <h3 id="shareHeading">📢 مشاركة النتائج</h3>
-                <div class="share-buttons">
-                    <button id="shareXBtn" class="share-btn x" aria-label="مشاركة النتيجة على X">
-                        X
-                    </button>
-                    <button id="shareInstagramBtn" class="share-btn instagram" aria-label="مشاركة النتيجة على Instagram">
-                        Instagram
-                    </button>
-                </div>
-            </section>
+            <div id="endScreenContent">
+                <div class="final-stats" aria-labelledby="finalStatsHeading">
+                    <h3 id="finalStatsHeading" class="sr-only">الإحصائيات النهائية</h3>
+                    <p>✍️ الاسم: <strong id="finalName"></strong></p>
+                    <p>🆔 المعرّف: <strong id="finalId"></strong></p>
+                    <p>🔢 رقم المحاولة: <strong id="finalAttemptNumber"></strong></p>
+                    <p>✅ الإجابات الصحيحة: <strong id="finalCorrect"></strong></p>
+                    <p>❌ الإجابات الخاطئة: <strong id="finalWrong"></strong></p>
+                    <p>⏭️ مرات التخطي: <strong id="finalSkips"></strong></p>
+                    <p>⭐ النقاط النهائية: <strong id="finalScore"></strong></p>
+                    <p>⏱️ الوقت المستغرق: <strong id="totalTime"></strong></p>
+                    <p>📈 المستوى الذي وصلت إليه: <strong id="finalLevel"></strong></p>                  
+                    <p>🎯 نسبة الدقة: <strong id="finalAccuracy"></strong></p>
+                    <p>⏳ متوسط وقت الإجابة: <strong id="finalAvgTime"></strong></p>
             
-            <div class="button-group">
-                <button id="playAgainBtn" class="btn-main">لعب مرة أخرى</button>
-                <button id="statsBtn" class="btn-secondary">لوحة الصدارة</button>
+                    <div class="performance-rating">
+                        <span>أداؤك: </span>
+                        <strong id="performanceText"></strong>
+                    </div>
+                </div>
+                
+                <section class="share-section" aria-labelledby="shareHeading">
+                    <h3 id="shareHeading">📢 مشاركة النتائج</h3>
+                    <div class="share-buttons">
+                        <button id="shareXBtn" class="share-btn x" aria-label="مشاركة النتيجة على X">
+                            X
+                        </button>
+                        <button id="shareInstagramBtn" class="share-btn instagram" aria-label="مشاركة النتيجة على Instagram">
+                            Instagram
+                        </button>
+                    </div>
+                </section>
+                
+                <div class="button-group">
+                    <button id="playAgainBtn" class="btn-main"><span class="btn-text">لعب مرة أخرى</span></button>
+                    <button id="statsBtn" class="btn-secondary">لوحة الصدارة</button>
+                </div>
             </div>
         </div>
     </div>
@@ -1429,7 +1457,7 @@
             <h3>إنهاء المسابقة</h3>
             <p>سيتم حفظ نقاطك الحالية. هل ترغب في المتابعة؟</p>
             <div class="modal-buttons">
-                <button id="confirmExitYes" class="btn-main">نعم</button>
+                <button id="confirmExitYes" class="btn-main"><span class="btn-text">نعم</span><div class="spinner"></div></button>
                 <button id="confirmExitNo" class="btn-secondary">لا</button>
             </div>
         </div>
@@ -1459,7 +1487,7 @@
                     <input type="file" id="problemScreenshot" name="problemScreenshot" accept="image/*" style="padding: 10px; border: 1px solid var(--border-color); border-radius: var(--radius-lg);">
                 </div>
                 <div class="modal-buttons">
-                    <button type="submit" class="btn-main">إرسال البلاغ</button>
+                    <button type="submit" class="btn-main"><span class="btn-text">إرسال البلاغ</span></button>
                     <button type="button" id="cancelReportBtn" class="btn-secondary">إلغاء</button>
                 </div>
             </form>
@@ -1473,7 +1501,7 @@
                 <img id="image-to-crop" src="" alt="Image for cropping">
             </div>
             <div class="modal-buttons">
-                <button id="saveCroppedImage" class="btn-main">حفظ الصورة</button>
+                <button id="saveCroppedImage" class="btn-main"><span class="btn-text">حفظ الصورة</span></button>
                 <button id="cancelCrop" class="btn-secondary">إلغاء</button>
             </div>
         </div>
@@ -1489,7 +1517,7 @@
             </div>
             <div id="devPasswordError" class="error-message"></div>
             <div class="modal-buttons">
-                <button id="confirmDevPassword" class="btn-main">دخول</button>
+                <button id="confirmDevPassword" class="btn-main"><span class="btn-text">دخول</span></button>
                 <button id="cancelDevPassword" class="btn-secondary">إلغاء</button>
             </div>
         </div>
@@ -1572,7 +1600,8 @@
 
         async loadQuestions() {
            try {
-                const response = await fetch(`https://abuqusayms.github.io/Shadow-Game/questions.json?v=${new Date().getTime()}`); // Cache busting
+                // Using cache busting to always get the latest version of questions.
+                const response = await fetch(`https://abuqusayms.github.io/Shadow-Game/questions.json?v=${new Date().getTime()}`);
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
@@ -1607,7 +1636,8 @@
                 this.showScreen('start');
                 this.hideLoader();
             } else {
-                this.domElements.screens.loader.textContent = "حدث خطأ في تحميل الأسئلة. الرجاء تحديث الصفحة.";
+                this.domElements.screens.loader.querySelector('.spinner').style.display = 'none';
+                this.domElements.screens.loader.insertAdjacentHTML('beforeend', '<p style="text-align: center;">حدث خطأ في تحميل الأسئلة.<br>الرجاء تحديث الصفحة.</p>');
             }
         }
 
@@ -1649,6 +1679,9 @@
                 devPasswordInput: document.getElementById('devPasswordInput'),
                 devPasswordError: document.getElementById('devPasswordError'),
                 devFloatingBtn: document.getElementById('devFloatingBtn'),
+                endScreenSpinner: document.getElementById('endScreenSpinner'),
+                endScreenContent: document.getElementById('endScreenContent'),
+                confirmExitYesBtn: document.getElementById('confirmExitYes'),
             };
         }
 
@@ -1661,7 +1694,7 @@
             document.getElementById('backToStartBtn').addEventListener('click', () => this.showScreen('start'));
             this.domElements.themeToggleBtn.addEventListener('click', () => this.toggleTheme());
             document.getElementById('endQuizBtn').addEventListener('click', () => this.showModal(this.domElements.modals.confirmExit));
-            document.getElementById('confirmExitYes').addEventListener('click', () => this.endGame());
+            this.domElements.confirmExitYesBtn.addEventListener('click', () => this.endGame());
             document.getElementById('confirmExitNo').addEventListener('click', () => this.hideModal(this.domElements.modals.confirmExit));
             document.getElementById('nextLevelBtn').addEventListener('click', () => this.nextLevel());
             document.getElementById('quitLevelBtn').addEventListener('click', () => this.endGame());
@@ -1736,6 +1769,7 @@
         populateAvatarGrid() {
             const avatarGrid = document.querySelector('.avatar-grid');
             avatarGrid.innerHTML = ''; 
+            const fragment = document.createDocumentFragment();
 
             const uploadContainer = document.createElement('div');
             uploadContainer.classList.add('avatar-upload-btn');
@@ -1746,7 +1780,7 @@
             uploadInput.accept = 'image/*';
             uploadInput.style.display = 'none';
             uploadContainer.appendChild(uploadInput);
-            avatarGrid.appendChild(uploadContainer);
+            fragment.appendChild(uploadContainer);
             
             uploadInput.addEventListener('change', (e) => this.handleAvatarUpload(e));
             uploadContainer.addEventListener('click', () => uploadInput.click());
@@ -1766,8 +1800,10 @@
                 img.alt = `صورة رمزية ${index + 1}`;
                 img.classList.add('avatar-option');
                 img.addEventListener('click', (e) => this.selectAvatar(e.target));
-                avatarGrid.appendChild(img);
+                fragment.appendChild(img);
             });
+
+            avatarGrid.appendChild(fragment);
         }
         
         selectAvatar(element) {
@@ -1834,7 +1870,7 @@
             this.gameState = {
                 ...this.gameState, 
                 playerId: this.generatePlayerId(),
-                deviceId: this.generateDeviceId(),
+                deviceId: this.getOrSetDeviceId(),
                 level: 0,
                 question: 0,
                 wrongAnswers: 0,
@@ -1856,7 +1892,7 @@
 
         generatePlayerId() { return `PL${Math.random().toString(36).substr(2, 9).toUpperCase()}`; }
         
-        generateDeviceId() {
+        getOrSetDeviceId() {
             let deviceId = localStorage.getItem('quizGameDeviceId');
             if (!deviceId) {
                 deviceId = 'D' + Date.now().toString(36) + Math.random().toString(36).substr(2, 9).toUpperCase();
@@ -1899,7 +1935,6 @@
         fetchQuestion() {
             const questions = this.gameState.shuffledQuestions;
             if (!questions || this.gameState.question >= questions.length) {
-                // This now correctly triggers level completion instead of ending the game prematurely.
                 this.levelComplete();
                 return; 
             }
@@ -1921,6 +1956,7 @@
             
             this.domElements.questionText.textContent = questionData.q;
             this.domElements.optionsGrid.innerHTML = '';
+            const fragment = document.createDocumentFragment();
 
             shuffledOptions.forEach(optionText => {
                 const button = document.createElement('button');
@@ -1928,8 +1964,9 @@
                 button.textContent = optionText;
                 if (optionText === correctAnswerText) { button.dataset.correct = 'true'; }
                 button.addEventListener('click', () => this.checkAnswer(button.dataset.correct === 'true', button));
-                this.domElements.optionsGrid.appendChild(button);
+                fragment.appendChild(button);
             });
+            this.domElements.optionsGrid.appendChild(fragment);
 
             this.updateUI();
             this.startTimer();
@@ -1991,6 +2028,13 @@
             clearInterval(this.timerInterval);
             this.hideModal(this.domElements.modals.confirmExit);
 
+            // UX Improvement: Show spinner while saving results
+            const exitBtn = this.domElements.confirmExitYesBtn;
+            this.setButtonLoading(exitBtn, true);
+            this.showScreen('end');
+            this.domElements.endScreenContent.style.display = 'none';
+            this.domElements.endScreenSpinner.style.display = 'block';
+
             const totalTimeSeconds = (new Date() - this.gameState.startTime) / 1000;
             const currentLevel = this.LEVELS[Math.min(this.gameState.level, this.LEVELS.length - 1)];
             const totalAnswered = this.gameState.correctAnswers + this.gameState.wrongAnswers;
@@ -2031,8 +2075,11 @@
                  finalResults.attemptNumber = 'DEV';
             }
             
+            // UX Improvement: Hide spinner and show final results
+            this.setButtonLoading(exitBtn, false);
+            this.domElements.endScreenSpinner.style.display = 'none';
+            this.domElements.endScreenContent.style.display = 'block';
             this.displayFinalStats(finalResults);
-            this.showScreen('end');
         }
         
         displayFinalStats(results) {
@@ -2103,7 +2150,6 @@
                 this.gameState.skips++;
                 this.gameState.question++;
                 this.updateUI();
-                // ✅ BUG FIX: Check if it's the end of the level after skipping.
                 if (this.gameState.question >= this.gameState.shuffledQuestions.length) {
                     this.levelComplete();
                 } else {
@@ -2282,16 +2328,23 @@
 
         async handleReportSubmit(event) {
             event.preventDefault();
-            const formData = new FormData(event.target);
+            const form = event.target;
+            const submitBtn = form.querySelector('button[type="submit"]');
+            this.setButtonLoading(submitBtn, true);
+
+            const formData = new FormData(form);
             const file = formData.get('problemScreenshot');
             let screenshotBase64 = null;
 
             this.showToast("جاري إرسال البلاغ...", "info");
-            this.hideModal(this.domElements.modals.advancedReport);
-
+            
             if (file && file.size > 0) {
                 try { screenshotBase64 = await this.fileToBase64(file); } 
-                catch (error) { this.showToast("خطأ في معالجة الصورة.", "error"); return; }
+                catch (error) { 
+                    this.showToast("خطأ في معالجة الصورة.", "error"); 
+                    this.setButtonLoading(submitBtn, false);
+                    return; 
+                }
             }
 
             const reportData = {
@@ -2306,9 +2359,16 @@
 
             try {
                 const response = await this.apiCall({ action: 'submitReportWithPhoto', data: reportData });
-                if (response.success) this.showToast("تم إرسال بلاغك بنجاح. شكراً لك!", "success");
+                if (response.success) {
+                    this.showToast("تم إرسال بلاغك بنجاح. شكراً لك!", "success");
+                    this.hideModal(this.domElements.modals.advancedReport);
+                }
                 else throw new Error(response.error || "فشل إرسال البلاغ");
-            } catch (error) { this.showToast("حدث خطأ أثناء إرسال البلاغ.", "error"); }
+            } catch (error) { 
+                this.showToast("حدث خطأ أثناء إرسال البلاغ.", "error"); 
+            } finally {
+                this.setButtonLoading(submitBtn, false);
+            }
         }
         
         fileToBase64(file) {
@@ -2360,7 +2420,6 @@
                     return;
                 }
                 
-                // PERFORMANCE: Use DocumentFragment to build the list in memory before appending to the DOM once.
                 const fragment = document.createDocumentFragment();
                 const listElement = document.createElement('ul');
                 listElement.className = 'leaderboard-list';
@@ -2386,7 +2445,6 @@
                         rankCounter++;
                     }
                     
-                    // PERFORMANCE: Build elements programmatically instead of using innerHTML string concatenation.
                     const rankSpan = document.createElement('span');
                     rankSpan.className = 'leaderboard-rank';
                     rankSpan.textContent = rankDisplay;
@@ -2535,6 +2593,16 @@
         }
 
         formatNumber(num) { return new Intl.NumberFormat('ar-EG').format(num); }
+
+        setButtonLoading(button, isLoading) {
+            if (isLoading) {
+                button.classList.add('loading');
+                button.disabled = true;
+            } else {
+                button.classList.remove('loading');
+                button.disabled = false;
+            }
+        }
     }
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -2548,4 +2616,3 @@
     <div class="sr-only" aria-live="polite" id="liveAnnouncements"></div>
 </body>
 </html>
-
