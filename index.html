@@ -25,6 +25,8 @@
       --color-dark-text: #f0f0f0;
       --color-dark-border: #374151;
       --color-dark-gold: #ffd700;
+      --color-dark-silver: #c0c0c0;
+      --color-dark-bronze: #cd7f32;
       --color-dark-success: #10b981;
       --color-dark-error: #ef4444;
 
@@ -36,6 +38,8 @@
       --color-light-text: #1e293b;
       --color-light-border: #cbd5e1;
       --color-light-gold: #ca8a04;
+      --color-light-silver: #a1a1aa;
+      --color-light-bronze: #a16207;
       --color-light-success: #059669;
       --color-light-error: #dc2626;
 
@@ -92,6 +96,8 @@
       --text-color: var(--color-dark-text);
       --border-color: var(--color-dark-border);
       --gold-color: var(--color-dark-gold);
+      --silver-color: var(--color-dark-silver);
+      --bronze-color: var(--color-dark-bronze);
       --success-color: var(--color-dark-success);
       --error-color: var(--color-dark-error);
     }
@@ -104,6 +110,8 @@
       --text-color: var(--color-light-text);
       --border-color: var(--color-light-border);
       --gold-color: var(--color-light-gold);
+      --silver-color: var(--color-light-silver);
+      --bronze-color: var(--color-light-bronze);
       --success-color: var(--color-light-success);
       --error-color: var(--color-light-error);
     }
@@ -171,7 +179,7 @@
       height: 100%;
       display: flex;
       flex-direction: column;
-      justify-content: center; /* Reverted to 'center' for default vertical centering */
+      justify-content: center;
       align-items: center;
       padding: var(--space-8) var(--space-4);
       opacity: 0;
@@ -182,7 +190,6 @@
       z-index: 1;
     }
 
-    /* New class for screens that need to scroll and align to top */
     .screen.screen--align-top {
         justify-content: flex-start;
     }
@@ -825,7 +832,7 @@
         right: var(--space-4);
         width: 3.5rem;
         height: 3.5rem;
-        padding: 0.5rem; /* Added padding to increase hitbox */
+        padding: 0.5rem;
         border-radius: var(--radius-full);
         display: flex;
         justify-content: center;
@@ -850,7 +857,7 @@
         color: var(--color-white);
     }
     .dev-fab span {
-        pointer-events: none; /* Make sure click goes to parent div */
+        pointer-events: none;
     }
     
     #image-editor-container {
@@ -870,6 +877,160 @@
         gap: var(--space-4);
         margin-top: var(--space-4);
     }
+
+    /* --- NEW LEADERBOARD STYLES --- */
+    #leaderboardContent {
+        max-height: 60vh;
+        overflow-y: auto;
+        padding: 0 var(--space-2);
+        margin: var(--space-4) 0;
+    }
+
+    .leaderboard-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-3);
+    }
+
+    .leaderboard-item {
+        display: flex;
+        align-items: center;
+        padding: var(--space-3);
+        background-color: var(--secondary-color);
+        border-radius: var(--radius-xl);
+        border: 2px solid var(--border-color);
+        transition: all var(--transition-fast);
+        cursor: pointer;
+    }
+
+    .leaderboard-item:hover {
+        transform: scale(1.02);
+        border-color: var(--accent-color);
+    }
+
+    .leaderboard-item.rank-1 { border-color: var(--gold-color); box-shadow: 0 0 10px var(--gold-color); }
+    .leaderboard-item.rank-2 { border-color: var(--silver-color); box-shadow: 0 0 8px var(--silver-color); }
+    .leaderboard-item.rank-3 { border-color: var(--bronze-color); box-shadow: 0 0 6px var(--bronze-color); }
+    .leaderboard-item.impossible-finisher {
+        order: -1; /* Always on top */
+        border-color: var(--level-impossible);
+        background: var(--level-bg);
+    }
+
+    .leaderboard-rank {
+        font-size: var(--font-size-xl);
+        font-weight: 900;
+        flex-basis: 3.5rem;
+        flex-shrink: 0;
+        text-align: center;
+    }
+
+    .leaderboard-avatar {
+        width: 3rem;
+        height: 3rem;
+        border-radius: 50%;
+        margin: 0 var(--space-3);
+        object-fit: cover;
+        border: 2px solid var(--border-color);
+    }
+
+    .leaderboard-details {
+        flex-grow: 1;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: var(--space-4);
+        min-width: 0;
+    }
+
+    .leaderboard-name {
+        font-weight: 700;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .leaderboard-score {
+        font-weight: 700;
+        color: var(--gold-color);
+        font-size: var(--font-size-lg);
+        flex-shrink: 0;
+    }
+
+    /* --- NEW PLAYER DETAILS MODAL STYLES --- */
+    .player-details-header {
+        margin-bottom: var(--space-4);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--space-2);
+        padding-bottom: var(--space-4);
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .player-details-avatar {
+        width: 5rem;
+        height: 5rem;
+        border-radius: 50%;
+        border: 3px solid var(--gold-color);
+    }
+
+    .player-details-body {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-3);
+        text-align: right;
+    }
+
+    .detail-item {
+        display: flex;
+        flex-direction: column;
+        background-color: var(--secondary-color);
+        padding: var(--space-3);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border-color);
+    }
+    
+    .detail-item.full-width {
+        grid-column: 1 / -1;
+    }
+
+    .detail-item .label {
+        font-size: 0.8rem;
+        opacity: 0.8;
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        margin-bottom: var(--space-1);
+    }
+
+    .detail-item .value {
+        font-size: var(--font-size-lg);
+        font-weight: 700;
+        word-wrap: break-word;
+    }
+    .detail-item .value.score {
+        color: var(--gold-color);
+    }
+    .progress-bar-container {
+        width: 100%;
+        height: 8px;
+        background-color: var(--border-color);
+        border-radius: var(--radius-full);
+        margin-top: var(--space-2);
+        overflow: hidden;
+    }
+    .progress-bar {
+        height: 100%;
+        background-color: var(--success-color);
+        border-radius: var(--radius-full);
+        transition: width var(--transition-normal);
+    }
+    /* --- END OF NEW STYLES --- */
+
 
     @media (min-width: 768px) {
       .screen {
@@ -1252,7 +1413,7 @@
             </header>
             
             <div id="leaderboardContent" aria-live="polite">
-                <!-- Leaderboard table will be inserted here -->
+                <!-- Leaderboard list will be inserted here -->
             </div>
             
             <div class="button-group">
@@ -1263,6 +1424,7 @@
         </div>
     </div>
 
+    <!-- MODALS SECTION -->
     <div id="confirmExitModal" class="modal" aria-hidden="true">
         <div class="modal-content">
             <h3>إنهاء المسابقة</h3>
@@ -1274,7 +1436,6 @@
         </div>
     </div>
     
-    <!-- Advanced Report Modal -->
     <div id="advancedReportModal" class="modal" aria-hidden="true">
         <div class="modal-content">
             <h3>الإبلاغ عن مشكلة</h3>
@@ -1306,7 +1467,6 @@
         </div>
     </div>
     
-    <!-- Avatar Cropper Modal -->
     <div id="avatarEditorModal" class="modal" aria-hidden="true">
         <div class="modal-content">
             <h3>تعديل الصورة الرمزية</h3>
@@ -1320,7 +1480,6 @@
         </div>
     </div>
 
-    <!-- Dev Password Modal -->
     <div id="devPasswordModal" class="modal" aria-hidden="true">
         <div class="modal-content">
             <h3>وضع المطور</h3>
@@ -1336,6 +1495,23 @@
             </div>
         </div>
     </div>
+    
+    <!-- NEW: Player Details Modal -->
+    <div id="playerDetailsModal" class="modal" aria-hidden="true">
+        <div class="modal-content">
+            <header class="player-details-header">
+                <img id="detailsAvatar" src="" alt="صورة اللاعب الرمزية" class="player-details-avatar">
+                <h3 id="detailsName"></h3>
+                <span id="detailsPlayerId" class="player-id"></span>
+            </header>
+            <div id="playerDetailsContent" class="player-details-body">
+                <!-- Details will be populated by JS -->
+            </div>
+            <div class="modal-buttons">
+                <button id="closeDetailsModal" class="btn-secondary">إغلاق</button>
+            </div>
+        </div>
+    </div>
 
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
@@ -1348,14 +1524,8 @@
             this.config = {
                 developerName: "AbuQusay",
                 developerPassword: "AbuQusay", // The password for developer mode
-                // *** NEW FEATURE: Flexible Question/Answer System ***
-                // The following settings control the randomization of questions and answers.
-                // This system is designed to be flexible:
-                // 1. To add/remove questions or levels, simply edit the 'questions.json' file.
-                // 2. To add/remove answer options, edit the 'options' array for a question in 'questions.json'
-                //    and make sure the 'correct' index is updated. The system handles any number of options.
-                randomize_questions: true, // Set to true to shuffle question order within a level.
-                randomize_answers: true,   // Set to true to shuffle answer options for each question.
+                randomize_questions: true,
+                randomize_answers: true, 
             };
             this.API_URL = "https://script.google.com/macros/s/AKfycbwSieydP8pgaTKpqzlDBYDEjeuMSYu85eVLwUlMepwkbGOi4toI5-Lc-lpeK8T6rRdg/exec";
             this.API_KEY = "AbuQusay2025_SecretKey";
@@ -1377,14 +1547,13 @@
             this.HELPER_COSTS = {
                 fiftyFifty: 100,
                 freezeTime: 100,
-                skipQuestion: 1 // Base cost - غير التكلفة الأساسية هنا
+                skipQuestion: 20 
             };
             
             this.isTimeFrozen = false;
-            this.isDevSession = false; // Is the user authenticated as a developer?
-            this.isDevTemporarilyDisabled = false; // Is the developer testing as a normal user?
+            this.isDevSession = false; 
+            this.isDevTemporarilyDisabled = false; 
             
-            // Initialize gameState with a default structure to prevent errors
             this.gameState = {
                 helpersUsed: { fiftyFifty: false, freezeTime: false }
             };
@@ -1399,10 +1568,7 @@
         }
 
         async loadQuestions() {
-             // This function loads all questions from an external JSON file.
-             // This makes the game highly flexible. You can change all questions
-             // without touching the main game code.
-            try {
+           try {
                 const response = await fetch(`questions.json?v=${new Date().getTime()}`); // Cache busting
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
@@ -1451,6 +1617,13 @@
                     end: document.getElementById('endScreen'),
                     leaderboard: document.getElementById('leaderboardScreen'),
                 },
+                modals: {
+                    confirmExit: document.getElementById('confirmExitModal'),
+                    advancedReport: document.getElementById('advancedReportModal'),
+                    avatarEditor: document.getElementById('avatarEditorModal'),
+                    devPassword: document.getElementById('devPasswordModal'),
+                    playerDetails: document.getElementById('playerDetailsModal'), // New
+                },
                 questionText: document.getElementById('questionText'),
                 optionsGrid: document.querySelector('.options-grid'),
                 scoreDisplay: document.getElementById('currentScore'),
@@ -1459,16 +1632,12 @@
                 confirmNameBtn: document.getElementById('confirmNameBtn'),
                 confirmAvatarBtn: document.getElementById('confirmAvatarBtn'),
                 themeToggleBtn: document.querySelector('.theme-toggle-btn'),
-                confirmExitModal: document.getElementById('confirmExitModal'),
                 reportErrorFab: document.getElementById('reportErrorFab'),
-                advancedReportModal: document.getElementById('advancedReportModal'),
                 reportProblemForm: document.getElementById('reportProblemForm'),
                 cancelReportBtn: document.getElementById('cancelReportBtn'),
-                avatarEditorModal: document.getElementById('avatarEditorModal'),
                 imageToCrop: document.getElementById('image-to-crop'),
                 saveCroppedImageBtn: document.getElementById('saveCroppedImage'),
                 cancelCropBtn: document.getElementById('cancelCrop'),
-                devPasswordModal: document.getElementById('devPasswordModal'),
                 devPasswordInput: document.getElementById('devPasswordInput'),
                 devPasswordError: document.getElementById('devPasswordError'),
                 devFloatingBtn: document.getElementById('devFloatingBtn'),
@@ -1483,9 +1652,9 @@
             document.getElementById('showLeaderboardBtn').addEventListener('click', () => this.displayLeaderboard());
             document.getElementById('backToStartBtn').addEventListener('click', () => this.showScreen('start'));
             this.domElements.themeToggleBtn.addEventListener('click', () => this.toggleTheme());
-            document.getElementById('endQuizBtn').addEventListener('click', () => this.showModal(this.domElements.confirmExitModal));
+            document.getElementById('endQuizBtn').addEventListener('click', () => this.showModal(this.domElements.modals.confirmExit));
             document.getElementById('confirmExitYes').addEventListener('click', () => this.endGame());
-            document.getElementById('confirmExitNo').addEventListener('click', () => this.hideModal(this.domElements.confirmExitModal));
+            document.getElementById('confirmExitNo').addEventListener('click', () => this.hideModal(this.domElements.modals.confirmExit));
             document.getElementById('nextLevelBtn').addEventListener('click', () => this.nextLevel());
             document.getElementById('quitLevelBtn').addEventListener('click', () => this.endGame());
             document.getElementById('playAgainBtn').addEventListener('click', () => this.resetGame());
@@ -1493,23 +1662,23 @@
             document.querySelectorAll('.helper-btn').forEach(btn => btn.addEventListener('click', (e) => this.useHelper(e)));
             document.getElementById('shareXBtn').addEventListener('click', () => this.shareOnX());
             document.getElementById('shareInstagramBtn').addEventListener('click', () => this.shareOnInstagram());
+            document.getElementById('closeDetailsModal').addEventListener('click', () => this.hideModal(this.domElements.modals.playerDetails));
             
             this.domElements.nameInput.addEventListener('input', () => this.validateNameInput());
             this.domElements.nameInput.addEventListener('keypress', (e) => { 
                 if (e.key === 'Enter') this.handleNameConfirmation();
             });
             
-            this.domElements.reportErrorFab.addEventListener('click', () => this.showModal(this.domElements.advancedReportModal));
+            this.domElements.reportErrorFab.addEventListener('click', () => this.showModal(this.domElements.modals.advancedReport));
             this.domElements.reportProblemForm.addEventListener('submit', (e) => this.handleReportSubmit(e));
-            this.domElements.cancelReportBtn.addEventListener('click', () => this.hideModal(this.domElements.advancedReportModal));
+            this.domElements.cancelReportBtn.addEventListener('click', () => this.hideModal(this.domElements.modals.advancedReport));
             
             this.domElements.saveCroppedImageBtn.addEventListener('click', () => this.saveCroppedAvatar());
-            this.domElements.cancelCropBtn.addEventListener('click', () => this.hideModal(this.domElements.avatarEditorModal));
+            this.domElements.cancelCropBtn.addEventListener('click', () => this.hideModal(this.domElements.modals.avatarEditor));
 
-            // Developer Mode Listeners
-            document.getElementById('showDevModeBtn').addEventListener('click', () => this.showModal(this.domElements.devPasswordModal));
+            document.getElementById('showDevModeBtn').addEventListener('click', () => this.showModal(this.domElements.modals.devPassword));
             document.getElementById('confirmDevPassword').addEventListener('click', () => this.checkDevPassword());
-            document.getElementById('cancelDevPassword').addEventListener('click', () => this.hideModal(this.domElements.devPasswordModal));
+            document.getElementById('cancelDevPassword').addEventListener('click', () => this.hideModal(this.domElements.modals.devPassword));
             this.domElements.devPasswordInput.addEventListener('keypress', (e) => {
                 if(e.key === 'Enter') this.checkDevPassword();
             });
@@ -1527,9 +1696,8 @@
         handleNameConfirmation() {
             if (!this.domElements.confirmNameBtn.disabled) {
                 this.gameState.name = this.domElements.nameInput.value.trim();
-                // Check for developer name activation
                 if(this.gameState.name.toLowerCase() === this.config.developerName.toLowerCase()) {
-                    this.activateDevSession(false); // Activate without showing modal
+                    this.activateDevSession(false);
                 }
                 this.showScreen('instructions');
             }
@@ -1540,7 +1708,7 @@
             if (this.isDevSession) {
                 this.showScreen('levelSelect');
             } else {
-                this.startGameFlow(0); // Start normal players at level 0
+                this.startGameFlow(0);
             }
         }
         
@@ -1609,7 +1777,7 @@
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     this.domElements.imageToCrop.src = e.target.result;
-                    this.showModal(this.domElements.avatarEditorModal, true);
+                    this.showModal(this.domElements.modals.avatarEditor, true);
                 };
                 reader.readAsDataURL(file);
             }
@@ -1634,7 +1802,7 @@
 
             newAvatarImg.addEventListener('click', (e) => this.selectAvatar(e.target));
             this.selectAvatar(newAvatarImg);
-            this.hideModal(this.domElements.avatarEditorModal);
+            this.hideModal(this.domElements.modals.avatarEditor);
         }
 
         showScreen(screenName) {
@@ -1656,7 +1824,7 @@
 
         setupInitialGameState() {
             this.gameState = {
-                ...this.gameState, // keeps name and avatar
+                ...this.gameState, 
                 playerId: this.generatePlayerId(),
                 deviceId: this.generateDeviceId(),
                 level: 0,
@@ -1666,7 +1834,7 @@
                 skips: 0,
                 startTime: new Date(),
                 helpersUsed: { fiftyFifty: false, freezeTime: false },
-                attemptNumber: 'N/A' // Will be set by the server
+                attemptNumber: 'N/A'
             };
         }
         
@@ -1678,7 +1846,7 @@
             this.startLevel();
         }
 
-        generatePlayerId() { return `P${Math.random().toString(36).substr(2, 9).toUpperCase()}`; }
+        generatePlayerId() { return `PL${Math.random().toString(36).substr(2, 9).toUpperCase()}`; }
         
         generateDeviceId() {
             let deviceId = localStorage.getItem('quizGameDeviceId');
@@ -1701,9 +1869,6 @@
                 this.showToast("المساعدات معطلة في المستوى المستحيل!", "info");
             }
 
-            // *** NEW FEATURE: Question Randomization ***
-            // If randomize_questions is true in the config, this will shuffle the questions
-            // for the current level before starting.
             let levelQuestions = [...this.QUESTIONS[currentLevel.name]];
             if (this.config.randomize_questions && currentLevel.name !== 'impossible') {
                 this.shuffleArray(levelQuestions);
@@ -1737,9 +1902,6 @@
         displayQuestion(questionData) {
             this.answerSubmitted = false;
             
-            // *** NEW FEATURE: Answer Randomization ***
-            // This logic ensures the correct answer is tracked even after shuffling the options.
-            // It finds the correct answer text before shuffling, then shuffles the options array.
             const correctAnswerText = questionData.options[questionData.correct];
             let shuffledOptions = [...questionData.options];
             if (this.config.randomize_answers) {
@@ -1752,8 +1914,6 @@
             this.domElements.questionText.textContent = questionData.q;
             this.domElements.optionsGrid.innerHTML = '';
 
-            // When creating the buttons, it marks the correct one with a 'data-correct' attribute
-            // based on the original correct text. This makes the system flexible to any number of answers.
             shuffledOptions.forEach(optionText => {
                 const button = document.createElement('button');
                 button.className = 'option-btn';
@@ -1821,7 +1981,7 @@
 
         async endGame(completedAllLevels = false) {
             clearInterval(this.timerInterval);
-            this.hideModal(this.domElements.confirmExitModal);
+            this.hideModal(this.domElements.modals.confirmExit);
 
             const totalTimeSeconds = (new Date() - this.gameState.startTime) / 1000;
             const currentLevel = this.LEVELS[Math.min(this.gameState.level, this.LEVELS.length - 1)];
@@ -1914,7 +2074,7 @@
             const isDev = this.isDeveloper();
             
             let cost = (type === 'skipQuestion')
-                ? this.HELPER_COSTS.skipQuestion + (this.gameState.skips * 1) // غير القيمة المتزايدة هنا
+                ? this.HELPER_COSTS.skipQuestion + (this.gameState.skips * 20)
                 : this.HELPER_COSTS[type];
 
             if (!isDev && this.currentScoreValue < cost) {
@@ -1993,7 +2153,6 @@
         }
 
         updateUI() {
-            // Early exit if gameState is not fully initialized
             if (!this.gameState.helpersUsed) return;
 
             document.getElementById('wrongAnswersCount').textContent = `${this.gameState.wrongAnswers} / ${this.MAX_WRONG_ANSWERS}`;
@@ -2001,7 +2160,7 @@
 
             const skipCostSpan = document.getElementById('skipCost');
             if (skipCostSpan) {
-                const currentSkipCost = this.HELPER_COSTS.skipQuestion + (this.gameState.skips * 1); // غير القيمة المتزايدة هنا أيضاً لتحديث الواجهة
+                const currentSkipCost = this.HELPER_COSTS.skipQuestion + (this.gameState.skips * 20);
                 skipCostSpan.textContent = `(${currentSkipCost})`;
             }
 
@@ -2012,7 +2171,7 @@
                      if (isImpossible) btn.disabled = true;
                      else if (type !== 'skipQuestion') btn.disabled = this.gameState.helpersUsed[type];
                 } else {
-                    btn.disabled = false; // Devs have unlimited helpers
+                    btn.disabled = false;
                 }
             });
         }
@@ -2024,11 +2183,8 @@
         }
         
         isDeveloper() {
-            // The effective check for developer powers
             return this.isDevSession && !this.isDevTemporarilyDisabled;
         }
-
-        // --- Developer Mode Functions ---
 
         checkDevPassword() {
             const input = this.domElements.devPasswordInput.value;
@@ -2043,7 +2199,7 @@
         activateDevSession(fromModal = true) {
             this.isDevSession = true;
             if(fromModal) {
-              this.hideModal(this.domElements.devPasswordModal);
+              this.hideModal(this.domElements.modals.devPassword);
             }
             this.showToast("تم تفعيل وضع المطور", "success");
             const fab = this.domElements.devFloatingBtn;
@@ -2054,7 +2210,7 @@
         }
 
         toggleDevView() {
-            if (!this.isDevSession) return; // Don't do anything if not a dev session
+            if (!this.isDevSession) return;
             
             this.isDevTemporarilyDisabled = !this.isDevTemporarilyDisabled;
             const fab = this.domElements.devFloatingBtn;
@@ -2070,11 +2226,8 @@
                 fab.classList.remove('inactive');
                 fab.querySelector('span').innerHTML = '⚡';
             }
-            // This is important to re-evaluate helpers etc.
             this.updateUI(); 
         }
-
-        // --- Modal and Theme Helpers ---
 
         showModal(modalElement, isCropper = false) {
             modalElement.classList.add('active');
@@ -2097,10 +2250,10 @@
             if (document.activeElement) document.activeElement.blur();
             modalElement.classList.remove('active');
             modalElement.setAttribute('aria-hidden', 'true');
-            if (modalElement === this.domElements.advancedReportModal) {
+            if (modalElement === this.domElements.modals.advancedReport) {
                 this.domElements.reportProblemForm.reset();
             }
-            if(modalElement === this.domElements.avatarEditorModal && this.cropper){
+            if(modalElement === this.domElements.modals.avatarEditor && this.cropper){
                 this.cropper.destroy();
                 this.cropper = null;
             }
@@ -2113,8 +2266,6 @@
             this.domElements.themeToggleBtn.textContent = newTheme === 'dark' ? '☀️' : '🌙';
         }
 
-        // --- Reporting and API ---
-
         async handleReportSubmit(event) {
             event.preventDefault();
             const formData = new FormData(event.target);
@@ -2122,7 +2273,7 @@
             let screenshotBase64 = null;
 
             this.showToast("جاري إرسال البلاغ...", "info");
-            this.hideModal(this.domElements.advancedReportModal);
+            this.hideModal(this.domElements.modals.advancedReport);
 
             if (file && file.size > 0) {
                 try { screenshotBase64 = await this.fileToBase64(file); } 
@@ -2182,56 +2333,143 @@
             contentDiv.innerHTML = '<div class="spinner"></div>';
 
             try {
-                const response = await this.apiCall({ action: 'getLeaderboardWithAttempts' });
-                if (response && response.success && Array.isArray(response.leaderboard)) {
-                    let players = response.leaderboard;
+                // ملاحظة: نفترض أن `getLeaderboard` ستعيد كل البيانات المطلوبة لكل لاعب
+                // (score, accuracy, totalTime, isImpossibleFinisher, etc.)
+                const response = await this.apiCall({ action: 'getLeaderboard' });
 
-                    // *** LEADERBOARD BUG FIX ***
-                    // The backend now sends the data pre-sorted by score. 
-                    // We no longer need to sort here on the client-side.
-
-                    let tableHTML = '<p>لوحة الصدارة فارغة حاليًا!</p>';
-                    if (players.length > 0) {
-                        tableHTML = `<table class="leaderboard-table" style="width:100%; text-align:right; border-collapse: collapse;">
-                            <thead style="font-weight:bold;"><tr>
-                                <th style="padding:8px;">الترتيب</th>
-                                <th style="padding:8px;">الاسم</th>
-                                <th style="padding:8px;">أعلى مستوى</th>
-                                <th style="padding:8px;">المحاولات</th>
-                            </tr></thead><tbody>`;
-                        
-                        // *** LEADERBOARD BUG FIX ***
-                        // This new logic correctly assigns medals based on rank (index)
-                        // and adds the special 🎖️ icon to the first finisher, wherever they rank.
-                        players.forEach((row, index) => {
-                            const rankMedals = ['🥇', '🥈', '🥉'];
-                            // Use index for medals, as the list is sorted by score.
-                            const rankDisplay = index < 3 ? rankMedals[index] : (index + 1); 
-                            
-                            // Check for the new `isFirstFinisher` flag from the backend.
-                            const finisherIcon = row.isFirstFinisher ? ' 🎖️' : '';
-                            const nameDisplay = `${row.name || 'غير معروف'}${finisherIcon}`;
-
-                            // Highlight the first finisher's row, regardless of their rank.
-                            const rowStyle = row.isFirstFinisher ? 'background-color: rgba(255, 215, 0, 0.2); font-weight: bold;' : '';
-                            
-                            tableHTML += `<tr style="${rowStyle}">
-                                <td style="padding:8px;">${rankDisplay}</td>
-                                <td style="padding:8px;">${nameDisplay}</td>
-                                <td style="padding:8px;">${row.level || 'N/A'}</td>
-                                <td style="padding:8px;">${this.formatNumber(row.attempts || 0)}</td>
-                            </tr>`;
-                        });
-                        tableHTML += `</tbody></table>`;
-                    }
-                    contentDiv.innerHTML = tableHTML;
-                } else {
-                    contentDiv.innerHTML = '<p>حدث خطأ في تحميل لوحة الصدارة.</p>';
+                if (!response || !response.success || !Array.isArray(response.leaderboard)) {
+                    throw new Error("بيانات لوحة الصدارة غير صالحة من الخادم.");
                 }
+
+                let players = response.leaderboard;
+
+                if (players.length === 0) {
+                    contentDiv.innerHTML = '<p>لوحة الصدارة فارغة حاليًا!</p>';
+                    return;
+                }
+                
+                let impossibleFinisher = null;
+                const otherPlayers = players.filter(p => {
+                    if (p.isImpossibleFinisher) {
+                        impossibleFinisher = p;
+                        return false;
+                    }
+                    return true;
+                });
+                
+                otherPlayers.sort((a, b) => {
+                    if (b.score !== a.score) return b.score - a.score;
+                    if (b.accuracy !== a.accuracy) return b.accuracy - a.accuracy;
+                    if (a.totalTime !== b.totalTime) return a.totalTime - b.totalTime;
+                    return a.avgTime - b.avgTime;
+                });
+                
+                const sortedPlayers = impossibleFinisher ? [impossibleFinisher, ...otherPlayers] : otherPlayers;
+
+                const listElement = document.createElement('ul');
+                listElement.className = 'leaderboard-list';
+
+                let rankCounter = 1;
+                sortedPlayers.forEach((player) => {
+                    const item = document.createElement('li');
+                    item.className = 'leaderboard-item';
+
+                    let rankDisplay;
+                    const medals = ['🥇', '🥈', '🥉'];
+
+                    if (player.isImpossibleFinisher) {
+                        item.classList.add('impossible-finisher');
+                        rankDisplay = '🎖️';
+                    } else {
+                        if (rankCounter <= 3) {
+                            item.classList.add(`rank-${rankCounter}`);
+                            rankDisplay = medals[rankCounter - 1];
+                        } else {
+                            rankDisplay = rankCounter;
+                        }
+                        rankCounter++;
+                    }
+                    
+                    const avatarUrl = player.avatar || 'https://em-content.zobj.net/thumbs/120/apple/354/brain_1f9e0.png';
+
+                    item.innerHTML = `
+                        <span class="leaderboard-rank">${rankDisplay}</span>
+                        <img src="${avatarUrl}" alt="صورة ${player.name}" class="leaderboard-avatar" onerror="this.onerror=null;this.src='https://em-content.zobj.net/thumbs/120/apple/354/brain_1f9e0.png';">
+                        <div class="leaderboard-details">
+                            <span class="leaderboard-name">${player.name || 'غير معروف'}</span>
+                            <span class="leaderboard-score">${this.formatNumber(player.score)}</span>
+                        </div>
+                    `;
+                    
+                    item.addEventListener('click', () => this.showPlayerDetails(player));
+                    listElement.appendChild(item);
+                });
+
+                contentDiv.innerHTML = '';
+                contentDiv.appendChild(listElement);
+
             } catch (error) {
                 console.error("Error loading leaderboard:", error);
                 contentDiv.innerHTML = '<p>حدث خطأ في تحميل لوحة الصدارة.</p>';
             }
+        }
+        
+        showPlayerDetails(player) {
+            document.getElementById('detailsName').textContent = player.name || 'غير معروف';
+            document.getElementById('detailsPlayerId').textContent = player.playerId || 'N/A';
+            const detailsAvatar = document.getElementById('detailsAvatar');
+            detailsAvatar.src = player.avatar || 'https://em-content.zobj.net/thumbs/120/apple/354/brain_1f9e0.png';
+            detailsAvatar.onerror = () => { detailsAvatar.src = 'https://em-content.zobj.net/thumbs/120/apple/354/brain_1f9e0.png'; };
+
+
+            const contentBody = document.getElementById('playerDetailsContent');
+            contentBody.innerHTML = `
+                <div class="detail-item">
+                    <span class="label">⭐ النقاط النهائية</span>
+                    <span class="value score">${this.formatNumber(player.score || 0)}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="label">👑 المستوى</span>
+                    <span class="value">${player.level || 'N/A'}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="label">✅ الصحيحة</span>
+                    <span class="value">${this.formatNumber(player.correctAnswers || 0)}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="label">❌ الخاطئة</span>
+                    <span class="value">${this.formatNumber(player.wrongAnswers || 0)}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="label">⏱️ الوقت</span>
+                    <span class="value">${this.formatTime(player.totalTime || 0)}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="label">⏳ المتوسط</span>
+                    <span class="value">${this.formatTime(player.avgTime || 0)}/س</span>
+                </div>
+                <div class="detail-item full-width">
+                     <span class="label">🎯 نسبة الدقة</span>
+                     <span class="value">${player.accuracy || 0}%</span>
+                     <div class="progress-bar-container">
+                        <div class="progress-bar" style="width: ${player.accuracy || 0}%;"></div>
+                     </div>
+                </div>
+                <div class="detail-item">
+                    <span class="label">⏭️ التخطي</span>
+                    <span class="value">${this.formatNumber(player.skips || 0)}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="label">🔢 المحاولة</span>
+                    <span class="value">${this.formatNumber(player.attemptNumber || 0)}</span>
+                </div>
+                <div class="detail-item full-width">
+                    <span class="label">📊 الأداء</span>
+                    <span class="value">${player.performanceRating || 'جيد'}</span>
+                </div>
+            `;
+
+            this.showModal(this.domElements.modals.playerDetails);
         }
 
         getShareText() {
@@ -2289,6 +2527,7 @@
     document.addEventListener('DOMContentLoaded', () => {
         const savedTheme = localStorage.getItem('theme') || 'dark';
         document.body.dataset.theme = savedTheme;
+        document.querySelector('.theme-toggle-btn').textContent = savedTheme === 'dark' ? '☀️' : '🌙';
         new QuizGame();
     });
 </script>
@@ -2296,4 +2535,3 @@
     <div class="sr-only" aria-live="polite" id="liveAnnouncements"></div>
 </body>
 </html>
-
