@@ -109,9 +109,9 @@
       --accent-color: var(--color-light-accent);
       --text-color: var(--color-light-text);
       --border-color: var(--color-light-border);
-      --color-light-gold: #ca8a04;
-      --color-light-silver: #a1a1aa;
-      --color-light-bronze: #a16207;
+      --gold-color: var(--color-light-gold);
+      --silver-color: var(--color-light-silver);
+      --bronze-color: var(--color-light-bronze);
       --success-color: var(--color-light-success);
       --error-color: var(--color-light-error);
     }
@@ -1897,8 +1897,8 @@
         fetchQuestion() {
             const questions = this.gameState.shuffledQuestions;
             if (!questions || this.gameState.question >= questions.length) {
-                const isLastLevel = this.gameState.level >= this.LEVELS.length - 1;
-                this.endGame(isLastLevel);
+                // This now correctly triggers level completion instead of ending the game prematurely.
+                this.levelComplete();
                 return; 
             }
             const questionData = questions[this.gameState.question];
@@ -2101,7 +2101,12 @@
                 this.gameState.skips++;
                 this.gameState.question++;
                 this.updateUI();
-                this.fetchQuestion();
+                // ✅ BUG FIX: Check if it's the end of the level after skipping.
+                if (this.gameState.question >= this.gameState.shuffledQuestions.length) {
+                    this.levelComplete();
+                } else {
+                    this.fetchQuestion();
+                }
             } else {
                 if (!isDev) this.gameState.helpersUsed[type] = true;
                 this.updateUI();
@@ -2346,42 +2351,26 @@
                     throw new Error("بيانات لوحة الصدارة غير صالحة من الخادم.");
                 }
 
-                let players = response.leaderboard;
+                const players = response.leaderboard;
 
                 if (players.length === 0) {
                     contentDiv.innerHTML = '<p>لوحة الصدارة فارغة حاليًا!</p>';
                     return;
                 }
                 
-                let impossibleFinisher = null;
-                const otherPlayers = players.filter(p => {
-                    if (p.isImpossibleFinisher) {
-                        impossibleFinisher = p;
-                        return false;
-                    }
-                    return true;
-                });
-                
-                otherPlayers.sort((a, b) => {
-                    if (b.score !== a.score) return b.score - a.score;
-                    if (b.accuracy !== a.accuracy) return b.accuracy - a.accuracy;
-                    if (a.totalTime !== b.totalTime) return a.totalTime - b.totalTime;
-                    return a.avgTime - b.avgTime;
-                });
-                
-                const sortedPlayers = impossibleFinisher ? [impossibleFinisher, ...otherPlayers] : otherPlayers;
-
+                // PERFORMANCE: Use DocumentFragment to build the list in memory before appending to the DOM once.
+                const fragment = document.createDocumentFragment();
                 const listElement = document.createElement('ul');
                 listElement.className = 'leaderboard-list';
 
                 let rankCounter = 1;
-                sortedPlayers.forEach((player) => {
+                const medals = ['🥇', '🥈', '🥉'];
+                
+                players.forEach((player) => {
                     const item = document.createElement('li');
                     item.className = 'leaderboard-item';
 
                     let rankDisplay;
-                    const medals = ['🥇', '🥈', '🥉'];
-
                     if (player.isImpossibleFinisher) {
                         item.classList.add('impossible-finisher');
                         rankDisplay = '🎖️';
@@ -2395,23 +2384,39 @@
                         rankCounter++;
                     }
                     
-                    const avatarUrl = player.avatar || '';
+                    // PERFORMANCE: Build elements programmatically instead of using innerHTML string concatenation.
+                    const rankSpan = document.createElement('span');
+                    rankSpan.className = 'leaderboard-rank';
+                    rankSpan.textContent = rankDisplay;
 
-                    item.innerHTML = `
-                        <span class="leaderboard-rank">${rankDisplay}</span>
-                        <img src="${avatarUrl}" alt="صورة ${player.name}" class="leaderboard-avatar" style="visibility: ${avatarUrl ? 'visible' : 'hidden'}" onerror="this.style.visibility='hidden';">
-                        <div class="leaderboard-details">
-                            <span class="leaderboard-name">${player.name || 'غير معروف'}</span>
-                            <span class="leaderboard-score">${this.formatNumber(player.score)}</span>
-                        </div>
-                    `;
+                    const avatarImg = document.createElement('img');
+                    avatarImg.src = player.avatar || '';
+                    avatarImg.alt = `صورة ${player.name}`;
+                    avatarImg.className = 'leaderboard-avatar';
+                    avatarImg.style.visibility = player.avatar ? 'visible' : 'hidden';
+                    avatarImg.onerror = () => { avatarImg.style.visibility = 'hidden'; };
+
+                    const detailsDiv = document.createElement('div');
+                    detailsDiv.className = 'leaderboard-details';
+
+                    const nameSpan = document.createElement('span');
+                    nameSpan.className = 'leaderboard-name';
+                    nameSpan.textContent = player.name || 'غير معروف';
+
+                    const scoreSpan = document.createElement('span');
+                    scoreSpan.className = 'leaderboard-score';
+                    scoreSpan.textContent = this.formatNumber(player.score);
+
+                    detailsDiv.append(nameSpan, scoreSpan);
+                    item.append(rankSpan, avatarImg, detailsDiv);
                     
                     item.addEventListener('click', () => this.showPlayerDetails(player));
                     listElement.appendChild(item);
                 });
-
-                contentDiv.innerHTML = '';
-                contentDiv.appendChild(listElement);
+                
+                fragment.appendChild(listElement);
+                contentDiv.innerHTML = ''; // Clear spinner
+                contentDiv.appendChild(fragment);
 
             } catch (error) {
                 console.error("Error loading leaderboard:", error);
@@ -2458,7 +2463,7 @@
                      <span class="label">🎯 نسبة الدقة</span>
                      <span class="value">${player.accuracy || 0}%</span>
                      <div class="progress-bar-container">
-                        <div class="progress-bar" style="width: ${player.accuracy || 0}%;"></div>
+                         <div class="progress-bar" style="width: ${player.accuracy || 0}%;"></div>
                      </div>
                 </div>
                 <div class="detail-item">
@@ -2541,4 +2546,3 @@
     <div class="sr-only" aria-live="polite" id="liveAnnouncements"></div>
 </body>
 </html>
-
