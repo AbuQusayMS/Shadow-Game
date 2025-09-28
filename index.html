@@ -2119,6 +2119,9 @@
                 this.domElements.endScreenSpinner.style.display = 'none';
                 this.domElements.endScreenContent.style.display = 'block';
                 this.displayFinalStats(finalResults);
+
+                // [NEW] Send final results to Telegram
+                await this.sendResultsToTelegram(finalResults);
             }
             
             displayFinalStats(results) {
@@ -2142,26 +2145,21 @@
                     return "N/A";
                 }
                 try {
-                    // [REVISED LOGIC]
-                    // 1. Get the leaderboard document for the current device to find the attempt number.
-                    const leaderboardRef = doc(this.db, 'leaderboard', resultsData.deviceId);
-                    const docSnap = await getDoc(leaderboardRef);
-                    
-                    let currentAttempts = 0;
-                    if (docSnap.exists()) {
-                        // The field on the leaderboard should track total attempts
-                        currentAttempts = docSnap.data().totalAttempts || 0;
-                    }
-                    const attemptNumber = currentAttempts + 1;
+                    // 1. Calculate attempt number
+                    const logsRef = collection(this.db, 'logs');
+                    const q = query(logsRef, where('deviceId', '==', resultsData.deviceId));
+                    const querySnapshot = await getDocs(q);
+                    const attemptNumber = querySnapshot.size + 1;
                     resultsData.attemptNumber = attemptNumber;
 
                     // 2. Add the full result to the 'logs' collection
-                    const logsRef = collection(this.db, 'logs');
                     await addDoc(logsRef, resultsData);
 
-                    // 3. Update the 'leaderboard' collection with new score and attempt count
-                    const isNewBestScore = !docSnap.exists() || docSnap.data().score < resultsData.score;
-                    if (isNewBestScore) {
+                    // 3. Update the 'leaderboard' collection
+                    const leaderboardRef = doc(this.db, 'leaderboard', resultsData.deviceId);
+                    const docSnap = await getDoc(leaderboardRef);
+
+                    if (!docSnap.exists() || docSnap.data().score < resultsData.score) {
                         const leaderboardEntry = {
                             score: resultsData.score,
                             name: resultsData.name,
@@ -2175,16 +2173,12 @@
                             correctAnswers: resultsData.correctAnswers,
                             wrongAnswers: resultsData.wrongAnswers,
                             skips: resultsData.skips,
-                            attemptNumber: resultsData.attemptNumber, // The attempt that set the high score
+                            attemptNumber: resultsData.attemptNumber,
                             performanceRating: resultsData.performanceRating,
-                            isImpossibleFinisher: docSnap.data()?.isImpossibleFinisher || (resultsData.level === 'مستحيل' && resultsData.completedAll),
-                            lastUpdated: Timestamp.fromDate(new Date()),
-                            totalAttempts: attemptNumber // Always update total attempts
+                            isImpossibleFinisher: docSnap.data()?.isImpossibleFinisher || (resultsData.level === 'مستحيل' && resultsData.completedAll), // Persist finisher status
+                            lastUpdated: Timestamp.fromDate(new Date())
                         };
                         await setDoc(leaderboardRef, leaderboardEntry, { merge: true });
-                    } else {
-                        // If it's not a new best score, just update the total attempts count.
-                        await setDoc(leaderboardRef, { totalAttempts: attemptNumber }, { merge: true });
                     }
 
                     this.showToast("تم حفظ نتيجتك بنجاح!", "success");
@@ -2198,5 +2192,575 @@
             }
             
             calculatePerformanceRating() {
-                const totalQuestions = this
+                const totalQuestions = this.gameState.correctAnswers + this.gameState.wrongAnswers;
+                if (totalQuestions === 0) return "لم يتم الإجابة على أي سؤال";
+                const accuracy = (this.gameState.correctAnswers / totalQuestions) * 100;
+                if (accuracy >= 90) return "ممتاز 🏆";
+                if (accuracy >= 75) return "جيد جدًا ⭐";
+                if (accuracy >= 60) return "جيد 👍";
+                if (accuracy >= 40) return "مقبول 👌";
+                return "يحتاج تحسين 📈";
+            }
+
+            useHelper(event) {
+                const btn = event.currentTarget;
+                const type = btn.dataset.type;
+                const isDev = this.isDeveloper();
+                
+                let cost = (type === 'skipQuestion')
+                    ? this.HELPER_COSTS.skipQuestion + (this.gameState.skips * 20)
+                    : this.HELPER_COSTS[type];
+
+                if (!isDev && this.currentScoreValue < cost) {
+                    this.showToast("نقاطك غير كافية!", "error");
+                    return;
+                }
+
+                if (!isDev) {
+                    this.updateScore(this.currentScoreValue - cost);
+                    this.showToast(`تم استخدام المساعدة! -${cost} نقطة`, "success");
+                } else {
+                    this.showToast(`مساعدة المطور (${type})`, "info");
+                }
+
+                if (type === 'skipQuestion') {
+                    clearInterval(this.timerInterval);
+                    this.gameState.skips++;
+                    this.gameState.question++;
+                    this.updateUI();
+                    if (this.gameState.question >= this.gameState.shuffledQuestions.length) {
+                        this.levelComplete();
+                    } else {
+                        this.fetchQuestion();
+                    }
+                } else {
+                    if (!isDev) this.gameState.helpersUsed[type] = true;
+                    this.updateUI();
+                    if (type === 'fiftyFifty') {
+                        const options = Array.from(this.domElements.optionsGrid.querySelectorAll('.option-btn'));
+                        let wrongOptions = options.filter(btn => btn.dataset.correct !== 'true');
+                        this.shuffleArray(wrongOptions);
+                        wrongOptions.slice(0, 2).forEach(btn => btn.classList.add('hidden'));
+                    } else if (type === 'freezeTime') {
+                        this.isTimeFrozen = true;
+                        document.querySelector('.timer-bar').classList.add('frozen');
+                        setTimeout(() => {
+                            this.isTimeFrozen = false;
+                            document.querySelector('.timer-bar').classList.remove('frozen');
+                        }, 10000);
+                    }
+                }
+            }
+
+            startTimer() {
+                clearInterval(this.timerInterval);
+                let timeLeft = this.QUESTION_TIME;
+                const timerBar = document.querySelector('.timer-bar');
+                const timerDisplay = document.querySelector('.timer-text');
+                timerDisplay.textContent = timeLeft;
+                timerBar.style.transition = 'width 1s linear';
+                timerBar.style.width = '100%';
+
+                this.timerInterval = setInterval(() => {
+                    if (this.isTimeFrozen) return;
+                    timeLeft--;
+                    timerDisplay.textContent = timeLeft;
+                    timerBar.style.width = `${(timeLeft / this.QUESTION_TIME) * 100}%`;
+
+                    if (timeLeft <= 0) {
+                        clearInterval(this.timerInterval);
+                        this.showToast("انتهى الوقت!", "error");
+                        this.gameState.wrongAnswers++;
+                        this.updateScore(this.currentScoreValue - 100);
+                        document.querySelectorAll('.option-btn').forEach(b => b.classList.add('disabled'));
+                        const correctButton = this.domElements.optionsGrid.querySelector('[data-correct="true"]');
+                        if (correctButton) correctButton.classList.add('correct');
+                        this.updateUI();
+                        setTimeout(() => {
+                            if (this.gameState.wrongAnswers >= this.MAX_WRONG_ANSWERS && !this.isDeveloper()) this.endGame(false);
+                            else { this.gameState.question++; this.fetchQuestion(); }
+                        }, 2000);
+                    }
+                }, 1000);
+            }
+            
+            updateScore(newScore, isReset = false) {
+                this.currentScoreValue = (this.isDeveloper() && !isReset) ? this.currentScoreValue : newScore;
+                this.domElements.scoreDisplay.textContent = this.formatNumber(this.currentScoreValue);
+                this.updateUI();
+            }
+
+            updateUI() {
+                if (!this.gameState.helpersUsed) return;
+
+                document.getElementById('wrongAnswersCount').textContent = `${this.gameState.wrongAnswers} / ${this.MAX_WRONG_ANSWERS}`;
+                document.getElementById('skipCount').textContent = this.gameState.skips;
+
+                const skipCostSpan = document.getElementById('skipCost');
+                if (skipCostSpan) {
+                    const currentSkipCost = this.HELPER_COSTS.skipQuestion + (this.gameState.skips * 20);
+                    skipCostSpan.textContent = `(${currentSkipCost})`;
+                }
+
+                const isImpossible = this.gameState.level !== undefined && this.LEVELS[this.gameState.level].name === 'impossible';
+                document.querySelectorAll('.helper-btn').forEach(btn => {
+                    const type = btn.dataset.type;
+                    if (!this.isDeveloper()) {
+                         if (isImpossible) btn.disabled = true;
+                         else if (type !== 'skipQuestion') btn.disabled = this.gameState.helpersUsed[type];
+                    } else {
+                        btn.disabled = false;
+                    }
+                });
+            }
+
+            setupGameUI() {
+                document.getElementById('playerAvatar').src = this.gameState.avatar;
+                document.getElementById('playerName').textContent = this.gameState.name;
+                document.getElementById('playerId').textContent = this.gameState.playerId;
+            }
+            
+            isDeveloper() {
+                return this.isDevSession && !this.isDevTemporarilyDisabled;
+            }
+
+            checkDevPassword() {
+                const input = this.domElements.devPasswordInput.value;
+                if (input === this.config.developerPassword) {
+                    this.activateDevSession();
+                } else {
+                    this.domElements.devPasswordError.textContent = "كلمة المرور غير صحيحة.";
+                    this.domElements.devPasswordError.classList.add('show');
+                }
+            }
+            
+            activateDevSession(fromModal = true) {
+                this.isDevSession = true;
+                if(fromModal) {
+                    this.hideModal(this.domElements.modals.devPassword);
+                }
+                this.showToast("تم تفعيل وضع المطور", "success");
+                const fab = this.domElements.devFloatingBtn;
+                fab.style.display = 'flex';
+                fab.classList.add('active');
+                fab.classList.remove('inactive');
+                fab.querySelector('span').innerHTML = '⚡';
+            }
+
+            toggleDevView() {
+                if (!this.isDevSession) return;
+                
+                this.isDevTemporarilyDisabled = !this.isDevTemporarilyDisabled;
+                const fab = this.domElements.devFloatingBtn;
+                if (this.isDevTemporarilyDisabled) {
+                    this.showToast("تم تعطيل وضع المطور مؤقتًا", "info");
+                    fab.classList.remove('active');
+                    fab.classList.add('inactive');
+                    fab.querySelector('span').innerHTML = '🛠️';
+
+                } else {
+                    this.showToast("تم تفعيل وضع المطور", "success");
+                    fab.classList.add('active');
+                    fab.classList.remove('inactive');
+                    fab.querySelector('span').innerHTML = '⚡';
+                }
+                this.updateUI(); 
+            }
+
+            showModal(modalElement, isCropper = false) {
+                modalElement.classList.add('active');
+                modalElement.setAttribute('aria-hidden', 'false');
+                const firstFocusable = modalElement.querySelector('button, [href], input, select, textarea');
+                if(firstFocusable) setTimeout(() => firstFocusable.focus(), 100);
+
+                if(isCropper){
+                    setTimeout(() => {
+                        if (this.cropper) this.cropper.destroy();
+                        this.cropper = new Cropper(this.domElements.imageToCrop, {
+                            aspectRatio: 1, viewMode: 1, background: false, responsive: true,
+                            autoCropArea: 1, zoomable: true, movable: true,
+                        });
+                    }, 300);
+                }
+            }
+
+            hideModal(modalElement) {
+                if (document.activeElement) document.activeElement.blur();
+                modalElement.classList.remove('active');
+                modalElement.setAttribute('aria-hidden', 'true');
+                if (modalElement === this.domElements.modals.advancedReport) {
+                    this.domElements.reportProblemForm.reset();
+                }
+                if(modalElement === this.domElements.modals.avatarEditor && this.cropper){
+                    this.cropper.destroy();
+                    this.cropper = null;
+                }
+            }
+            
+            toggleTheme() {
+                const newTheme = document.body.dataset.theme === 'dark' ? 'light' : 'dark';
+                document.body.dataset.theme = newTheme;
+                localStorage.setItem('theme', newTheme);
+                this.domElements.themeToggleBtn.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+            }
+
+            async handleReportSubmit(event) {
+                event.preventDefault();
+                if (!this.db) {
+                    this.showToast("قاعدة البيانات غير متصلة.", "error");
+                    return;
+                }
+
+                const form = event.target;
+                const submitBtn = form.querySelector('button[type="submit"]');
+                this.setButtonLoading(submitBtn, true);
+
+                this.showToast("جاري إرسال البلاغ...", "info");
+                
+                const reportData = {
+                    type: form.problemType.value, 
+                    description: form.problemDescription.value,
+                    playerName: this.gameState.name || 'لم يبدأ اللعب',
+                    playerId: this.gameState.playerId || 'N/A',
+                    currentLevel: this.gameState.level !== undefined ? this.LEVELS[this.gameState.level].label : 'N/A',
+                    currentQuestionText: this.domElements.questionText.textContent || 'لا يوجد',
+                    timestamp: Timestamp.fromDate(new Date())
+                };
+
+                try {
+                    await addDoc(collection(this.db, 'reports'), reportData);
+                    this.showToast("تم إرسال بلاغك بنجاح. شكراً لك!", "success");
+                    this.hideModal(this.domElements.modals.advancedReport);
+
+                    // [NEW] Send notification to Telegram after successful report
+                    await this.sendTelegramNotification(reportData);
+
+                } catch (error) { 
+                    console.error("Error submitting report:", error);
+                    this.showToast("حدث خطأ أثناء إرسال البلاغ.", "error"); 
+                } finally {
+                    this.setButtonLoading(submitBtn, false);
+                }
+            }
+            
+            // [MODIFIED] Renamed for clarity to specify "Report"
+            async sendTelegramNotification(reportData) {
+                const { TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID } = this.config;
+                if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
+                    console.warn("Telegram bot token or chat ID is not configured.");
+                    return;
+                }
+
+                const message = `
+⚠️ *بلاغ جديد في مسابقة المعلومات* ⚠️
+
+*النوع:* ${reportData.type}
+*اللاعب:* ${reportData.playerName} (\`${reportData.playerId}\`)
+*المستوى الحالي:* ${reportData.currentLevel}
+*نص السؤال:* \`${reportData.currentQuestionText}\`
+
+*الوصف:*
+${reportData.description}
+                `;
+
+                const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+                
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            chat_id: TELEGRAM_CHAT_ID,
+                            text: message,
+                            parse_mode: 'Markdown'
+                        })
+                    });
+
+                    const result = await response.json();
+                    if (result.ok) {
+                        console.log("Telegram report notification sent successfully.");
+                        this.showToast("تم إشعار المطور.", "success");
+                    } else {
+                        console.error("Failed to send Telegram report notification:", result.description);
+                        this.showToast("فشل إشعار المطور.", "error");
+                    }
+                } catch (error) {
+                    console.error("Error sending Telegram report notification:", error);
+                }
+            }
+
+            // [NEW] Function to send final results to Telegram
+            async sendResultsToTelegram(resultsData) {
+                const { TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID } = this.config;
+                if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
+                    return; // Fail silently if not configured
+                }
+
+                const message = `
+*🏆 النتائج النهائية 🏆*
+
+*الاسم:* ${resultsData.name}
+*المعرّف:* \`${resultsData.playerId}\`
+*رقم المحاولة:* ${resultsData.attemptNumber}
+*الإجابات الصحيحة:* ${resultsData.correctAnswers}
+*الإجابات الخاطئة:* ${resultsData.wrongAnswers}
+*مرات التخطي:* ${resultsData.skips}
+*النقاط النهائية:* ${this.formatNumber(resultsData.score)}
+*الوقت المستغرق:* ${this.formatTime(resultsData.totalTime)}
+*المستوى الذي وصلت إليه:* ${resultsData.level}
+*نسبة الدقة:* ${resultsData.accuracy}%
+*متوسط وقت الإجابة:* ${this.formatTime(resultsData.avgTime)} / سؤال
+*أداؤك:* ${resultsData.performanceRating}
+                `;
+
+                const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+                
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            chat_id: TELEGRAM_CHAT_ID,
+                            text: message,
+                            parse_mode: 'Markdown'
+                        })
+                    });
+                    const result = await response.json();
+                    if (result.ok) {
+                        console.log("Telegram results sent successfully.");
+                    } else {
+                        console.error("Failed to send Telegram results:", result.description);
+                    }
+                } catch (error) {
+                    console.error("Error sending Telegram results:", error);
+                }
+            }
+
+            showToast(message, type = 'info') {
+                const toastContainer = document.getElementById('toast-container');
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                toast.textContent = message;
+                toast.setAttribute('role', 'alert');
+                toastContainer.appendChild(toast);
+                setTimeout(() => toast.remove(), 3000);
+            }
+
+            async displayLeaderboard() {
+                if (!this.db) {
+                    this.showToast("قاعدة البيانات غير متصلة.", "error");
+                    return;
+                }
+                this.showScreen('leaderboard');
+                const contentDiv = document.getElementById('leaderboardContent');
+                contentDiv.innerHTML = '<div class="spinner"></div>';
+
+                try {
+                    const leaderboardRef = collection(this.db, 'leaderboard');
+                    // This query requires a composite index in Firestore.
+                    const q = query(leaderboardRef, orderBy('score', 'desc'), orderBy('accuracy', 'desc'), orderBy('totalTime', 'asc'), limit(100));
+                    const querySnapshot = await getDocs(q);
+                    
+                    const players = [];
+                    querySnapshot.forEach((doc) => {
+                        players.push(doc.data());
+                    });
+
+                    if (players.length === 0) {
+                        contentDiv.innerHTML = '<p>لوحة الصدارة فارغة حاليًا!</p>';
+                        return;
+                    }
+                    
+                    const fragment = document.createDocumentFragment();
+                    const listElement = document.createElement('ul');
+                    listElement.className = 'leaderboard-list';
+
+                    let rankCounter = 1;
+                    const medals = ['🥇', '🥈', '🥉'];
+                    
+                    players.forEach((player) => {
+                        const item = document.createElement('li');
+                        item.className = 'leaderboard-item';
+
+                        let rankDisplay;
+                        if (player.isImpossibleFinisher) {
+                            item.classList.add('impossible-finisher');
+                            rankDisplay = '🎖️';
+                        } else {
+                            if (rankCounter <= 3) {
+                                item.classList.add(`rank-${rankCounter}`);
+                                rankDisplay = medals[rankCounter - 1];
+                            } else {
+                                rankDisplay = rankCounter;
+                            }
+                            rankCounter++;
+                        }
+                        
+                        const rankSpan = document.createElement('span');
+                        rankSpan.className = 'leaderboard-rank';
+                        rankSpan.textContent = rankDisplay;
+
+                        const avatarImg = document.createElement('img');
+                        avatarImg.src = player.avatar || '';
+                        avatarImg.alt = `صورة ${player.name}`;
+                        avatarImg.className = 'leaderboard-avatar';
+                        avatarImg.style.visibility = player.avatar ? 'visible' : 'hidden';
+                        avatarImg.onerror = () => { avatarImg.style.visibility = 'hidden'; };
+
+                        const detailsDiv = document.createElement('div');
+                        detailsDiv.className = 'leaderboard-details';
+
+                        const nameSpan = document.createElement('span');
+                        nameSpan.className = 'leaderboard-name';
+                        nameSpan.textContent = player.name || 'غير معروف';
+
+                        const scoreSpan = document.createElement('span');
+                        scoreSpan.className = 'leaderboard-score';
+                        scoreSpan.textContent = this.formatNumber(player.score);
+
+                        detailsDiv.append(nameSpan, scoreSpan);
+                        item.append(rankSpan, avatarImg, detailsDiv);
+                        
+                        item.addEventListener('click', () => this.showPlayerDetails(player));
+                        listElement.appendChild(item);
+                    });
+                    
+                    fragment.appendChild(listElement);
+                    contentDiv.innerHTML = ''; // Clear spinner
+                    contentDiv.appendChild(fragment);
+
+                } catch (error) {
+                    console.error("Error loading leaderboard:", error);
+                    contentDiv.innerHTML = '<p>حدث خطأ في تحميل لوحة الصدارة. قد يتطلب الأمر إنشاء فهرس في قاعدة البيانات.</p>';
+                    this.showToast("خطأ في تحميل لوحة الصدارة", "error");
+                }
+            }
+            
+            showPlayerDetails(player) {
+                document.getElementById('detailsName').textContent = player.name || 'غير معروف';
+                document.getElementById('detailsPlayerId').textContent = player.playerId || 'N/A';
+                const detailsAvatar = document.getElementById('detailsAvatar');
+                detailsAvatar.src = player.avatar || '';
+                detailsAvatar.style.visibility = player.avatar ? 'visible' : 'hidden';
+                detailsAvatar.onerror = () => { detailsAvatar.style.visibility = 'hidden'; };
+
+
+                const contentBody = document.getElementById('playerDetailsContent');
+                contentBody.innerHTML = `
+                    <div class="detail-item">
+                        <span class="label">⭐ النقاط النهائية</span>
+                        <span class="value score">${this.formatNumber(player.score || 0)}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="label">👑 المستوى</span>
+                        <span class="value">${player.level || 'N/A'}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="label">✅ الصحيحة</span>
+                        <span class="value">${this.formatNumber(player.correctAnswers || 0)}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="label">❌ الخاطئة</span>
+                        <span class="value">${this.formatNumber(player.wrongAnswers || 0)}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="label">⏱️ الوقت</span>
+                        <span class="value">${this.formatTime(player.totalTime || 0)}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="label">⏳ المتوسط</span>
+                        <span class="value">${this.formatTime(player.avgTime || 0)}/س</span>
+                    </div>
+                    <div class="detail-item full-width">
+                         <span class="label">🎯 نسبة الدقة</span>
+                         <span class="value">${player.accuracy || 0}%</span>
+                         <div class="progress-bar-container">
+                             <div class="progress-bar" style="width: ${player.accuracy || 0}%;"></div>
+                         </div>
+                    </div>
+                    <div class="detail-item">
+                        <span class="label">⏭️ التخطي</span>
+                        <span class="value">${this.formatNumber(player.skips || 0)}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="label">🔢 المحاولة</span>
+                        <span class="value">${this.formatNumber(player.attemptNumber || 0)}</span>
+                    </div>
+                    <div class="detail-item full-width">
+                        <span class="label">📊 الأداء</span>
+                        <span class="value">${player.performanceRating || 'جيد'}</span>
+                    </div>
+                `;
+
+                this.showModal(this.domElements.modals.playerDetails);
+            }
+
+            getShareText() {
+                const performanceRating = this.calculatePerformanceRating();
+                return `🏆 حققت نتيجة رائعة في مسابقة المعلومات!\n\n` + 
+                       `⭐ النقاط: ${this.formatNumber(this.currentScoreValue)}\n` +
+                       `📈 الأداء: ${performanceRating}\n` +
+                       `🎯 الدقة: ${this.getFinalAccuracy()}%\n\n` +
+                       `هل يمكنك التفوق علي؟ 🤔`;
+            }
+            
+            getFinalAccuracy() {
+                const totalAnswered = this.gameState.correctAnswers + this.gameState.wrongAnswers;
+                return totalAnswered > 0 ? parseFloat(((this.gameState.correctAnswers / totalAnswered) * 100).toFixed(1)) : 0.0;
+            }
+
+            getFinalAvgTime() {
+                const totalAnswered = this.gameState.correctAnswers + this.gameState.wrongAnswers;
+                const totalTimeSeconds = (new Date() - this.gameState.startTime) / 1000;
+                const avgTime = totalAnswered > 0 ? parseFloat((totalTimeSeconds / totalAnswered).toFixed(1)) : 0;
+                return this.formatTime(avgTime);
+            }
+
+            shareOnX() {
+                const textToShare = this.getShareText() + `\n\n🔗 جرب اللعبة الآن!\n${window.location.href}`;
+                window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(textToShare)}`, '_blank');
+            }
+
+            shareOnInstagram() {
+                navigator.clipboard.writeText(this.getShareText())
+                    .then(() => this.showToast("تم نسخ النتيجة لمشاركتها في الستوري!", "success"))
+                    .catch(() => this.showToast("فشل نسخ النتيجة.", "error"));
+            }
+
+            resetGame() { window.location.reload(); }
+            
+            formatTime(totalSeconds) {
+                const total = Math.floor(totalSeconds);
+                const minutes = Math.floor(total / 60);
+                const seconds = total % 60;
+                return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            }
+
+            formatNumber(num) { return new Intl.NumberFormat('ar-EG').format(num); }
+
+            setButtonLoading(button, isLoading) {
+                if (isLoading) {
+                    button.classList.add('loading');
+                    button.disabled = true;
+                } else {
+                    button.classList.remove('loading');
+                    button.disabled = false;
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            document.body.dataset.theme = savedTheme;
+            document.querySelector('.theme-toggle-btn').textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+            new QuizGame();
+        });
+    </script>
+    
+    <div class="sr-only" aria-live="polite" id="liveAnnouncements"></div>
+</body>
+</html>
+
 
