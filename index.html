@@ -2186,18 +2186,9 @@
                 if (response && response.success && Array.isArray(response.leaderboard)) {
                     let players = response.leaderboard;
 
-                    // *** NEW FEATURE: Enhanced Leaderboard Sorting ***
-                    // This logic sorts players to prioritize those who have completed the entire quiz.
-                    // It assumes the API provides a 'completedAll' boolean for each player.
-                    players.sort((a, b) => {
-                        // A player who completed (`a.completedAll`) always comes before one who hasn't.
-                        if (a.completedAll && !b.completedAll) return -1;
-                        if (!a.completedAll && b.completedAll) return 1;
-                        
-                        // If both have the same completion status, sort by the rank given by the API.
-                        // The backend is responsible for determining the *first* finisher.
-                        return (a.rank || 999) - (b.rank || 999);
-                    });
+                    // *** LEADERBOARD BUG FIX ***
+                    // The backend now sends the data pre-sorted by score. 
+                    // We no longer need to sort here on the client-side.
 
                     let tableHTML = '<p>لوحة الصدارة فارغة حاليًا!</p>';
                     if (players.length > 0) {
@@ -2209,14 +2200,20 @@
                                 <th style="padding:8px;">المحاولات</th>
                             </tr></thead><tbody>`;
                         
-                        // *** NEW FEATURE: Leaderboard Highlighting ***
-                        // This logic adds special icons and styling for the first player to complete the quiz.
+                        // *** LEADERBOARD BUG FIX ***
+                        // This new logic correctly assigns medals based on rank (index)
+                        // and adds the special 🎖️ icon to the first finisher, wherever they rank.
                         players.forEach((row, index) => {
-                            const isFirstFinisher = row.completedAll && index === 0;
-                            const finisherIcon = isFirstFinisher ? '🎖️' : '';
-                            const rankDisplay = isFirstFinisher ? '🥇' : (row.rank || index + 1);
-                            const nameDisplay = `${row.name || 'غير معروف'} ${finisherIcon}`;
-                            const rowStyle = isFirstFinisher ? 'background-color: rgba(255, 215, 0, 0.2); font-weight: bold;' : '';
+                            const rankMedals = ['🥇', '🥈', '🥉'];
+                            // Use index for medals, as the list is sorted by score.
+                            const rankDisplay = index < 3 ? rankMedals[index] : (index + 1); 
+                            
+                            // Check for the new `isFirstFinisher` flag from the backend.
+                            const finisherIcon = row.isFirstFinisher ? ' 🎖️' : '';
+                            const nameDisplay = `${row.name || 'غير معروف'}${finisherIcon}`;
+
+                            // Highlight the first finisher's row, regardless of their rank.
+                            const rowStyle = row.isFirstFinisher ? 'background-color: rgba(255, 215, 0, 0.2); font-weight: bold;' : '';
                             
                             tableHTML += `<tr style="${rowStyle}">
                                 <td style="padding:8px;">${rankDisplay}</td>
