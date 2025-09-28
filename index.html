@@ -1327,7 +1327,7 @@
                 <div id="fiftyFiftyDesc" class="sr-only">يزيل خيارين خاطئين</div>
         
                 <button class="helper-btn" data-type="freezeTime" aria-describedby="freezeTimeDesc">
-                        ❄️ 10ث
+                    ❄️ 10ث
                     <span class="helper-cost">(100)</span>
                 </button>
                 <div id="freezeTimeDesc" class="sr-only">يوقف المؤقت لمدة 10 ثوان</div>
@@ -1399,7 +1399,7 @@
                     <p>⏭️ مرات التخطي: <strong id="finalSkips"></strong></p>
                     <p>⭐ النقاط النهائية: <strong id="finalScore"></strong></p>
                     <p>⏱️ الوقت المستغرق: <strong id="totalTime"></strong></p>
-                    <p>📈 المستوى الذي وصلت إليه: <strong id="finalLevel"></strong></p>                      
+                    <p>📈 المستوى الذي وصلت إليه: <strong id="finalLevel"></strong></p>                    
                     <p>🎯 نسبة الدقة: <strong id="finalAccuracy"></strong></p>
                     <p>⏳ متوسط وقت الإجابة: <strong id="finalAvgTime"></strong></p>
             
@@ -1540,20 +1540,32 @@
         </div>
     </div>
 
-    <!-- Firebase SDK (using compat libraries for easier transition) -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore-compat.js"></script>
-    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
-    <script>
-        
-    // =================================================================
-        // Import the functions you need from the SDKs you need
-        import { initializeApp } from "firebase/app";
-        // TODO: Add SDKs for Firebase products that you want to use
-        // https://firebase.google.com/docs/web/setup#available-libraries
 
-        // Your web app's Firebase configuration
+    <!-- The core Firebase JS SDK is always required and must be listed first -->
+    <script type="module">
+        // =================================================================
+        //                 --[ Firebase Configuration ]--
+        // =================================================================
+        // --[ 1. Import required functions from the SDKs ]--
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { 
+            getFirestore, 
+            collection, 
+            addDoc, 
+            getDocs, 
+            query, 
+            where, 
+            orderBy, 
+            limit, 
+            doc, 
+            getDoc,
+            setDoc,
+            Timestamp
+        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        // --[ 2. Your web app's Firebase configuration ]--
+        // IMPORTANT: Replace with your actual configuration details
         const firebaseConfig = {
           apiKey: "AIzaSyAeyZ4hr7MKhh1Ouqp5sA4VV0DVqKtszp0",
           authDomain: "project-1-4447a.firebaseapp.com",
@@ -1562,1093 +1574,1082 @@
           messagingSenderId: "748000954923",
           appId: "1:748000954923:web:6ea9476aa29f6e2aeab86e"
         };
+        // =================================================================
 
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-    // =================================================================
-        
-    const firebaseConfig = {
-      // apiKey: "...",
-      // authDomain: "...",
-      // projectId: "...",
-      // storageBucket: "...",
-      // messagingSenderId: "...",
-      // appId: "..."
-    };
-    // =================================================================
-    
-    class QuizGame {
-        constructor() {
-            // =================================================================
-            //                      Game Configuration
-            // =================================================================
-            this.config = {
-                developerName: "AbuQusay",
-                developerPassword: "AbuQusay", 
-                randomize_questions: true,
-                randomize_answers: true, 
-            };
-            
-            this.db = null; // Will be initialized after firebase app
-            
-            this.QUESTION_TIME = 80;
-            this.MAX_WRONG_ANSWERS = 3;
-            this.STARTING_SCORE = 100;
-
-            this.LEVELS = [
-                { name: "easy", label: "سهل" },
-                { name: "medium", label: "متوسط" },
-                { name: "hard", label: "صعب" },
-                { name: "impossible", label: "مستحيل" }
-            ];
-
-            this.QUESTIONS = {};
-
-            this.HELPER_COSTS = {
-                fiftyFifty: 100,
-                freezeTime: 100,
-                skipQuestion: 20 
-            };
-            
-            this.isTimeFrozen = false;
-            this.isDevSession = false; 
-            this.isDevTemporarilyDisabled = false; 
-            
-            this.gameState = {
-                helpersUsed: { fiftyFifty: false, freezeTime: false }
-            };
-            
-            this.currentScoreValue = this.STARTING_SCORE;
-            this.timerInterval = null;
-            this.answerSubmitted = false;
-            this.domElements = {};
-            this.cropper = null;
-
-            this.init();
-        }
-
-        async init() {
-            this.cacheDomElements();
-            this.bindEventListeners();
-            this.populateAvatarGrid();
-            this.initFirebase();
-
-            const questionsLoaded = await this.loadQuestions();
-            
-            if (questionsLoaded) {
-                this.showScreen('start');
-                this.hideLoader();
-            } else {
-                this.domElements.screens.loader.querySelector('.spinner').style.display = 'none';
-                this.domElements.screens.loader.insertAdjacentHTML('beforeend', '<p style="text-align: center;">حدث خطأ في تحميل الأسئلة.<br>الرجاء تحديث الصفحة.</p>');
-            }
-        }
-
-        initFirebase() {
-          try {
-            if (firebaseConfig.apiKey) {
-              firebase.initializeApp(firebaseConfig);
-              this.db = firebase.firestore();
-              console.log("Firebase initialized successfully!");
-            } else {
-              console.error("Firebase config is missing. Please paste it into index.html");
-              this.showToast("خطأ: إعداد Firebase غير مكتمل!", "error");
-            }
-          } catch(e) {
-            console.error("Error initializing Firebase:", e);
-            this.showToast("خطأ في الاتصال بقاعدة البيانات.", "error");
-          }
-        }
-
-        async loadQuestions() {
-           try {
-                // Using cache busting to always get the latest version of questions.
-                const response = await fetch(`https://abuqusayms.github.io/Shadow-Game/questions.json?v=${new Date().getTime()}`);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                this.QUESTIONS = await response.json();
-                return true;
-            } catch (error) {
-                console.error("فشل في تحميل ملف الأسئلة:", error);
-                return false;
-            }
-        }
-
-        shuffleArray(array) {
-            for (let i = array.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [array[i], array[j]] = [array[j], array[i]];
-            }
-        }
-
-        cacheDomElements() {
-            this.domElements = {
-                screens: {
-                    loader: document.getElementById('loader'),
-                    start: document.getElementById('startScreen'),
-                    avatar: document.getElementById('avatarScreen'),
-                    nameEntry: document.getElementById('nameEntry'),
-                    instructions: document.getElementById('instructionsScreen'),
-                    levelSelect: document.getElementById('levelSelectScreen'),
-                    game: document.getElementById('gameContainer'),
-                    levelComplete: document.getElementById('levelCompleteScreen'),
-                    end: document.getElementById('endScreen'),
-                    leaderboard: document.getElementById('leaderboardScreen'),
-                },
-                modals: {
-                    confirmExit: document.getElementById('confirmExitModal'),
-                    advancedReport: document.getElementById('advancedReportModal'),
-                    avatarEditor: document.getElementById('avatarEditorModal'),
-                    devPassword: document.getElementById('devPasswordModal'),
-                    playerDetails: document.getElementById('playerDetailsModal'),
-                },
-                questionText: document.getElementById('questionText'),
-                optionsGrid: document.querySelector('.options-grid'),
-                scoreDisplay: document.getElementById('currentScore'),
-                nameInput: document.getElementById('nameInput'),
-                nameError: document.getElementById('nameError'),
-                confirmNameBtn: document.getElementById('confirmNameBtn'),
-                confirmAvatarBtn: document.getElementById('confirmAvatarBtn'),
-                themeToggleBtn: document.querySelector('.theme-toggle-btn'),
-                reportErrorFab: document.getElementById('reportErrorFab'),
-                reportProblemForm: document.getElementById('reportProblemForm'),
-                cancelReportBtn: document.getElementById('cancelReportBtn'),
-                imageToCrop: document.getElementById('image-to-crop'),
-                saveCroppedImageBtn: document.getElementById('saveCroppedImage'),
-                cancelCropBtn: document.getElementById('cancelCrop'),
-                devPasswordInput: document.getElementById('devPasswordInput'),
-                devPasswordError: document.getElementById('devPasswordError'),
-                devFloatingBtn: document.getElementById('devFloatingBtn'),
-                endScreenSpinner: document.getElementById('endScreenSpinner'),
-                endScreenContent: document.getElementById('endScreenContent'),
-                confirmExitYesBtn: document.getElementById('confirmExitYes'),
-            };
-        }
-
-        bindEventListeners() {
-            document.getElementById('startPlayBtn').addEventListener('click', () => this.showScreen('avatar'));
-            this.domElements.confirmAvatarBtn.addEventListener('click', () => this.showScreen('nameEntry'));
-            this.domElements.confirmNameBtn.addEventListener('click', this.handleNameConfirmation.bind(this));
-            document.getElementById('instructionsConfirmBtn').addEventListener('click', this.postInstructionsStart.bind(this));
-            document.getElementById('showLeaderboardBtn').addEventListener('click', () => this.displayLeaderboard());
-            document.getElementById('backToStartBtn').addEventListener('click', () => this.showScreen('start'));
-            this.domElements.themeToggleBtn.addEventListener('click', () => this.toggleTheme());
-            document.getElementById('endQuizBtn').addEventListener('click', () => this.showModal(this.domElements.modals.confirmExit));
-            this.domElements.confirmExitYesBtn.addEventListener('click', () => this.endGame());
-            document.getElementById('confirmExitNo').addEventListener('click', () => this.hideModal(this.domElements.modals.confirmExit));
-            document.getElementById('nextLevelBtn').addEventListener('click', () => this.nextLevel());
-            document.getElementById('quitLevelBtn').addEventListener('click', () => this.endGame());
-            document.getElementById('playAgainBtn').addEventListener('click', () => this.resetGame());
-            document.getElementById('statsBtn').addEventListener('click', () => this.displayLeaderboard());
-            document.querySelectorAll('.helper-btn').forEach(btn => btn.addEventListener('click', (e) => this.useHelper(e)));
-            document.getElementById('shareXBtn').addEventListener('click', () => this.shareOnX());
-            document.getElementById('shareInstagramBtn').addEventListener('click', () => this.shareOnInstagram());
-            document.getElementById('closeDetailsModal').addEventListener('click', () => this.hideModal(this.domElements.modals.playerDetails));
-            
-            this.domElements.nameInput.addEventListener('input', () => this.validateNameInput());
-            this.domElements.nameInput.addEventListener('keypress', (e) => { 
-                if (e.key === 'Enter') this.handleNameConfirmation();
-            });
-            
-            this.domElements.reportErrorFab.addEventListener('click', () => this.showModal(this.domElements.modals.advancedReport));
-            this.domElements.reportProblemForm.addEventListener('submit', (e) => this.handleReportSubmit(e));
-            this.domElements.cancelReportBtn.addEventListener('click', () => this.hideModal(this.domElements.modals.advancedReport));
-            
-            this.domElements.saveCroppedImageBtn.addEventListener('click', () => this.saveCroppedAvatar());
-            this.domElements.cancelCropBtn.addEventListener('click', () => this.hideModal(this.domElements.modals.avatarEditor));
-
-            document.getElementById('showDevModeBtn').addEventListener('click', () => this.showModal(this.domElements.modals.devPassword));
-            document.getElementById('confirmDevPassword').addEventListener('click', () => this.checkDevPassword());
-            document.getElementById('cancelDevPassword').addEventListener('click', () => this.hideModal(this.domElements.modals.devPassword));
-            this.domElements.devPasswordInput.addEventListener('keypress', (e) => {
-                if(e.key === 'Enter') this.checkDevPassword();
-            });
-            this.domElements.devFloatingBtn.addEventListener('click', () => this.toggleDevView());
-
-
-            this.domElements.screens.levelSelect.querySelectorAll('button').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const levelIndex = parseInt(e.target.dataset.levelIndex, 10);
-                    this.startGameFlow(levelIndex);
-                });
-            });
-        }
-        
-        handleNameConfirmation() {
-            if (!this.domElements.confirmNameBtn.disabled) {
-                this.gameState.name = this.domElements.nameInput.value.trim();
-                if(this.gameState.name.toLowerCase() === this.config.developerName.toLowerCase()) {
-                    this.activateDevSession(false);
-                }
-                this.showScreen('instructions');
-            }
-        }
-
-        postInstructionsStart() {
-            this.setupInitialGameState();
-            if (this.isDevSession) {
-                this.showScreen('levelSelect');
-            } else {
-                this.startGameFlow(0);
-            }
-        }
-        
-        validateNameInput() {
-            const name = this.domElements.nameInput.value.trim();
-            if (name.length >= 3) {
-                this.domElements.nameError.textContent = "";
-                this.domElements.nameError.classList.remove('show');
-                this.domElements.confirmNameBtn.disabled = false;
-            } else {
-                this.domElements.nameError.textContent = "الاسم يجب أن يتكون من ٣ أحرف على الأقل.";
-                this.domElements.nameError.classList.add('show');
-                this.domElements.confirmNameBtn.disabled = true;
-            }
-        }
-        
-        populateAvatarGrid() {
-            const avatarGrid = document.querySelector('.avatar-grid');
-            avatarGrid.innerHTML = ''; 
-            const fragment = document.createDocumentFragment();
-
-            const uploadContainer = document.createElement('div');
-            uploadContainer.classList.add('avatar-upload-btn');
-            uploadContainer.innerHTML = `<span>+</span><label for="avatarUploadInput" class="sr-only">رفع صورة</label>`;
-            const uploadInput = document.createElement('input');
-            uploadInput.type = 'file';
-            uploadInput.id = 'avatarUploadInput';
-            uploadInput.accept = 'image/*';
-            uploadInput.style.display = 'none';
-            uploadContainer.appendChild(uploadInput);
-            fragment.appendChild(uploadContainer);
-            
-            uploadInput.addEventListener('change', (e) => this.handleAvatarUpload(e));
-            uploadContainer.addEventListener('click', () => uploadInput.click());
-
-            const avatarUrls = [
-                "https://em-content.zobj.net/thumbs/120/apple/354/woman_1f469.png", "https://em-content.zobj.net/thumbs/120/apple/354/man_1f468.png",
-                "https://em-content.zobj.net/thumbs/120/apple/354/person-beard_1f9d4.png", "https://em-content.zobj.net/thumbs/120/apple/354/old-man_1f474.png",
-                "https://em-content.zobj.net/thumbs/120/apple/354/student_1f9d1-200d-1f393.png", "https://em-content.zobj.net/thumbs/120/apple/354/teacher_1f9d1-200d-1f3eb.png",
-                "https://em-content.zobj.net/thumbs/120/apple/354/scientist_1f9d1-200d-1f52c.png", "https://em-content.zobj.net/thumbs/120/apple/354/artist_1f9d1-200d-1f3a8.png",
-                "https://em-content.zobj.net/thumbs/120/apple/354/astronaut_1f9d1-200d-1f680.png", "https://em-content.zobj.net/thumbs/120/apple/354/police-officer_1f46e.png",
-                "https://em-content.zobj.net/thumbs/120/apple/354/superhero_1f9b8.png", "https://em-content.zobj.net/thumbs/120/apple/354/mage_1f9d9.png",
-            ];
-
-            avatarUrls.forEach((url, index) => {
-                const img = document.createElement('img');
-                img.src = url;
-                img.alt = `صورة رمزية ${index + 1}`;
-                img.classList.add('avatar-option');
-                img.addEventListener('click', (e) => this.selectAvatar(e.target));
-                fragment.appendChild(img);
-            });
-
-            avatarGrid.appendChild(fragment);
-        }
-        
-        selectAvatar(element) {
-            document.querySelectorAll('.avatar-option.selected, .avatar-upload-btn.selected').forEach(el => el.classList.remove('selected'));
-            element.classList.add('selected');
-            this.gameState.avatar = element.tagName === 'IMG' ? element.src : element.dataset.src;
-            this.domElements.confirmAvatarBtn.disabled = false;
-            element.classList.add('clicked');
-            setTimeout(() => element.classList.remove('clicked'), 300);
-        }
-
-        handleAvatarUpload(event) {
-            const file = event.target.files[0];
-            if (file && file.type.startsWith('image/')) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    this.domElements.imageToCrop.src = e.target.result;
-                    this.showModal(this.domElements.modals.avatarEditor, true);
+        class QuizGame {
+            constructor() {
+                // =================================================================
+                //                     Game Configuration
+                // =================================================================
+                this.config = {
+                    developerName: "AbuQusay",
+                    developerPassword: "AbuQusay", 
+                    randomize_questions: true,
+                    randomize_answers: true, 
                 };
-                reader.readAsDataURL(file);
-            }
-        }
+                
+                // Firebase services
+                this.app = null;
+                this.db = null;
+                
+                this.QUESTION_TIME = 80;
+                this.MAX_WRONG_ANSWERS = 3;
+                this.STARTING_SCORE = 100;
 
-        saveCroppedAvatar() {
-            if (!this.cropper) return;
-            const croppedImageDataUrl = this.cropper.getCroppedCanvas({
-                width: 256, height: 256, imageSmoothingQuality: 'high',
-            }).toDataURL('image/png');
-            
-            const existingCustom = document.getElementById('custom-avatar');
-            if(existingCustom) existingCustom.remove();
-            
-            const newAvatarImg = document.createElement('img');
-            newAvatarImg.src = croppedImageDataUrl;
-            newAvatarImg.classList.add('avatar-option');
-            newAvatarImg.id = 'custom-avatar';
-            
-            const uploadBtn = document.querySelector('.avatar-upload-btn');
-            uploadBtn.parentElement.insertBefore(newAvatarImg, uploadBtn.nextSibling);
+                this.LEVELS = [
+                    { name: "easy", label: "سهل" },
+                    { name: "medium", label: "متوسط" },
+                    { name: "hard", label: "صعب" },
+                    { name: "impossible", label: "مستحيل" }
+                ];
 
-            newAvatarImg.addEventListener('click', (e) => this.selectAvatar(e.target));
-            this.selectAvatar(newAvatarImg);
-            this.hideModal(this.domElements.modals.avatarEditor);
-        }
+                this.QUESTIONS = {};
 
-        showScreen(screenName) {
-            if (document.activeElement) document.activeElement.blur();
-            Object.values(this.domElements.screens).forEach(screen => {
-                screen.classList.remove('active');
-                screen.setAttribute('aria-hidden', 'true');
-            });
-            const activeScreen = this.domElements.screens[screenName];
-            if (activeScreen) {
-                activeScreen.classList.add('active');
-                activeScreen.setAttribute('aria-hidden', 'false');
-                const firstFocusable = activeScreen.querySelector('button, [href], input, select, textarea');
-                if(firstFocusable) setTimeout(() => firstFocusable.focus(), 100);
-            }
-        }
+                this.HELPER_COSTS = {
+                    fiftyFifty: 100,
+                    freezeTime: 100,
+                    skipQuestion: 20 
+                };
+                
+                // Game state variables
+                this.isTimeFrozen = false;
+                this.isDevSession = false; 
+                this.isDevTemporarilyDisabled = false; 
+                this.gameState = {
+                    helpersUsed: { fiftyFifty: false, freezeTime: false }
+                };
+                
+                this.currentScoreValue = this.STARTING_SCORE;
+                this.timerInterval = null;
+                this.answerSubmitted = false;
+                this.domElements = {};
+                this.cropper = null;
 
-        hideLoader() { this.domElements.screens.loader.classList.remove('active'); }
-
-        setupInitialGameState() {
-            this.gameState = {
-                ...this.gameState, 
-                playerId: this.generatePlayerId(),
-                deviceId: this.getOrSetDeviceId(),
-                level: 0,
-                question: 0,
-                wrongAnswers: 0,
-                correctAnswers: 0,
-                skips: 0,
-                startTime: new Date(),
-                helpersUsed: { fiftyFifty: false, freezeTime: false },
-                attemptNumber: 'N/A'
-            };
-        }
-        
-        startGameFlow(levelIndex = 0) {
-            this.gameState.level = levelIndex;
-            this.updateScore(this.STARTING_SCORE, true);
-            this.setupGameUI();
-            this.showScreen('game');
-            this.startLevel();
-        }
-
-        generatePlayerId() { return `PL${Math.random().toString(36).substr(2, 9).toUpperCase()}`; }
-        
-        getOrSetDeviceId() {
-            let deviceId = localStorage.getItem('quizGameDeviceId');
-            if (!deviceId) {
-                deviceId = 'D' + Date.now().toString(36) + Math.random().toString(36).substr(2, 9).toUpperCase();
-                localStorage.setItem('quizGameDeviceId', deviceId);
-            }
-            return deviceId;
-        }
-
-        startLevel() {
-            const currentLevel = this.LEVELS[this.gameState.level];
-            document.body.setAttribute('data-level', currentLevel.name);
-            document.getElementById('currentLevelBadge').textContent = currentLevel.label;
-            
-            const isImpossible = currentLevel.name === 'impossible';
-            
-            if(isImpossible && !this.isDeveloper()){
-                document.querySelectorAll('.helper-btn').forEach(btn => { btn.disabled = true; });
-                this.showToast("المساعدات معطلة في المستوى المستحيل!", "info");
+                this.init();
             }
 
-            let levelQuestions = [...this.QUESTIONS[currentLevel.name]];
-            if (this.config.randomize_questions && currentLevel.name !== 'impossible') {
-                this.shuffleArray(levelQuestions);
-            }
-            this.gameState.shuffledQuestions = levelQuestions;
+            async init() {
+                this.cacheDomElements();
+                this.bindEventListeners();
+                this.populateAvatarGrid();
+                this.initFirebase();
 
-            document.querySelectorAll('.level-indicator').forEach((indicator, index) => {
-                indicator.classList.remove('active', 'completed');
-                if (index < this.gameState.level) {
-                    indicator.classList.add('completed', 'active');
-                } else if (index === this.gameState.level) {
-                    indicator.classList.add('active');
-                }
-            });
-            
-            this.gameState.question = 0;
-            this.fetchQuestion();
-        }
-
-        fetchQuestion() {
-            const questions = this.gameState.shuffledQuestions;
-            if (!questions || this.gameState.question >= questions.length) {
-                this.levelComplete();
-                return; 
-            }
-            const questionData = questions[this.gameState.question];
-            this.displayQuestion(questionData);
-        }
-
-        displayQuestion(questionData) {
-            this.answerSubmitted = false;
-            
-            const correctAnswerText = questionData.options[questionData.correct];
-            let shuffledOptions = [...questionData.options];
-            if (this.config.randomize_answers) {
-                this.shuffleArray(shuffledOptions);
-            }
-
-            const totalQuestionsInLevel = this.gameState.shuffledQuestions.length;
-            document.getElementById('questionCounter').textContent = `السؤال ${this.gameState.question + 1} من ${totalQuestionsInLevel}`;
-            
-            this.domElements.questionText.textContent = questionData.q;
-            this.domElements.optionsGrid.innerHTML = '';
-            const fragment = document.createDocumentFragment();
-
-            shuffledOptions.forEach(optionText => {
-                const button = document.createElement('button');
-                button.className = 'option-btn';
-                button.textContent = optionText;
-                if (optionText === correctAnswerText) { button.dataset.correct = 'true'; }
-                button.addEventListener('click', () => this.checkAnswer(button.dataset.correct === 'true', button));
-                fragment.appendChild(button);
-            });
-            this.domElements.optionsGrid.appendChild(fragment);
-
-            this.updateUI();
-            this.startTimer();
-        }
-
-        checkAnswer(isCorrect, selectedButton) {
-            if (this.answerSubmitted) return;
-            this.answerSubmitted = true;
-            clearInterval(this.timerInterval);
-            document.querySelectorAll('.option-btn').forEach(b => b.classList.add('disabled'));
-
-            if (isCorrect) {
-                selectedButton.classList.add('correct');
-                this.updateScore(this.currentScoreValue + 100);
-                this.gameState.correctAnswers++;
-                this.showToast("إجابة صحيحة! +100 نقطة", "success");
-            } else {
-                selectedButton.classList.add('wrong');
-                const correctButton = this.domElements.optionsGrid.querySelector('[data-correct="true"]');
-                if (correctButton) correctButton.classList.add('correct');
-                this.gameState.wrongAnswers++;
-                this.updateScore(this.currentScoreValue - 100);
-                this.showToast("إجابة خاطئة! -100 نقطة", "error");
-            }
-
-            this.gameState.question++;
-            this.updateUI();
-
-            const isGameOver = this.gameState.wrongAnswers >= this.MAX_WRONG_ANSWERS && !this.isDeveloper();
-            setTimeout(() => {
-                if (isGameOver) this.endGame(false);
-                else if (this.gameState.question >= this.gameState.shuffledQuestions.length) this.levelComplete();
-                else this.fetchQuestion();
-            }, 2000);
-        }
-        
-        levelComplete() {
-            const isLastLevel = this.gameState.level >= this.LEVELS.length - 1;
-            if (isLastLevel) {
-                this.endGame(true);
-                return;
-            }
-            const currentLevel = this.LEVELS[this.gameState.level];
-            document.getElementById('levelCompleteTitle').textContent = `🎉 أكملت المستوى ${currentLevel.label}!`;
-            document.getElementById('levelScore').textContent = this.formatNumber(this.currentScoreValue);
-            document.getElementById('levelErrors').textContent = this.gameState.wrongAnswers;
-            document.getElementById('levelCorrect').textContent = this.gameState.correctAnswers;
-            this.showScreen('levelComplete');
-        }
-        
-        nextLevel() {
-            this.gameState.level++;
-            if (this.gameState.level >= this.LEVELS.length) this.endGame(true);
-            else this.startLevel();
-            this.showScreen('game');
-        }
-
-        async endGame(completedAllLevels = false) {
-            clearInterval(this.timerInterval);
-            this.hideModal(this.domElements.modals.confirmExit);
-
-            const exitBtn = this.domElements.confirmExitYesBtn;
-            this.setButtonLoading(exitBtn, true);
-            this.showScreen('end');
-            this.domElements.endScreenContent.style.display = 'none';
-            this.domElements.endScreenSpinner.style.display = 'block';
-
-            const totalTimeSeconds = (new Date() - this.gameState.startTime) / 1000;
-            const currentLevel = this.LEVELS[Math.min(this.gameState.level, this.LEVELS.length - 1)];
-            const totalAnswered = this.gameState.correctAnswers + this.gameState.wrongAnswers;
-            const accuracy = totalAnswered > 0 ? parseFloat(((this.gameState.correctAnswers / totalAnswered) * 100).toFixed(1)) : 0.0;
-            const avgTime = totalAnswered > 0 ? parseFloat((totalTimeSeconds / totalAnswered).toFixed(1)) : 0;
-            const performanceRating = this.calculatePerformanceRating();
-
-            let finalResults = {
-                name: this.gameState.name,
-                playerId: this.gameState.playerId,
-                avatar: this.gameState.avatar,
-                correctAnswers: this.gameState.correctAnswers,
-                wrongAnswers: this.gameState.wrongAnswers,
-                skips: this.gameState.skips,
-                score: this.currentScoreValue,
-                totalTime: totalTimeSeconds,
-                level: currentLevel.label,
-                accuracy: accuracy,
-                avgTime: avgTime,
-                performanceRating: performanceRating,
-                completedAll: completedAllLevels,
-                helpersUsed: this.gameState.helpersUsed,
-                deviceId: this.gameState.deviceId,
-                timestamp: new Date()
-            };
-
-            if (!this.isDevSession) {
-                const attemptNumber = await this.saveResults(finalResults);
-                finalResults.attemptNumber = attemptNumber;
-            } else {
-                 finalResults.attemptNumber = 'DEV';
-            }
-            
-            this.setButtonLoading(exitBtn, false);
-            this.domElements.endScreenSpinner.style.display = 'none';
-            this.domElements.endScreenContent.style.display = 'block';
-            this.displayFinalStats(finalResults);
-        }
-        
-        displayFinalStats(results) {
-            document.getElementById('finalName').textContent = results.name;
-            document.getElementById('finalId').textContent = results.playerId;
-            document.getElementById('finalAttemptNumber').textContent = results.attemptNumber;
-            document.getElementById('finalCorrect').textContent = results.correctAnswers;
-            document.getElementById('finalWrong').textContent = results.wrongAnswers;
-            document.getElementById('finalSkips').textContent = results.skips;
-            document.getElementById('finalScore').textContent = this.formatNumber(results.score);
-            document.getElementById('totalTime').textContent = this.formatTime(results.totalTime);
-            document.getElementById('finalLevel').textContent = results.level;
-            document.getElementById('finalAccuracy').textContent = `${results.accuracy}%`;
-            document.getElementById('finalAvgTime').textContent = `${this.formatTime(results.avgTime)} / سؤال`;
-            document.getElementById('performanceText').textContent = results.performanceRating;
-        }
-
-        async saveResults(resultsData) {
-            if (!this.db) {
-                this.showToast("خطأ في الاتصال بقاعدة البيانات.", "error");
-                return "N/A";
-            }
-            try {
-                // 1. Calculate attempt number
-                const logsRef = this.db.collection('logs');
-                const q = logsRef.where('deviceId', '==', resultsData.deviceId);
-                const querySnapshot = await q.get();
-                const attemptNumber = querySnapshot.size + 1;
-                resultsData.attemptNumber = attemptNumber;
-
-                // 2. Add the full result to the 'logs' collection
-                await logsRef.add(resultsData);
-
-                // 3. Update the 'leaderboard' collection
-                const leaderboardRef = this.db.collection('leaderboard').doc(resultsData.deviceId);
-                const doc = await leaderboardRef.get();
-
-                if (!doc.exists || doc.data().score < resultsData.score) {
-                    // This is a new best score, so we update the leaderboard
-                    const leaderboardEntry = {
-                        score: resultsData.score,
-                        name: resultsData.name,
-                        avatar: resultsData.avatar,
-                        playerId: resultsData.playerId,
-                        deviceId: resultsData.deviceId,
-                        level: resultsData.level,
-                        accuracy: resultsData.accuracy,
-                        totalTime: resultsData.totalTime,
-                        avgTime: resultsData.avgTime,
-                        correctAnswers: resultsData.correctAnswers,
-                        wrongAnswers: resultsData.wrongAnswers,
-                        skips: resultsData.skips,
-                        attemptNumber: resultsData.attemptNumber,
-                        performanceRating: resultsData.performanceRating,
-                        isImpossibleFinisher: doc.data()?.isImpossibleFinisher || (resultsData.level === 'مستحيل' && resultsData.completedAll), // Persist finisher status
-                        lastUpdated: new Date()
-                    };
-                    await leaderboardRef.set(leaderboardEntry, { merge: true });
-                }
-
-                this.showToast("تم حفظ نتيجتك بنجاح!", "success");
-                return attemptNumber;
-
-            } catch (error) {
-                console.error("Error saving results to Firebase:", error);
-                this.showToast("حدث خطأ أثناء حفظ النتيجة.", "error");
-                return "N/A";
-            }
-        }
-        
-        calculatePerformanceRating() {
-            const totalQuestions = this.gameState.correctAnswers + this.gameState.wrongAnswers;
-            if (totalQuestions === 0) return "لم يتم الإجابة على أي سؤال";
-            const accuracy = (this.gameState.correctAnswers / totalQuestions) * 100;
-            if (accuracy >= 90) return "ممتاز 🏆";
-            if (accuracy >= 75) return "جيد جدًا ⭐";
-            if (accuracy >= 60) return "جيد 👍";
-            if (accuracy >= 40) return "مقبول 👌";
-            return "يحتاج تحسين 📈";
-        }
-
-        useHelper(event) {
-            const btn = event.currentTarget;
-            const type = btn.dataset.type;
-            const isDev = this.isDeveloper();
-            
-            let cost = (type === 'skipQuestion')
-                ? this.HELPER_COSTS.skipQuestion + (this.gameState.skips * 20)
-                : this.HELPER_COSTS[type];
-
-            if (!isDev && this.currentScoreValue < cost) {
-                this.showToast("نقاطك غير كافية!", "error");
-                return;
-            }
-
-            if (!isDev) {
-                this.updateScore(this.currentScoreValue - cost);
-                this.showToast(`تم استخدام المساعدة! -${cost} نقطة`, "success");
-            } else {
-                this.showToast(`مساعدة المطور (${type})`, "info");
-            }
-
-            if (type === 'skipQuestion') {
-                clearInterval(this.timerInterval);
-                this.gameState.skips++;
-                this.gameState.question++;
-                this.updateUI();
-                if (this.gameState.question >= this.gameState.shuffledQuestions.length) {
-                    this.levelComplete();
+                const questionsLoaded = await this.loadQuestions();
+                
+                if (questionsLoaded) {
+                    this.showScreen('start');
+                    this.hideLoader();
                 } else {
-                    this.fetchQuestion();
-                }
-            } else {
-                if (!isDev) this.gameState.helpersUsed[type] = true;
-                this.updateUI();
-                if (type === 'fiftyFifty') {
-                    const options = Array.from(this.domElements.optionsGrid.querySelectorAll('.option-btn'));
-                    let wrongOptions = options.filter(btn => btn.dataset.correct !== 'true');
-                    this.shuffleArray(wrongOptions);
-                    wrongOptions.slice(0, 2).forEach(btn => btn.classList.add('hidden'));
-                } else if (type === 'freezeTime') {
-                    this.isTimeFrozen = true;
-                    document.querySelector('.timer-bar').classList.add('frozen');
-                    setTimeout(() => {
-                        this.isTimeFrozen = false;
-                        document.querySelector('.timer-bar').classList.remove('frozen');
-                    }, 10000);
+                    this.domElements.screens.loader.querySelector('.spinner').style.display = 'none';
+                    this.domElements.screens.loader.insertAdjacentHTML('beforeend', '<p style="text-align: center;">حدث خطأ في تحميل الأسئلة.<br>الرجاء تحديث الصفحة.</p>');
                 }
             }
-        }
 
-        startTimer() {
-            clearInterval(this.timerInterval);
-            let timeLeft = this.QUESTION_TIME;
-            const timerBar = document.querySelector('.timer-bar');
-            const timerDisplay = document.querySelector('.timer-text');
-            timerDisplay.textContent = timeLeft;
-            timerBar.style.transition = 'width 1s linear';
-            timerBar.style.width = '100%';
+            initFirebase() {
+                try {
+                    if (firebaseConfig.apiKey) {
+                        this.app = initializeApp(firebaseConfig);
+                        this.db = getFirestore(this.app);
+                        console.log("Firebase initialized successfully with modular SDK!");
+                    } else {
+                        console.error("Firebase config is missing. Please paste it into index.html");
+                        this.showToast("خطأ: إعداد Firebase غير مكتمل!", "error");
+                    }
+                } catch(e) {
+                    console.error("Error initializing Firebase:", e);
+                    this.showToast("خطأ في الاتصال بقاعدة البيانات.", "error");
+                }
+            }
 
-            this.timerInterval = setInterval(() => {
-                if (this.isTimeFrozen) return;
-                timeLeft--;
-                timerDisplay.textContent = timeLeft;
-                timerBar.style.width = `${(timeLeft / this.QUESTION_TIME) * 100}%`;
+            async loadQuestions() {
+               try {
+                    // Using cache busting to always get the latest version of questions.
+                    const response = await fetch(`https://abuqusayms.github.io/Shadow-Game/questions.json?v=${new Date().getTime()}`);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    this.QUESTIONS = await response.json();
+                    return true;
+                } catch (error) {
+                    console.error("فشل في تحميل ملف الأسئلة:", error);
+                    return false;
+                }
+            }
 
-                if (timeLeft <= 0) {
-                    clearInterval(this.timerInterval);
-                    this.showToast("انتهى الوقت!", "error");
-                    this.gameState.wrongAnswers++;
-                    this.updateScore(this.currentScoreValue - 100);
-                    document.querySelectorAll('.option-btn').forEach(b => b.classList.add('disabled'));
+            shuffleArray(array) {
+                for (let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+            }
+
+            cacheDomElements() {
+                this.domElements = {
+                    screens: {
+                        loader: document.getElementById('loader'),
+                        start: document.getElementById('startScreen'),
+                        avatar: document.getElementById('avatarScreen'),
+                        nameEntry: document.getElementById('nameEntry'),
+                        instructions: document.getElementById('instructionsScreen'),
+                        levelSelect: document.getElementById('levelSelectScreen'),
+                        game: document.getElementById('gameContainer'),
+                        levelComplete: document.getElementById('levelCompleteScreen'),
+                        end: document.getElementById('endScreen'),
+                        leaderboard: document.getElementById('leaderboardScreen'),
+                    },
+                    modals: {
+                        confirmExit: document.getElementById('confirmExitModal'),
+                        advancedReport: document.getElementById('advancedReportModal'),
+                        avatarEditor: document.getElementById('avatarEditorModal'),
+                        devPassword: document.getElementById('devPasswordModal'),
+                        playerDetails: document.getElementById('playerDetailsModal'),
+                    },
+                    questionText: document.getElementById('questionText'),
+                    optionsGrid: document.querySelector('.options-grid'),
+                    scoreDisplay: document.getElementById('currentScore'),
+                    nameInput: document.getElementById('nameInput'),
+                    nameError: document.getElementById('nameError'),
+                    confirmNameBtn: document.getElementById('confirmNameBtn'),
+                    confirmAvatarBtn: document.getElementById('confirmAvatarBtn'),
+                    themeToggleBtn: document.querySelector('.theme-toggle-btn'),
+                    reportErrorFab: document.getElementById('reportErrorFab'),
+                    reportProblemForm: document.getElementById('reportProblemForm'),
+                    cancelReportBtn: document.getElementById('cancelReportBtn'),
+                    imageToCrop: document.getElementById('image-to-crop'),
+                    saveCroppedImageBtn: document.getElementById('saveCroppedImage'),
+                    cancelCropBtn: document.getElementById('cancelCrop'),
+                    devPasswordInput: document.getElementById('devPasswordInput'),
+                    devPasswordError: document.getElementById('devPasswordError'),
+                    devFloatingBtn: document.getElementById('devFloatingBtn'),
+                    endScreenSpinner: document.getElementById('endScreenSpinner'),
+                    endScreenContent: document.getElementById('endScreenContent'),
+                    confirmExitYesBtn: document.getElementById('confirmExitYes'),
+                };
+            }
+
+            bindEventListeners() {
+                document.getElementById('startPlayBtn').addEventListener('click', () => this.showScreen('avatar'));
+                this.domElements.confirmAvatarBtn.addEventListener('click', () => this.showScreen('nameEntry'));
+                this.domElements.confirmNameBtn.addEventListener('click', this.handleNameConfirmation.bind(this));
+                document.getElementById('instructionsConfirmBtn').addEventListener('click', this.postInstructionsStart.bind(this));
+                document.getElementById('showLeaderboardBtn').addEventListener('click', () => this.displayLeaderboard());
+                document.getElementById('backToStartBtn').addEventListener('click', () => this.showScreen('start'));
+                this.domElements.themeToggleBtn.addEventListener('click', () => this.toggleTheme());
+                document.getElementById('endQuizBtn').addEventListener('click', () => this.showModal(this.domElements.modals.confirmExit));
+                this.domElements.confirmExitYesBtn.addEventListener('click', () => this.endGame());
+                document.getElementById('confirmExitNo').addEventListener('click', () => this.hideModal(this.domElements.modals.confirmExit));
+                document.getElementById('nextLevelBtn').addEventListener('click', () => this.nextLevel());
+                document.getElementById('quitLevelBtn').addEventListener('click', () => this.endGame());
+                document.getElementById('playAgainBtn').addEventListener('click', () => this.resetGame());
+                document.getElementById('statsBtn').addEventListener('click', () => this.displayLeaderboard());
+                document.querySelectorAll('.helper-btn').forEach(btn => btn.addEventListener('click', (e) => this.useHelper(e)));
+                document.getElementById('shareXBtn').addEventListener('click', () => this.shareOnX());
+                document.getElementById('shareInstagramBtn').addEventListener('click', () => this.shareOnInstagram());
+                document.getElementById('closeDetailsModal').addEventListener('click', () => this.hideModal(this.domElements.modals.playerDetails));
+                
+                this.domElements.nameInput.addEventListener('input', () => this.validateNameInput());
+                this.domElements.nameInput.addEventListener('keypress', (e) => { 
+                    if (e.key === 'Enter') this.handleNameConfirmation();
+                });
+                
+                this.domElements.reportErrorFab.addEventListener('click', () => this.showModal(this.domElements.modals.advancedReport));
+                this.domElements.reportProblemForm.addEventListener('submit', (e) => this.handleReportSubmit(e));
+                this.domElements.cancelReportBtn.addEventListener('click', () => this.hideModal(this.domElements.modals.advancedReport));
+                
+                this.domElements.saveCroppedImageBtn.addEventListener('click', () => this.saveCroppedAvatar());
+                this.domElements.cancelCropBtn.addEventListener('click', () => this.hideModal(this.domElements.modals.avatarEditor));
+
+                document.getElementById('showDevModeBtn').addEventListener('click', () => this.showModal(this.domElements.modals.devPassword));
+                document.getElementById('confirmDevPassword').addEventListener('click', () => this.checkDevPassword());
+                document.getElementById('cancelDevPassword').addEventListener('click', () => this.hideModal(this.domElements.modals.devPassword));
+                this.domElements.devPasswordInput.addEventListener('keypress', (e) => {
+                    if(e.key === 'Enter') this.checkDevPassword();
+                });
+                this.domElements.devFloatingBtn.addEventListener('click', () => this.toggleDevView());
+
+
+                this.domElements.screens.levelSelect.querySelectorAll('button').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const levelIndex = parseInt(e.target.dataset.levelIndex, 10);
+                        this.startGameFlow(levelIndex);
+                    });
+                });
+            }
+            
+            handleNameConfirmation() {
+                if (!this.domElements.confirmNameBtn.disabled) {
+                    this.gameState.name = this.domElements.nameInput.value.trim();
+                    if(this.gameState.name.toLowerCase() === this.config.developerName.toLowerCase()) {
+                        this.activateDevSession(false);
+                    }
+                    this.showScreen('instructions');
+                }
+            }
+
+            postInstructionsStart() {
+                this.setupInitialGameState();
+                if (this.isDevSession) {
+                    this.showScreen('levelSelect');
+                } else {
+                    this.startGameFlow(0);
+                }
+            }
+            
+            validateNameInput() {
+                const name = this.domElements.nameInput.value.trim();
+                if (name.length >= 3) {
+                    this.domElements.nameError.textContent = "";
+                    this.domElements.nameError.classList.remove('show');
+                    this.domElements.confirmNameBtn.disabled = false;
+                } else {
+                    this.domElements.nameError.textContent = "الاسم يجب أن يتكون من ٣ أحرف على الأقل.";
+                    this.domElements.nameError.classList.add('show');
+                    this.domElements.confirmNameBtn.disabled = true;
+                }
+            }
+            
+            populateAvatarGrid() {
+                const avatarGrid = document.querySelector('.avatar-grid');
+                avatarGrid.innerHTML = ''; 
+                const fragment = document.createDocumentFragment();
+
+                const uploadContainer = document.createElement('div');
+                uploadContainer.classList.add('avatar-upload-btn');
+                uploadContainer.innerHTML = `<span>+</span><label for="avatarUploadInput" class="sr-only">رفع صورة</label>`;
+                const uploadInput = document.createElement('input');
+                uploadInput.type = 'file';
+                uploadInput.id = 'avatarUploadInput';
+                uploadInput.accept = 'image/*';
+                uploadInput.style.display = 'none';
+                uploadContainer.appendChild(uploadInput);
+                fragment.appendChild(uploadContainer);
+                
+                uploadInput.addEventListener('change', (e) => this.handleAvatarUpload(e));
+                uploadContainer.addEventListener('click', () => uploadInput.click());
+
+                const avatarUrls = [
+                    "https://em-content.zobj.net/thumbs/120/apple/354/woman_1f469.png", "https://em-content.zobj.net/thumbs/120/apple/354/man_1f468.png",
+                    "https://em-content.zobj.net/thumbs/120/apple/354/person-beard_1f9d4.png", "https://em-content.zobj.net/thumbs/120/apple/354/old-man_1f474.png",
+                    "https://em-content.zobj.net/thumbs/120/apple/354/student_1f9d1-200d-1f393.png", "https://em-content.zobj.net/thumbs/120/apple/354/teacher_1f9d1-200d-1f3eb.png",
+                    "https://em-content.zobj.net/thumbs/120/apple/354/scientist_1f9d1-200d-1f52c.png", "https://em-content.zobj.net/thumbs/120/apple/354/artist_1f9d1-200d-1f3a8.png",
+                    "https://em-content.zobj.net/thumbs/120/apple/354/astronaut_1f9d1-200d-1f680.png", "https://em-content.zobj.net/thumbs/120/apple/354/police-officer_1f46e.png",
+                    "https://em-content.zobj.net/thumbs/120/apple/354/superhero_1f9b8.png", "https://em-content.zobj.net/thumbs/120/apple/354/mage_1f9d9.png",
+                ];
+
+                avatarUrls.forEach((url, index) => {
+                    const img = document.createElement('img');
+                    img.src = url;
+                    img.alt = `صورة رمزية ${index + 1}`;
+                    img.classList.add('avatar-option');
+                    img.addEventListener('click', (e) => this.selectAvatar(e.target));
+                    fragment.appendChild(img);
+                });
+
+                avatarGrid.appendChild(fragment);
+            }
+            
+            selectAvatar(element) {
+                document.querySelectorAll('.avatar-option.selected, .avatar-upload-btn.selected').forEach(el => el.classList.remove('selected'));
+                element.classList.add('selected');
+                this.gameState.avatar = element.tagName === 'IMG' ? element.src : element.dataset.src;
+                this.domElements.confirmAvatarBtn.disabled = false;
+                element.classList.add('clicked');
+                setTimeout(() => element.classList.remove('clicked'), 300);
+            }
+
+            handleAvatarUpload(event) {
+                const file = event.target.files[0];
+                if (file && file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        this.domElements.imageToCrop.src = e.target.result;
+                        this.showModal(this.domElements.modals.avatarEditor, true);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
+
+            saveCroppedAvatar() {
+                if (!this.cropper) return;
+                const croppedImageDataUrl = this.cropper.getCroppedCanvas({
+                    width: 256, height: 256, imageSmoothingQuality: 'high',
+                }).toDataURL('image/png');
+                
+                const existingCustom = document.getElementById('custom-avatar');
+                if(existingCustom) existingCustom.remove();
+                
+                const newAvatarImg = document.createElement('img');
+                newAvatarImg.src = croppedImageDataUrl;
+                newAvatarImg.classList.add('avatar-option');
+                newAvatarImg.id = 'custom-avatar';
+                
+                const uploadBtn = document.querySelector('.avatar-upload-btn');
+                uploadBtn.parentElement.insertBefore(newAvatarImg, uploadBtn.nextSibling);
+
+                newAvatarImg.addEventListener('click', (e) => this.selectAvatar(e.target));
+                this.selectAvatar(newAvatarImg);
+                this.hideModal(this.domElements.modals.avatarEditor);
+            }
+
+            showScreen(screenName) {
+                if (document.activeElement) document.activeElement.blur();
+                Object.values(this.domElements.screens).forEach(screen => {
+                    screen.classList.remove('active');
+                    screen.setAttribute('aria-hidden', 'true');
+                });
+                const activeScreen = this.domElements.screens[screenName];
+                if (activeScreen) {
+                    activeScreen.classList.add('active');
+                    activeScreen.setAttribute('aria-hidden', 'false');
+                    const firstFocusable = activeScreen.querySelector('button, [href], input, select, textarea');
+                    if(firstFocusable) setTimeout(() => firstFocusable.focus(), 100);
+                }
+            }
+
+            hideLoader() { this.domElements.screens.loader.classList.remove('active'); }
+
+            setupInitialGameState() {
+                this.gameState = {
+                    ...this.gameState, 
+                    playerId: this.generatePlayerId(),
+                    deviceId: this.getOrSetDeviceId(),
+                    level: 0,
+                    question: 0,
+                    wrongAnswers: 0,
+                    correctAnswers: 0,
+                    skips: 0,
+                    startTime: new Date(),
+                    helpersUsed: { fiftyFifty: false, freezeTime: false },
+                    attemptNumber: 'N/A'
+                };
+            }
+            
+            startGameFlow(levelIndex = 0) {
+                this.gameState.level = levelIndex;
+                this.updateScore(this.STARTING_SCORE, true);
+                this.setupGameUI();
+                this.showScreen('game');
+                this.startLevel();
+            }
+
+            generatePlayerId() { return `PL${Math.random().toString(36).substr(2, 9).toUpperCase()}`; }
+            
+            getOrSetDeviceId() {
+                let deviceId = localStorage.getItem('quizGameDeviceId');
+                if (!deviceId) {
+                    deviceId = 'D' + Date.now().toString(36) + Math.random().toString(36).substr(2, 9).toUpperCase();
+                    localStorage.setItem('quizGameDeviceId', deviceId);
+                }
+                return deviceId;
+            }
+
+            startLevel() {
+                const currentLevel = this.LEVELS[this.gameState.level];
+                document.body.setAttribute('data-level', currentLevel.name);
+                document.getElementById('currentLevelBadge').textContent = currentLevel.label;
+                
+                const isImpossible = currentLevel.name === 'impossible';
+                
+                if(isImpossible && !this.isDeveloper()){
+                    document.querySelectorAll('.helper-btn').forEach(btn => { btn.disabled = true; });
+                    this.showToast("المساعدات معطلة في المستوى المستحيل!", "info");
+                }
+
+                let levelQuestions = [...this.QUESTIONS[currentLevel.name]];
+                if (this.config.randomize_questions && currentLevel.name !== 'impossible') {
+                    this.shuffleArray(levelQuestions);
+                }
+                this.gameState.shuffledQuestions = levelQuestions;
+
+                document.querySelectorAll('.level-indicator').forEach((indicator, index) => {
+                    indicator.classList.remove('active', 'completed');
+                    if (index < this.gameState.level) {
+                        indicator.classList.add('completed', 'active');
+                    } else if (index === this.gameState.level) {
+                        indicator.classList.add('active');
+                    }
+                });
+                
+                this.gameState.question = 0;
+                this.fetchQuestion();
+            }
+
+            fetchQuestion() {
+                const questions = this.gameState.shuffledQuestions;
+                if (!questions || this.gameState.question >= questions.length) {
+                    this.levelComplete();
+                    return; 
+                }
+                const questionData = questions[this.gameState.question];
+                this.displayQuestion(questionData);
+            }
+
+            displayQuestion(questionData) {
+                this.answerSubmitted = false;
+                
+                const correctAnswerText = questionData.options[questionData.correct];
+                let shuffledOptions = [...questionData.options];
+                if (this.config.randomize_answers) {
+                    this.shuffleArray(shuffledOptions);
+                }
+
+                const totalQuestionsInLevel = this.gameState.shuffledQuestions.length;
+                document.getElementById('questionCounter').textContent = `السؤال ${this.gameState.question + 1} من ${totalQuestionsInLevel}`;
+                
+                this.domElements.questionText.textContent = questionData.q;
+                this.domElements.optionsGrid.innerHTML = '';
+                const fragment = document.createDocumentFragment();
+
+                shuffledOptions.forEach(optionText => {
+                    const button = document.createElement('button');
+                    button.className = 'option-btn';
+                    button.textContent = optionText;
+                    if (optionText === correctAnswerText) { button.dataset.correct = 'true'; }
+                    button.addEventListener('click', () => this.checkAnswer(button.dataset.correct === 'true', button));
+                    fragment.appendChild(button);
+                });
+                this.domElements.optionsGrid.appendChild(fragment);
+
+                this.updateUI();
+                this.startTimer();
+            }
+
+            checkAnswer(isCorrect, selectedButton) {
+                if (this.answerSubmitted) return;
+                this.answerSubmitted = true;
+                clearInterval(this.timerInterval);
+                document.querySelectorAll('.option-btn').forEach(b => b.classList.add('disabled'));
+
+                if (isCorrect) {
+                    selectedButton.classList.add('correct');
+                    this.updateScore(this.currentScoreValue + 100);
+                    this.gameState.correctAnswers++;
+                    this.showToast("إجابة صحيحة! +100 نقطة", "success");
+                } else {
+                    selectedButton.classList.add('wrong');
                     const correctButton = this.domElements.optionsGrid.querySelector('[data-correct="true"]');
                     if (correctButton) correctButton.classList.add('correct');
-                    this.updateUI();
-                    setTimeout(() => {
-                        if (this.gameState.wrongAnswers >= this.MAX_WRONG_ANSWERS && !this.isDeveloper()) this.endGame(false);
-                        else { this.gameState.question++; this.fetchQuestion(); }
-                    }, 2000);
+                    this.gameState.wrongAnswers++;
+                    this.updateScore(this.currentScoreValue - 100);
+                    this.showToast("إجابة خاطئة! -100 نقطة", "error");
                 }
-            }, 1000);
-        }
-        
-        updateScore(newScore, isReset = false) {
-            this.currentScoreValue = (this.isDeveloper() && !isReset) ? this.currentScoreValue : newScore;
-            this.domElements.scoreDisplay.textContent = this.formatNumber(this.currentScoreValue);
-            this.updateUI();
-        }
 
-        updateUI() {
-            if (!this.gameState.helpersUsed) return;
+                this.gameState.question++;
+                this.updateUI();
 
-            document.getElementById('wrongAnswersCount').textContent = `${this.gameState.wrongAnswers} / ${this.MAX_WRONG_ANSWERS}`;
-            document.getElementById('skipCount').textContent = this.gameState.skips;
-
-            const skipCostSpan = document.getElementById('skipCost');
-            if (skipCostSpan) {
-                const currentSkipCost = this.HELPER_COSTS.skipQuestion + (this.gameState.skips * 20);
-                skipCostSpan.textContent = `(${currentSkipCost})`;
+                const isGameOver = this.gameState.wrongAnswers >= this.MAX_WRONG_ANSWERS && !this.isDeveloper();
+                setTimeout(() => {
+                    if (isGameOver) this.endGame(false);
+                    else if (this.gameState.question >= this.gameState.shuffledQuestions.length) this.levelComplete();
+                    else this.fetchQuestion();
+                }, 2000);
             }
-
-            const isImpossible = this.gameState.level !== undefined && this.LEVELS[this.gameState.level].name === 'impossible';
-            document.querySelectorAll('.helper-btn').forEach(btn => {
-                const type = btn.dataset.type;
-                if (!this.isDeveloper()) {
-                     if (isImpossible) btn.disabled = true;
-                     else if (type !== 'skipQuestion') btn.disabled = this.gameState.helpersUsed[type];
-                } else {
-                    btn.disabled = false;
-                }
-            });
-        }
-
-        setupGameUI() {
-            document.getElementById('playerAvatar').src = this.gameState.avatar;
-            document.getElementById('playerName').textContent = this.gameState.name;
-            document.getElementById('playerId').textContent = this.gameState.playerId;
-        }
-        
-        isDeveloper() {
-            return this.isDevSession && !this.isDevTemporarilyDisabled;
-        }
-
-        checkDevPassword() {
-            const input = this.domElements.devPasswordInput.value;
-            if (input === this.config.developerPassword) {
-                this.activateDevSession();
-            } else {
-                this.domElements.devPasswordError.textContent = "كلمة المرور غير صحيحة.";
-                this.domElements.devPasswordError.classList.add('show');
-            }
-        }
-        
-        activateDevSession(fromModal = true) {
-            this.isDevSession = true;
-            if(fromModal) {
-              this.hideModal(this.domElements.modals.devPassword);
-            }
-            this.showToast("تم تفعيل وضع المطور", "success");
-            const fab = this.domElements.devFloatingBtn;
-            fab.style.display = 'flex';
-            fab.classList.add('active');
-            fab.classList.remove('inactive');
-            fab.querySelector('span').innerHTML = '⚡';
-        }
-
-        toggleDevView() {
-            if (!this.isDevSession) return;
             
-            this.isDevTemporarilyDisabled = !this.isDevTemporarilyDisabled;
-            const fab = this.domElements.devFloatingBtn;
-            if (this.isDevTemporarilyDisabled) {
-                this.showToast("تم تعطيل وضع المطور مؤقتًا", "info");
-                fab.classList.remove('active');
-                fab.classList.add('inactive');
-                fab.querySelector('span').innerHTML = '🛠️';
+            levelComplete() {
+                const isLastLevel = this.gameState.level >= this.LEVELS.length - 1;
+                if (isLastLevel) {
+                    this.endGame(true);
+                    return;
+                }
+                const currentLevel = this.LEVELS[this.gameState.level];
+                document.getElementById('levelCompleteTitle').textContent = `🎉 أكملت المستوى ${currentLevel.label}!`;
+                document.getElementById('levelScore').textContent = this.formatNumber(this.currentScoreValue);
+                document.getElementById('levelErrors').textContent = this.gameState.wrongAnswers;
+                document.getElementById('levelCorrect').textContent = this.gameState.correctAnswers;
+                this.showScreen('levelComplete');
+            }
+            
+            nextLevel() {
+                this.gameState.level++;
+                if (this.gameState.level >= this.LEVELS.length) this.endGame(true);
+                else this.startLevel();
+                this.showScreen('game');
+            }
 
-            } else {
+            async endGame(completedAllLevels = false) {
+                clearInterval(this.timerInterval);
+                this.hideModal(this.domElements.modals.confirmExit);
+
+                const exitBtn = this.domElements.confirmExitYesBtn;
+                this.setButtonLoading(exitBtn, true);
+                this.showScreen('end');
+                this.domElements.endScreenContent.style.display = 'none';
+                this.domElements.endScreenSpinner.style.display = 'block';
+
+                const totalTimeSeconds = (new Date() - this.gameState.startTime) / 1000;
+                const currentLevel = this.LEVELS[Math.min(this.gameState.level, this.LEVELS.length - 1)];
+                const totalAnswered = this.gameState.correctAnswers + this.gameState.wrongAnswers;
+                const accuracy = totalAnswered > 0 ? parseFloat(((this.gameState.correctAnswers / totalAnswered) * 100).toFixed(1)) : 0.0;
+                const avgTime = totalAnswered > 0 ? parseFloat((totalTimeSeconds / totalAnswered).toFixed(1)) : 0;
+                const performanceRating = this.calculatePerformanceRating();
+
+                let finalResults = {
+                    name: this.gameState.name,
+                    playerId: this.gameState.playerId,
+                    avatar: this.gameState.avatar,
+                    correctAnswers: this.gameState.correctAnswers,
+                    wrongAnswers: this.gameState.wrongAnswers,
+                    skips: this.gameState.skips,
+                    score: this.currentScoreValue,
+                    totalTime: totalTimeSeconds,
+                    level: currentLevel.label,
+                    accuracy: accuracy,
+                    avgTime: avgTime,
+                    performanceRating: performanceRating,
+                    completedAll: completedAllLevels,
+                    helpersUsed: this.gameState.helpersUsed,
+                    deviceId: this.gameState.deviceId,
+                    timestamp: Timestamp.fromDate(new Date()) // Use Firestore Timestamp
+                };
+
+                if (!this.isDevSession) {
+                    const attemptNumber = await this.saveResults(finalResults);
+                    finalResults.attemptNumber = attemptNumber;
+                } else {
+                     finalResults.attemptNumber = 'DEV';
+                }
+                
+                this.setButtonLoading(exitBtn, false);
+                this.domElements.endScreenSpinner.style.display = 'none';
+                this.domElements.endScreenContent.style.display = 'block';
+                this.displayFinalStats(finalResults);
+            }
+            
+            displayFinalStats(results) {
+                document.getElementById('finalName').textContent = results.name;
+                document.getElementById('finalId').textContent = results.playerId;
+                document.getElementById('finalAttemptNumber').textContent = results.attemptNumber;
+                document.getElementById('finalCorrect').textContent = results.correctAnswers;
+                document.getElementById('finalWrong').textContent = results.wrongAnswers;
+                document.getElementById('finalSkips').textContent = results.skips;
+                document.getElementById('finalScore').textContent = this.formatNumber(results.score);
+                document.getElementById('totalTime').textContent = this.formatTime(results.totalTime);
+                document.getElementById('finalLevel').textContent = results.level;
+                document.getElementById('finalAccuracy').textContent = `${results.accuracy}%`;
+                document.getElementById('finalAvgTime').textContent = `${this.formatTime(results.avgTime)} / سؤال`;
+                document.getElementById('performanceText').textContent = results.performanceRating;
+            }
+
+            async saveResults(resultsData) {
+                if (!this.db) {
+                    this.showToast("خطأ في الاتصال بقاعدة البيانات.", "error");
+                    return "N/A";
+                }
+                try {
+                    // 1. Calculate attempt number
+                    const logsRef = collection(this.db, 'logs');
+                    const q = query(logsRef, where('deviceId', '==', resultsData.deviceId));
+                    const querySnapshot = await getDocs(q);
+                    const attemptNumber = querySnapshot.size + 1;
+                    resultsData.attemptNumber = attemptNumber;
+
+                    // 2. Add the full result to the 'logs' collection
+                    await addDoc(logsRef, resultsData);
+
+                    // 3. Update the 'leaderboard' collection
+                    const leaderboardRef = doc(this.db, 'leaderboard', resultsData.deviceId);
+                    const docSnap = await getDoc(leaderboardRef);
+
+                    if (!docSnap.exists() || docSnap.data().score < resultsData.score) {
+                        const leaderboardEntry = {
+                            score: resultsData.score,
+                            name: resultsData.name,
+                            avatar: resultsData.avatar,
+                            playerId: resultsData.playerId,
+                            deviceId: resultsData.deviceId,
+                            level: resultsData.level,
+                            accuracy: resultsData.accuracy,
+                            totalTime: resultsData.totalTime,
+                            avgTime: resultsData.avgTime,
+                            correctAnswers: resultsData.correctAnswers,
+                            wrongAnswers: resultsData.wrongAnswers,
+                            skips: resultsData.skips,
+                            attemptNumber: resultsData.attemptNumber,
+                            performanceRating: resultsData.performanceRating,
+                            isImpossibleFinisher: docSnap.data()?.isImpossibleFinisher || (resultsData.level === 'مستحيل' && resultsData.completedAll), // Persist finisher status
+                            lastUpdated: Timestamp.fromDate(new Date())
+                        };
+                        await setDoc(leaderboardRef, leaderboardEntry, { merge: true });
+                    }
+
+                    this.showToast("تم حفظ نتيجتك بنجاح!", "success");
+                    return attemptNumber;
+
+                } catch (error) {
+                    console.error("Error saving results to Firebase:", error);
+                    this.showToast("حدث خطأ أثناء حفظ النتيجة.", "error");
+                    return "N/A";
+                }
+            }
+            
+            calculatePerformanceRating() {
+                const totalQuestions = this.gameState.correctAnswers + this.gameState.wrongAnswers;
+                if (totalQuestions === 0) return "لم يتم الإجابة على أي سؤال";
+                const accuracy = (this.gameState.correctAnswers / totalQuestions) * 100;
+                if (accuracy >= 90) return "ممتاز 🏆";
+                if (accuracy >= 75) return "جيد جدًا ⭐";
+                if (accuracy >= 60) return "جيد 👍";
+                if (accuracy >= 40) return "مقبول 👌";
+                return "يحتاج تحسين 📈";
+            }
+
+            useHelper(event) {
+                const btn = event.currentTarget;
+                const type = btn.dataset.type;
+                const isDev = this.isDeveloper();
+                
+                let cost = (type === 'skipQuestion')
+                    ? this.HELPER_COSTS.skipQuestion + (this.gameState.skips * 20)
+                    : this.HELPER_COSTS[type];
+
+                if (!isDev && this.currentScoreValue < cost) {
+                    this.showToast("نقاطك غير كافية!", "error");
+                    return;
+                }
+
+                if (!isDev) {
+                    this.updateScore(this.currentScoreValue - cost);
+                    this.showToast(`تم استخدام المساعدة! -${cost} نقطة`, "success");
+                } else {
+                    this.showToast(`مساعدة المطور (${type})`, "info");
+                }
+
+                if (type === 'skipQuestion') {
+                    clearInterval(this.timerInterval);
+                    this.gameState.skips++;
+                    this.gameState.question++;
+                    this.updateUI();
+                    if (this.gameState.question >= this.gameState.shuffledQuestions.length) {
+                        this.levelComplete();
+                    } else {
+                        this.fetchQuestion();
+                    }
+                } else {
+                    if (!isDev) this.gameState.helpersUsed[type] = true;
+                    this.updateUI();
+                    if (type === 'fiftyFifty') {
+                        const options = Array.from(this.domElements.optionsGrid.querySelectorAll('.option-btn'));
+                        let wrongOptions = options.filter(btn => btn.dataset.correct !== 'true');
+                        this.shuffleArray(wrongOptions);
+                        wrongOptions.slice(0, 2).forEach(btn => btn.classList.add('hidden'));
+                    } else if (type === 'freezeTime') {
+                        this.isTimeFrozen = true;
+                        document.querySelector('.timer-bar').classList.add('frozen');
+                        setTimeout(() => {
+                            this.isTimeFrozen = false;
+                            document.querySelector('.timer-bar').classList.remove('frozen');
+                        }, 10000);
+                    }
+                }
+            }
+
+            startTimer() {
+                clearInterval(this.timerInterval);
+                let timeLeft = this.QUESTION_TIME;
+                const timerBar = document.querySelector('.timer-bar');
+                const timerDisplay = document.querySelector('.timer-text');
+                timerDisplay.textContent = timeLeft;
+                timerBar.style.transition = 'width 1s linear';
+                timerBar.style.width = '100%';
+
+                this.timerInterval = setInterval(() => {
+                    if (this.isTimeFrozen) return;
+                    timeLeft--;
+                    timerDisplay.textContent = timeLeft;
+                    timerBar.style.width = `${(timeLeft / this.QUESTION_TIME) * 100}%`;
+
+                    if (timeLeft <= 0) {
+                        clearInterval(this.timerInterval);
+                        this.showToast("انتهى الوقت!", "error");
+                        this.gameState.wrongAnswers++;
+                        this.updateScore(this.currentScoreValue - 100);
+                        document.querySelectorAll('.option-btn').forEach(b => b.classList.add('disabled'));
+                        const correctButton = this.domElements.optionsGrid.querySelector('[data-correct="true"]');
+                        if (correctButton) correctButton.classList.add('correct');
+                        this.updateUI();
+                        setTimeout(() => {
+                            if (this.gameState.wrongAnswers >= this.MAX_WRONG_ANSWERS && !this.isDeveloper()) this.endGame(false);
+                            else { this.gameState.question++; this.fetchQuestion(); }
+                        }, 2000);
+                    }
+                }, 1000);
+            }
+            
+            updateScore(newScore, isReset = false) {
+                this.currentScoreValue = (this.isDeveloper() && !isReset) ? this.currentScoreValue : newScore;
+                this.domElements.scoreDisplay.textContent = this.formatNumber(this.currentScoreValue);
+                this.updateUI();
+            }
+
+            updateUI() {
+                if (!this.gameState.helpersUsed) return;
+
+                document.getElementById('wrongAnswersCount').textContent = `${this.gameState.wrongAnswers} / ${this.MAX_WRONG_ANSWERS}`;
+                document.getElementById('skipCount').textContent = this.gameState.skips;
+
+                const skipCostSpan = document.getElementById('skipCost');
+                if (skipCostSpan) {
+                    const currentSkipCost = this.HELPER_COSTS.skipQuestion + (this.gameState.skips * 20);
+                    skipCostSpan.textContent = `(${currentSkipCost})`;
+                }
+
+                const isImpossible = this.gameState.level !== undefined && this.LEVELS[this.gameState.level].name === 'impossible';
+                document.querySelectorAll('.helper-btn').forEach(btn => {
+                    const type = btn.dataset.type;
+                    if (!this.isDeveloper()) {
+                         if (isImpossible) btn.disabled = true;
+                         else if (type !== 'skipQuestion') btn.disabled = this.gameState.helpersUsed[type];
+                    } else {
+                        btn.disabled = false;
+                    }
+                });
+            }
+
+            setupGameUI() {
+                document.getElementById('playerAvatar').src = this.gameState.avatar;
+                document.getElementById('playerName').textContent = this.gameState.name;
+                document.getElementById('playerId').textContent = this.gameState.playerId;
+            }
+            
+            isDeveloper() {
+                return this.isDevSession && !this.isDevTemporarilyDisabled;
+            }
+
+            checkDevPassword() {
+                const input = this.domElements.devPasswordInput.value;
+                if (input === this.config.developerPassword) {
+                    this.activateDevSession();
+                } else {
+                    this.domElements.devPasswordError.textContent = "كلمة المرور غير صحيحة.";
+                    this.domElements.devPasswordError.classList.add('show');
+                }
+            }
+            
+            activateDevSession(fromModal = true) {
+                this.isDevSession = true;
+                if(fromModal) {
+                    this.hideModal(this.domElements.modals.devPassword);
+                }
                 this.showToast("تم تفعيل وضع المطور", "success");
+                const fab = this.domElements.devFloatingBtn;
+                fab.style.display = 'flex';
                 fab.classList.add('active');
                 fab.classList.remove('inactive');
                 fab.querySelector('span').innerHTML = '⚡';
             }
-            this.updateUI(); 
-        }
 
-        showModal(modalElement, isCropper = false) {
-            modalElement.classList.add('active');
-            modalElement.setAttribute('aria-hidden', 'false');
-            const firstFocusable = modalElement.querySelector('button, [href], input, select, textarea');
-            if(firstFocusable) setTimeout(() => firstFocusable.focus(), 100);
-
-            if(isCropper){
-                setTimeout(() => {
-                    if (this.cropper) this.cropper.destroy();
-                    this.cropper = new Cropper(this.domElements.imageToCrop, {
-                        aspectRatio: 1, viewMode: 1, background: false, responsive: true,
-                        autoCropArea: 1, zoomable: true, movable: true,
-                    });
-                }, 300);
-            }
-        }
-
-        hideModal(modalElement) {
-            if (document.activeElement) document.activeElement.blur();
-            modalElement.classList.remove('active');
-            modalElement.setAttribute('aria-hidden', 'true');
-            if (modalElement === this.domElements.modals.advancedReport) {
-                this.domElements.reportProblemForm.reset();
-            }
-            if(modalElement === this.domElements.modals.avatarEditor && this.cropper){
-                this.cropper.destroy();
-                this.cropper = null;
-            }
-        }
-        
-        toggleTheme() {
-            const newTheme = document.body.dataset.theme === 'dark' ? 'light' : 'dark';
-            document.body.dataset.theme = newTheme;
-            localStorage.setItem('theme', newTheme);
-            this.domElements.themeToggleBtn.textContent = newTheme === 'dark' ? '☀️' : '🌙';
-        }
-
-        async handleReportSubmit(event) {
-            event.preventDefault();
-            if (!this.db) {
-                this.showToast("قاعدة البيانات غير متصلة.", "error");
-                return;
-            }
-
-            const form = event.target;
-            const submitBtn = form.querySelector('button[type="submit"]');
-            this.setButtonLoading(submitBtn, true);
-
-            this.showToast("جاري إرسال البلاغ...", "info");
-            
-            const reportData = {
-                type: form.problemType.value, 
-                description: form.problemDescription.value,
-                playerName: this.gameState.name || 'لم يبدأ اللعب',
-                playerId: this.gameState.playerId || 'N/A',
-                currentLevel: this.gameState.level !== undefined ? this.LEVELS[this.gameState.level].label : 'N/A',
-                currentQuestionText: this.domElements.questionText.textContent || 'لا يوجد',
-                timestamp: new Date()
-            };
-
-            try {
-                await this.db.collection('reports').add(reportData);
-                this.showToast("تم إرسال بلاغك بنجاح. شكراً لك!", "success");
-                this.hideModal(this.domElements.modals.advancedReport);
-            } catch (error) { 
-                console.error("Error submitting report:", error);
-                this.showToast("حدث خطأ أثناء إرسال البلاغ.", "error"); 
-            } finally {
-                this.setButtonLoading(submitBtn, false);
-            }
-        }
-        
-        showToast(message, type = 'info') {
-            const toastContainer = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            toast.className = `toast ${type}`;
-            toast.textContent = message;
-            toast.setAttribute('role', 'alert');
-            toastContainer.appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
-        }
-
-        async displayLeaderboard() {
-            if (!this.db) {
-                this.showToast("قاعدة البيانات غير متصلة.", "error");
-                return;
-            }
-            this.showScreen('leaderboard');
-            const contentDiv = document.getElementById('leaderboardContent');
-            contentDiv.innerHTML = '<div class="spinner"></div>';
-
-            try {
-                const leaderboardRef = this.db.collection('leaderboard');
-                const q = leaderboardRef.orderBy('score', 'desc').orderBy('accuracy', 'desc').orderBy('totalTime', 'asc').limit(100);
-                const querySnapshot = await q.get();
+            toggleDevView() {
+                if (!this.isDevSession) return;
                 
-                const players = [];
-                querySnapshot.forEach((doc) => {
-                    players.push(doc.data());
-                });
+                this.isDevTemporarilyDisabled = !this.isDevTemporarilyDisabled;
+                const fab = this.domElements.devFloatingBtn;
+                if (this.isDevTemporarilyDisabled) {
+                    this.showToast("تم تعطيل وضع المطور مؤقتًا", "info");
+                    fab.classList.remove('active');
+                    fab.classList.add('inactive');
+                    fab.querySelector('span').innerHTML = '🛠️';
 
-                if (players.length === 0) {
-                    contentDiv.innerHTML = '<p>لوحة الصدارة فارغة حاليًا!</p>';
+                } else {
+                    this.showToast("تم تفعيل وضع المطور", "success");
+                    fab.classList.add('active');
+                    fab.classList.remove('inactive');
+                    fab.querySelector('span').innerHTML = '⚡';
+                }
+                this.updateUI(); 
+            }
+
+            showModal(modalElement, isCropper = false) {
+                modalElement.classList.add('active');
+                modalElement.setAttribute('aria-hidden', 'false');
+                const firstFocusable = modalElement.querySelector('button, [href], input, select, textarea');
+                if(firstFocusable) setTimeout(() => firstFocusable.focus(), 100);
+
+                if(isCropper){
+                    setTimeout(() => {
+                        if (this.cropper) this.cropper.destroy();
+                        this.cropper = new Cropper(this.domElements.imageToCrop, {
+                            aspectRatio: 1, viewMode: 1, background: false, responsive: true,
+                            autoCropArea: 1, zoomable: true, movable: true,
+                        });
+                    }, 300);
+                }
+            }
+
+            hideModal(modalElement) {
+                if (document.activeElement) document.activeElement.blur();
+                modalElement.classList.remove('active');
+                modalElement.setAttribute('aria-hidden', 'true');
+                if (modalElement === this.domElements.modals.advancedReport) {
+                    this.domElements.reportProblemForm.reset();
+                }
+                if(modalElement === this.domElements.modals.avatarEditor && this.cropper){
+                    this.cropper.destroy();
+                    this.cropper = null;
+                }
+            }
+            
+            toggleTheme() {
+                const newTheme = document.body.dataset.theme === 'dark' ? 'light' : 'dark';
+                document.body.dataset.theme = newTheme;
+                localStorage.setItem('theme', newTheme);
+                this.domElements.themeToggleBtn.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+            }
+
+            async handleReportSubmit(event) {
+                event.preventDefault();
+                if (!this.db) {
+                    this.showToast("قاعدة البيانات غير متصلة.", "error");
                     return;
                 }
-                
-                const fragment = document.createDocumentFragment();
-                const listElement = document.createElement('ul');
-                listElement.className = 'leaderboard-list';
 
-                let rankCounter = 1;
-                const medals = ['🥇', '🥈', '🥉'];
-                
-                players.forEach((player) => {
-                    const item = document.createElement('li');
-                    item.className = 'leaderboard-item';
+                const form = event.target;
+                const submitBtn = form.querySelector('button[type="submit"]');
+                this.setButtonLoading(submitBtn, true);
 
-                    let rankDisplay;
-                    if (player.isImpossibleFinisher) {
-                        item.classList.add('impossible-finisher');
-                        rankDisplay = '🎖️';
-                    } else {
-                        if (rankCounter <= 3) {
-                            item.classList.add(`rank-${rankCounter}`);
-                            rankDisplay = medals[rankCounter - 1];
-                        } else {
-                            rankDisplay = rankCounter;
-                        }
-                        rankCounter++;
+                this.showToast("جاري إرسال البلاغ...", "info");
+                
+                const reportData = {
+                    type: form.problemType.value, 
+                    description: form.problemDescription.value,
+                    playerName: this.gameState.name || 'لم يبدأ اللعب',
+                    playerId: this.gameState.playerId || 'N/A',
+                    currentLevel: this.gameState.level !== undefined ? this.LEVELS[this.gameState.level].label : 'N/A',
+                    currentQuestionText: this.domElements.questionText.textContent || 'لا يوجد',
+                    timestamp: Timestamp.fromDate(new Date())
+                };
+
+                try {
+                    await addDoc(collection(this.db, 'reports'), reportData);
+                    this.showToast("تم إرسال بلاغك بنجاح. شكراً لك!", "success");
+                    this.hideModal(this.domElements.modals.advancedReport);
+                } catch (error) { 
+                    console.error("Error submitting report:", error);
+                    this.showToast("حدث خطأ أثناء إرسال البلاغ.", "error"); 
+                } finally {
+                    this.setButtonLoading(submitBtn, false);
+                }
+            }
+            
+            showToast(message, type = 'info') {
+                const toastContainer = document.getElementById('toast-container');
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                toast.textContent = message;
+                toast.setAttribute('role', 'alert');
+                toastContainer.appendChild(toast);
+                setTimeout(() => toast.remove(), 3000);
+            }
+
+            async displayLeaderboard() {
+                if (!this.db) {
+                    this.showToast("قاعدة البيانات غير متصلة.", "error");
+                    return;
+                }
+                this.showScreen('leaderboard');
+                const contentDiv = document.getElementById('leaderboardContent');
+                contentDiv.innerHTML = '<div class="spinner"></div>';
+
+                try {
+                    const leaderboardRef = collection(this.db, 'leaderboard');
+                    // This query requires a composite index in Firestore.
+                    const q = query(leaderboardRef, orderBy('score', 'desc'), orderBy('accuracy', 'desc'), orderBy('totalTime', 'asc'), limit(100));
+                    const querySnapshot = await getDocs(q);
+                    
+                    const players = [];
+                    querySnapshot.forEach((doc) => {
+                        players.push(doc.data());
+                    });
+
+                    if (players.length === 0) {
+                        contentDiv.innerHTML = '<p>لوحة الصدارة فارغة حاليًا!</p>';
+                        return;
                     }
                     
-                    const rankSpan = document.createElement('span');
-                    rankSpan.className = 'leaderboard-rank';
-                    rankSpan.textContent = rankDisplay;
+                    const fragment = document.createDocumentFragment();
+                    const listElement = document.createElement('ul');
+                    listElement.className = 'leaderboard-list';
 
-                    const avatarImg = document.createElement('img');
-                    avatarImg.src = player.avatar || '';
-                    avatarImg.alt = `صورة ${player.name}`;
-                    avatarImg.className = 'leaderboard-avatar';
-                    avatarImg.style.visibility = player.avatar ? 'visible' : 'hidden';
-                    avatarImg.onerror = () => { avatarImg.style.visibility = 'hidden'; };
-
-                    const detailsDiv = document.createElement('div');
-                    detailsDiv.className = 'leaderboard-details';
-
-                    const nameSpan = document.createElement('span');
-                    nameSpan.className = 'leaderboard-name';
-                    nameSpan.textContent = player.name || 'غير معروف';
-
-                    const scoreSpan = document.createElement('span');
-                    scoreSpan.className = 'leaderboard-score';
-                    scoreSpan.textContent = this.formatNumber(player.score);
-
-                    detailsDiv.append(nameSpan, scoreSpan);
-                    item.append(rankSpan, avatarImg, detailsDiv);
+                    let rankCounter = 1;
+                    const medals = ['🥇', '🥈', '🥉'];
                     
-                    item.addEventListener('click', () => this.showPlayerDetails(player));
-                    listElement.appendChild(item);
-                });
-                
-                fragment.appendChild(listElement);
-                contentDiv.innerHTML = ''; // Clear spinner
-                contentDiv.appendChild(fragment);
+                    players.forEach((player) => {
+                        const item = document.createElement('li');
+                        item.className = 'leaderboard-item';
 
-            } catch (error) {
-                console.error("Error loading leaderboard:", error);
-                contentDiv.innerHTML = '<p>حدث خطأ في تحميل لوحة الصدارة.</p>';
-                this.showToast("خطأ في تحميل لوحة الصدارة", "error");
+                        let rankDisplay;
+                        if (player.isImpossibleFinisher) {
+                            item.classList.add('impossible-finisher');
+                            rankDisplay = '🎖️';
+                        } else {
+                            if (rankCounter <= 3) {
+                                item.classList.add(`rank-${rankCounter}`);
+                                rankDisplay = medals[rankCounter - 1];
+                            } else {
+                                rankDisplay = rankCounter;
+                            }
+                            rankCounter++;
+                        }
+                        
+                        const rankSpan = document.createElement('span');
+                        rankSpan.className = 'leaderboard-rank';
+                        rankSpan.textContent = rankDisplay;
+
+                        const avatarImg = document.createElement('img');
+                        avatarImg.src = player.avatar || '';
+                        avatarImg.alt = `صورة ${player.name}`;
+                        avatarImg.className = 'leaderboard-avatar';
+                        avatarImg.style.visibility = player.avatar ? 'visible' : 'hidden';
+                        avatarImg.onerror = () => { avatarImg.style.visibility = 'hidden'; };
+
+                        const detailsDiv = document.createElement('div');
+                        detailsDiv.className = 'leaderboard-details';
+
+                        const nameSpan = document.createElement('span');
+                        nameSpan.className = 'leaderboard-name';
+                        nameSpan.textContent = player.name || 'غير معروف';
+
+                        const scoreSpan = document.createElement('span');
+                        scoreSpan.className = 'leaderboard-score';
+                        scoreSpan.textContent = this.formatNumber(player.score);
+
+                        detailsDiv.append(nameSpan, scoreSpan);
+                        item.append(rankSpan, avatarImg, detailsDiv);
+                        
+                        item.addEventListener('click', () => this.showPlayerDetails(player));
+                        listElement.appendChild(item);
+                    });
+                    
+                    fragment.appendChild(listElement);
+                    contentDiv.innerHTML = ''; // Clear spinner
+                    contentDiv.appendChild(fragment);
+
+                } catch (error) {
+                    console.error("Error loading leaderboard:", error);
+                    contentDiv.innerHTML = '<p>حدث خطأ في تحميل لوحة الصدارة. قد يتطلب الأمر إنشاء فهرس في قاعدة البيانات.</p>';
+                    this.showToast("خطأ في تحميل لوحة الصدارة", "error");
+                }
+            }
+            
+            showPlayerDetails(player) {
+                document.getElementById('detailsName').textContent = player.name || 'غير معروف';
+                document.getElementById('detailsPlayerId').textContent = player.playerId || 'N/A';
+                const detailsAvatar = document.getElementById('detailsAvatar');
+                detailsAvatar.src = player.avatar || '';
+                detailsAvatar.style.visibility = player.avatar ? 'visible' : 'hidden';
+                detailsAvatar.onerror = () => { detailsAvatar.style.visibility = 'hidden'; };
+
+
+                const contentBody = document.getElementById('playerDetailsContent');
+                contentBody.innerHTML = `
+                    <div class="detail-item">
+                        <span class="label">⭐ النقاط النهائية</span>
+                        <span class="value score">${this.formatNumber(player.score || 0)}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="label">👑 المستوى</span>
+                        <span class="value">${player.level || 'N/A'}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="label">✅ الصحيحة</span>
+                        <span class="value">${this.formatNumber(player.correctAnswers || 0)}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="label">❌ الخاطئة</span>
+                        <span class="value">${this.formatNumber(player.wrongAnswers || 0)}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="label">⏱️ الوقت</span>
+                        <span class="value">${this.formatTime(player.totalTime || 0)}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="label">⏳ المتوسط</span>
+                        <span class="value">${this.formatTime(player.avgTime || 0)}/س</span>
+                    </div>
+                    <div class="detail-item full-width">
+                         <span class="label">🎯 نسبة الدقة</span>
+                         <span class="value">${player.accuracy || 0}%</span>
+                         <div class="progress-bar-container">
+                             <div class="progress-bar" style="width: ${player.accuracy || 0}%;"></div>
+                         </div>
+                    </div>
+                    <div class="detail-item">
+                        <span class="label">⏭️ التخطي</span>
+                        <span class="value">${this.formatNumber(player.skips || 0)}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="label">🔢 المحاولة</span>
+                        <span class="value">${this.formatNumber(player.attemptNumber || 0)}</span>
+                    </div>
+                    <div class="detail-item full-width">
+                        <span class="label">📊 الأداء</span>
+                        <span class="value">${player.performanceRating || 'جيد'}</span>
+                    </div>
+                `;
+
+                this.showModal(this.domElements.modals.playerDetails);
+            }
+
+            getShareText() {
+                const performanceRating = this.calculatePerformanceRating();
+                return `🏆 حققت نتيجة رائعة في مسابقة المعلومات!\n\n` + 
+                       `⭐ النقاط: ${this.formatNumber(this.currentScoreValue)}\n` +
+                       `📈 الأداء: ${performanceRating}\n` +
+                       `🎯 الدقة: ${this.getFinalAccuracy()}%\n\n` +
+                       `هل يمكنك التفوق علي؟ 🤔`;
+            }
+            
+            getFinalAccuracy() {
+                const totalAnswered = this.gameState.correctAnswers + this.gameState.wrongAnswers;
+                return totalAnswered > 0 ? parseFloat(((this.gameState.correctAnswers / totalAnswered) * 100).toFixed(1)) : 0.0;
+            }
+
+            getFinalAvgTime() {
+                const totalAnswered = this.gameState.correctAnswers + this.gameState.wrongAnswers;
+                const totalTimeSeconds = (new Date() - this.gameState.startTime) / 1000;
+                const avgTime = totalAnswered > 0 ? parseFloat((totalTimeSeconds / totalAnswered).toFixed(1)) : 0;
+                return this.formatTime(avgTime);
+            }
+
+            shareOnX() {
+                const textToShare = this.getShareText() + `\n\n🔗 جرب اللعبة الآن!\n${window.location.href}`;
+                window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(textToShare)}`, '_blank');
+            }
+
+            shareOnInstagram() {
+                navigator.clipboard.writeText(this.getShareText())
+                    .then(() => this.showToast("تم نسخ النتيجة لمشاركتها في الستوري!", "success"))
+                    .catch(() => this.showToast("فشل نسخ النتيجة.", "error"));
+            }
+
+            resetGame() { window.location.reload(); }
+            
+            formatTime(totalSeconds) {
+                const total = Math.floor(totalSeconds);
+                const minutes = Math.floor(total / 60);
+                const seconds = total % 60;
+                return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            }
+
+            formatNumber(num) { return new Intl.NumberFormat('ar-EG').format(num); }
+
+            setButtonLoading(button, isLoading) {
+                if (isLoading) {
+                    button.classList.add('loading');
+                    button.disabled = true;
+                } else {
+                    button.classList.remove('loading');
+                    button.disabled = false;
+                }
             }
         }
-        
-        showPlayerDetails(player) {
-            document.getElementById('detailsName').textContent = player.name || 'غير معروف';
-            document.getElementById('detailsPlayerId').textContent = player.playerId || 'N/A';
-            const detailsAvatar = document.getElementById('detailsAvatar');
-            detailsAvatar.src = player.avatar || '';
-            detailsAvatar.style.visibility = player.avatar ? 'visible' : 'hidden';
-            detailsAvatar.onerror = () => { detailsAvatar.style.visibility = 'hidden'; };
 
-
-            const contentBody = document.getElementById('playerDetailsContent');
-            contentBody.innerHTML = `
-                <div class="detail-item">
-                    <span class="label">⭐ النقاط النهائية</span>
-                    <span class="value score">${this.formatNumber(player.score || 0)}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="label">👑 المستوى</span>
-                    <span class="value">${player.level || 'N/A'}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="label">✅ الصحيحة</span>
-                    <span class="value">${this.formatNumber(player.correctAnswers || 0)}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="label">❌ الخاطئة</span>
-                    <span class="value">${this.formatNumber(player.wrongAnswers || 0)}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="label">⏱️ الوقت</span>
-                    <span class="value">${this.formatTime(player.totalTime || 0)}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="label">⏳ المتوسط</span>
-                    <span class="value">${this.formatTime(player.avgTime || 0)}/س</span>
-                </div>
-                <div class="detail-item full-width">
-                     <span class="label">🎯 نسبة الدقة</span>
-                     <span class="value">${player.accuracy || 0}%</span>
-                     <div class="progress-bar-container">
-                         <div class="progress-bar" style="width: ${player.accuracy || 0}%;"></div>
-                     </div>
-                </div>
-                <div class="detail-item">
-                    <span class="label">⏭️ التخطي</span>
-                    <span class="value">${this.formatNumber(player.skips || 0)}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="label">🔢 المحاولة</span>
-                    <span class="value">${this.formatNumber(player.attemptNumber || 0)}</span>
-                </div>
-                <div class="detail-item full-width">
-                    <span class="label">📊 الأداء</span>
-                    <span class="value">${player.performanceRating || 'جيد'}</span>
-                </div>
-            `;
-
-            this.showModal(this.domElements.modals.playerDetails);
-        }
-
-        getShareText() {
-            const performanceRating = this.calculatePerformanceRating();
-            return `🏆 حققت نتيجة رائعة في مسابقة المعلومات!\n\n` + 
-                   `⭐ النقاط: ${this.formatNumber(this.currentScoreValue)}\n` +
-                   `📈 الأداء: ${performanceRating}\n` +
-                   `🎯 الدقة: ${this.getFinalAccuracy()}%\n\n` +
-                   `هل يمكنك التفوق علي؟ 🤔`;
-        }
-        
-        getFinalAccuracy() {
-            const totalAnswered = this.gameState.correctAnswers + this.gameState.wrongAnswers;
-            return totalAnswered > 0 ? parseFloat(((this.gameState.correctAnswers / totalAnswered) * 100).toFixed(1)) : 0.0;
-        }
-
-        getFinalAvgTime() {
-            const totalAnswered = this.gameState.correctAnswers + this.gameState.wrongAnswers;
-            const totalTimeSeconds = (new Date() - this.gameState.startTime) / 1000;
-            const avgTime = totalAnswered > 0 ? parseFloat((totalTimeSeconds / totalAnswered).toFixed(1)) : 0;
-            return this.formatTime(avgTime);
-        }
-
-        shareOnX() {
-            const textToShare = this.getShareText() + `\n\n🔗 جرب اللعبة الآن!\n${window.location.href}`;
-            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(textToShare)}`, '_blank');
-        }
-
-        shareOnInstagram() {
-            navigator.clipboard.writeText(this.getShareText())
-                .then(() => this.showToast("تم نسخ النتيجة لمشاركتها في الستوري!", "success"))
-                .catch(() => this.showToast("فشل نسخ النتيجة.", "error"));
-        }
-
-        resetGame() { window.location.reload(); }
-        
-        formatTime(totalSeconds) {
-            const total = Math.floor(totalSeconds);
-            const minutes = Math.floor(total / 60);
-            const seconds = total % 60;
-            return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-        }
-
-        formatNumber(num) { return new Intl.NumberFormat('ar-EG').format(num); }
-
-        setButtonLoading(button, isLoading) {
-            if (isLoading) {
-                button.classList.add('loading');
-                button.disabled = true;
-            } else {
-                button.classList.remove('loading');
-                button.disabled = false;
-            }
-        }
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-        const savedTheme = localStorage.getItem('theme') || 'dark';
-        document.body.dataset.theme = savedTheme;
-        document.querySelector('.theme-toggle-btn').textContent = savedTheme === 'dark' ? '☀️' : '🌙';
-        new QuizGame();
-    });
-</script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            document.body.dataset.theme = savedTheme;
+            document.querySelector('.theme-toggle-btn').textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+            new QuizGame();
+        });
+    </script>
     
     <div class="sr-only" aria-live="polite" id="liveAnnouncements"></div>
 </body>
