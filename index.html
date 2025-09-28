@@ -1526,7 +1526,9 @@
                 randomize_questions: true,
                 randomize_answers: true, 
             };
-            this.API_URL = "https://script.google.com/macros/s/AKfycby_QpB5-eX_x_f3zB5j_yJ8-sP2zW2a9i8K5dG6bB-lX_g4nK3qZ1j/exec"; // Replace with your deployment ID
+            // !!! تنبيه هام جداً !!!
+            // !!! يجب عليك استبدال الرابط التالي بالرابط الجديد الذي ستحصل عليه بعد عملية النشر (Deploy) !!!
+            this.API_URL = "https://script.google.com/macros/s/AKfycbyR_6BGrZCb2-5D0Kw2uy78Hx-ZY24kflfSTiGamzXJuhdYXHfFUr7-uTp3GCs3rIym/exec"; 
             this.API_KEY = "AbuQusay2025_SecretKey";
             // =================================================================
 
@@ -1593,6 +1595,11 @@
             this.populateAvatarGrid();
 
             const questionsLoaded = await this.loadQuestions();
+            
+            if(this.API_URL.includes("!!!")){
+                this.showToast("خطأ: الرجاء تحديث رابط API_URL في ملف index.html", "error");
+                console.error("Please update the API_URL in your index.html file with your new Google Apps Script deployment URL.");
+            }
             
             if (questionsLoaded) {
                 this.showScreen('start');
