@@ -109,9 +109,9 @@
       --accent-color: var(--color-light-accent);
       --text-color: var(--color-light-text);
       --border-color: var(--color-light-border);
-      --gold-color: var(--color-light-gold);
-      --silver-color: var(--color-light-silver);
-      --bronze-color: var(--color-light-bronze);
+      --color-light-gold: #ca8a04;
+      --color-light-silver: #a1a1aa;
+      --color-light-bronze: #a16207;
       --success-color: var(--color-light-success);
       --error-color: var(--color-light-error);
     }
@@ -878,7 +878,7 @@
         margin-top: var(--space-4);
     }
 
-    /* --- NEW LEADERBOARD STYLES --- */
+    /* --- LEADERBOARD STYLES --- */
     #leaderboardContent {
         max-height: 60vh;
         overflow-y: auto;
@@ -915,7 +915,7 @@
     .leaderboard-item.rank-2 { border-color: var(--silver-color); box-shadow: 0 0 8px var(--silver-color); }
     .leaderboard-item.rank-3 { border-color: var(--bronze-color); box-shadow: 0 0 6px var(--bronze-color); }
     .leaderboard-item.impossible-finisher {
-        order: -1; /* Always on top */
+        order: -1; 
         border-color: var(--level-impossible);
         background: var(--level-bg);
     }
@@ -960,7 +960,7 @@
         flex-shrink: 0;
     }
 
-    /* --- NEW PLAYER DETAILS MODAL STYLES --- */
+    /* --- PLAYER DETAILS MODAL STYLES --- */
     .player-details-header {
         margin-bottom: var(--space-4);
         display: flex;
@@ -1029,7 +1029,6 @@
         border-radius: var(--radius-full);
         transition: width var(--transition-normal);
     }
-    /* --- END OF NEW STYLES --- */
 
 
     @media (min-width: 768px) {
@@ -1527,7 +1526,7 @@
                 randomize_questions: true,
                 randomize_answers: true, 
             };
-            this.API_URL = "https://script.google.com/macros/s/AKfycbwSieydP8pgaTKpqzlDBYDEjeuMSYu85eVLwUlMepwkbGOi4toI5-Lc-lpeK8T6rRdg/exec";
+            this.API_URL = "https://script.google.com/macros/s/AKfycby_QpB5-eX_x_f3zB5j_yJ8-sP2zW2a9i8K5dG6bB-lX_g4nK3qZ1j/exec"; // Replace with your deployment ID
             this.API_KEY = "AbuQusay2025_SecretKey";
             // =================================================================
 
@@ -1569,7 +1568,7 @@
 
         async loadQuestions() {
            try {
-                const response = await fetch(`questions.json?v=${new Date().getTime()}`); // Cache busting
+                const response = await fetch(`https://abuqusayms.github.io/Shadow-Game/questions.json?v=${new Date().getTime()}`); // Cache busting
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
@@ -1622,7 +1621,7 @@
                     advancedReport: document.getElementById('advancedReportModal'),
                     avatarEditor: document.getElementById('avatarEditorModal'),
                     devPassword: document.getElementById('devPasswordModal'),
-                    playerDetails: document.getElementById('playerDetailsModal'), // New
+                    playerDetails: document.getElementById('playerDetailsModal'),
                 },
                 questionText: document.getElementById('questionText'),
                 optionsGrid: document.querySelector('.options-grid'),
@@ -1993,6 +1992,7 @@
             let finalResults = {
                 name: this.gameState.name,
                 playerId: this.gameState.playerId,
+                avatar: this.gameState.avatar,
                 correctAnswers: this.gameState.correctAnswers,
                 wrongAnswers: this.gameState.wrongAnswers,
                 skips: this.gameState.skips,
@@ -2333,8 +2333,6 @@
             contentDiv.innerHTML = '<div class="spinner"></div>';
 
             try {
-                // ملاحظة: نفترض أن `getLeaderboard` ستعيد كل البيانات المطلوبة لكل لاعب
-                // (score, accuracy, totalTime, isImpossibleFinisher, etc.)
                 const response = await this.apiCall({ action: 'getLeaderboard' });
 
                 if (!response || !response.success || !Array.isArray(response.leaderboard)) {
@@ -2390,11 +2388,11 @@
                         rankCounter++;
                     }
                     
-                    const avatarUrl = player.avatar || 'https://em-content.zobj.net/thumbs/120/apple/354/brain_1f9e0.png';
+                    const avatarUrl = player.avatar || '';
 
                     item.innerHTML = `
                         <span class="leaderboard-rank">${rankDisplay}</span>
-                        <img src="${avatarUrl}" alt="صورة ${player.name}" class="leaderboard-avatar" onerror="this.onerror=null;this.src='https://em-content.zobj.net/thumbs/120/apple/354/brain_1f9e0.png';">
+                        <img src="${avatarUrl}" alt="صورة ${player.name}" class="leaderboard-avatar" style="visibility: ${avatarUrl ? 'visible' : 'hidden'}" onerror="this.style.visibility='hidden';">
                         <div class="leaderboard-details">
                             <span class="leaderboard-name">${player.name || 'غير معروف'}</span>
                             <span class="leaderboard-score">${this.formatNumber(player.score)}</span>
@@ -2418,8 +2416,9 @@
             document.getElementById('detailsName').textContent = player.name || 'غير معروف';
             document.getElementById('detailsPlayerId').textContent = player.playerId || 'N/A';
             const detailsAvatar = document.getElementById('detailsAvatar');
-            detailsAvatar.src = player.avatar || 'https://em-content.zobj.net/thumbs/120/apple/354/brain_1f9e0.png';
-            detailsAvatar.onerror = () => { detailsAvatar.src = 'https://em-content.zobj.net/thumbs/120/apple/354/brain_1f9e0.png'; };
+            detailsAvatar.src = player.avatar || '';
+            detailsAvatar.style.visibility = player.avatar ? 'visible' : 'hidden';
+            detailsAvatar.onerror = () => { detailsAvatar.style.visibility = 'hidden'; };
 
 
             const contentBody = document.getElementById('playerDetailsContent');
@@ -2535,3 +2534,4 @@
     <div class="sr-only" aria-live="polite" id="liveAnnouncements"></div>
 </body>
 </html>
+
