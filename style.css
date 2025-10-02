@@ -362,6 +362,10 @@ textarea { resize: vertical; min-height: 100px; }
 }
 .modal-buttons { display: flex; gap: var(--space-4); justify-content: center; margin-top: var(--space-6); }
 
+#reportImagePreview img { display:block; max-height: 240px; object-fit: contain; }
+.modal { cursor: default; }
+.modal .modal-content { cursor: auto; } /* علشان نقدر نغلق بالنقر خارج المحتوى */
+
 /* =========================
    🔔 Toasts
    ========================= */
