@@ -37,7 +37,7 @@
   <div id="toast-container" class="toast-container" aria-live="assertive"></div>
 
   <!-- ✅ إصلاح العنصر المكسور -->
-  <div id="reportErrorFab" class="report-fab" role="button" aria-label="الإبلاغ عن مشكلة" title="الإبلاغ عن مشكلة">⚠️</div>
+  <div id="reportErrorFab" class="report-fab" role="button" aria-label="الإبلاغ عن مشكلة">⚠️</div>
 
   <div id="devFloatingBtn" class="dev-fab" role="button" title="تبديل وضع المطور" style="display: none;"><span>⚡</span></div>
 
@@ -250,14 +250,43 @@
             <option value="technical">مشكلة تقنية (تجمد، بطء)</option>
             <option value="question_error">خطأ في السؤال أو الإجابة</option>
             <option value="account_issue">مشكلة في الحساب أو النقاط</option>
+            <option value="ui_ux">واجهة/تجربة المستخدم</option>
+            <option value="performance">الأداء/السرعة</option>
             <option value="suggestion">اقتراح لتحسين اللعبة</option>
             <option value="other">أخرى</option>
           </select>
         </div>
+
+        <div class="form-group">
+          <label>أين ظهرت المشكلة؟ (اختياري)</label>
+          <div class="detail-item" style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;">
+            <label><input type="checkbox" name="where[]" value="start"> شاشة البداية</label>
+            <label><input type="checkbox" name="where[]" value="avatar"> اختيار الصورة الرمزية</label>
+            <label><input type="checkbox" name="where[]" value="name"> إدخال الاسم</label>
+            <label><input type="checkbox" name="where[]" value="instructions"> التعليمات</label>
+            <label><input type="checkbox" name="where[]" value="game"> أثناء الأسئلة</label>
+            <label><input type="checkbox" name="where[]" value="leaderboard"> لوحة الصدارة</label>
+            <label><input type="checkbox" name="where[]" value="end"> شاشة النتيجة</label>
+          </div>
+        </div>
+
         <div class="form-group">
           <label for="problemDescription">وصف المشكلة:</label>
           <textarea id="problemDescription" name="problemDescription" placeholder="يرجى تقديم تفاصيل دقيقة..." required></textarea>
         </div>
+
+        <div class="form-group">
+          <label for="problemScreenshot">إرفاق صورة/لقطة شاشة (اختياري):</label>
+          <input type="file" id="problemScreenshot" accept="image/*">
+          <div id="reportImagePreview" style="margin-top:.5rem;display:none;">
+            <img alt="معاينة الصورة" style="max-width:100%;border-radius:.5rem;border:1px solid var(--border-color)"/>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label><input type="checkbox" id="includeAutoDiagnostics" checked> إرفاق معلومات التشخيص التلقائي</label>
+        </div>
+
         <div class="modal-buttons">
           <button type="submit" class="btn-main">إرسال البلاغ</button>
           <button type="button" class="btn-secondary" data-action="closeModal" data-modal-id="advancedReportModal">إلغاء</button>
