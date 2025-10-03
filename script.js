@@ -160,7 +160,7 @@ class QuizGame {
         toggleTheme: () => this.toggleTheme(),
         showConfirmExitModal: () => this.showModal('confirmExit'),
         showDevPasswordModal: () => this.showModal('devPassword'),
-        closeModal: () => this.hideModal(target.dataset.modalId),
+        closeModal: () => this.hideModal(target.dataset.modalId || target.dataset.modalKey),
         endGame: () => this.endGame(),
         nextLevel: () => this.nextLevel(),
         playAgain: () => window.location.reload(),
@@ -217,6 +217,14 @@ class QuizGame {
       const url = URL.createObjectURL(file);
       prev.style.display = 'block';
       prev.querySelector('img').src = url;
+    });
+    
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        // أغلق أول مودال مفتوح
+        const open = document.querySelector('.modal.active');
+        if (open) open.classList.remove('active');
+       }
     });
   }
 
@@ -783,8 +791,15 @@ class QuizGame {
     Object.values(this.dom.screens).forEach(screen => screen.classList.remove('active'));
     if (this.dom.screens[screenName]) this.dom.screens[screenName].classList.add('active');
   }
-  showModal(modalName) { this.dom.modals[modalName]?.classList.add('active'); }
-  hideModal(modalName) { this.dom.modals[modalName]?.classList.remove('active'); }
+  showModal(nameOrId) {
+    const el = this.dom.modals[nameOrId] || document.getElementById(nameOrId);
+    if (el) el.classList.add('active');
+  }
+
+  hideModal(nameOrId) {
+    const el = this.dom.modals[nameOrId] || document.getElementById(nameOrId);
+    if (el) el.classList.remove('active');
+  }
 
   showToast(message, type = 'info') {
     const toastContainer = this.getEl('#toast-container');
