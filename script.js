@@ -49,6 +49,26 @@ class QuizGame {
     this.leaderboardSubscription = null;
     this.isDevSession = false;
     this.isDevTemporarilyDisabled = false;
+    this.recentErrors = [];
+    window.addEventListener('error', (ev) => {
+      this.recentErrors.push({
+        type: 'error',
+        message: String(ev.message || ''),
+        source: ev.filename || '',
+        line: ev.lineno || 0,
+        col: ev.colno || 0,
+        time: new Date().toISOString()
+      });
+      this.recentErrors = this.recentErrors.slice(-10); // آخر 10 فقط
+    });
+    window.addEventListener('unhandledrejection', (ev) => {
+      this.recentErrors.push({
+        type: 'unhandledrejection',
+        reason: String(ev.reason || ''),
+        time: new Date().toISOString()
+      });
+      this.recentErrors = this.recentErrors.slice(-10);
+    });
 
     this.init();
   }
@@ -110,7 +130,11 @@ class QuizGame {
       leaderboardContent: byId('leaderboardContent'),
       questionText: byId('questionText'),
       optionsGrid: this.getEl('.options-grid'),
-      scoreDisplay: byId('currentScore')
+      scoreDisplay: byId('currentScore'),
+      reportFab: byId('reportErrorFab'),
+      problemScreenshot: byId('problemScreenshot'),
+      reportImagePreview: byId('reportImagePreview'),
+      includeAutoDiagnostics: byId('includeAutoDiagnostics')
     };
   }
   getEl(selector, parent = document) { return parent.querySelector(selector); }
@@ -171,6 +195,28 @@ class QuizGame {
     // Avatars (grid موجود في DOM)
     this.getEl('.avatar-grid').addEventListener('click', (e) => {
       if (e.target.matches('.avatar-option')) this.selectAvatar(e.target);
+    });
+
+    // فتح نافذة البلاغ عند الضغط على الأيقونة
+    this.dom.reportFab.addEventListener('click', () => this.showModal('advancedReport'));
+
+    // إغلاق المودال بالنقر خارج صندوق المحتوى
+    document.querySelectorAll('.modal').forEach(modal => {
+      modal.addEventListener('click', (e) => {
+        if (e.target.classList.contains('modal')) {
+          modal.classList.remove('active');
+        }
+      });
+    });
+
+    // معاينة صورة البلاغ
+    this.dom.problemScreenshot.addEventListener('change', (e) => {
+      const file = e.target.files?.[0];
+      const prev = this.dom.reportImagePreview;
+      if (!file) { prev.style.display='none'; prev.querySelector('img').src=''; return; }
+      const url = URL.createObjectURL(file);
+      prev.style.display = 'block';
+      prev.querySelector('img').src = url;
     });
   }
 
@@ -633,6 +679,43 @@ class QuizGame {
   }
 
   formatNumber(num) { return new Intl.NumberFormat('ar-EG').format(Number(num) || 0); }
+
+  getAutoDiagnostics() {
+    try {
+      const nav = navigator || {};
+      const conn = nav.connection || {};
+      const perf = performance || {};
+      const mem = perf.memory || {};
+
+      const activeScreen = Object.entries(this.dom.screens).find(([,el]) => el.classList.contains('active'))?.[0] || 'unknown';
+
+       return {
+         url: location.href,
+         userAgent: nav.userAgent || '',
+         platform: nav.platform || '',
+         language: nav.language || '',
+         viewport: { w: window.innerWidth, h: window.innerHeight, dpr: window.devicePixelRatio || 1 },
+         connection: {
+           type: conn.effectiveType || '',
+           downlink: conn.downlink || '',
+           rtt: conn.rtt || ''
+         },
+         performance: {
+           memory: { jsHeapSizeLimit: mem.jsHeapSizeLimit || null, totalJSHeapSize: mem.totalJSHeapSize || null, usedJSHeapSize: mem.usedJSHeapSize || null },
+          timingNow: perf.now ? Math.round(perf.now()) : null
+        },
+        appState: {
+          screen: activeScreen,
+          level: this.config.LEVELS[this.gameState?.level || 0]?.name || null,
+          questionIndex: this.gameState?.questionIndex ?? null,
+          score: this.gameState?.currentScore ?? null
+        },
+        recentErrors: this.recentErrors || []
+      };
+    } catch (e) {
+      return { error: String(e) };
+    }
+  }
 
   // ===================================================
   // Dev Mode
