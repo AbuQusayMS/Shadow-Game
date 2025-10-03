@@ -160,6 +160,7 @@ class QuizGame {
         toggleTheme: () => this.toggleTheme(),
         showConfirmExitModal: () => this.showModal('confirmExit'),
         showDevPasswordModal: () => this.showModal('devPassword'),
+        openReport: () => this.showModal('advancedReport'),
         closeModal: () => this.hideModal(target.dataset.modalId || target.dataset.modalKey),
         endGame: () => this.endGame(),
         nextLevel: () => this.nextLevel(),
