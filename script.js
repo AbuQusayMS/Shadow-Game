@@ -453,98 +453,133 @@ class QuizGame {
   }
 
   // ===================================================
-  // Data & API
-  // ===================================================
-  async loadQuestions() {
-    try {
-      const response = await fetch(this.config.QUESTIONS_URL, { cache: 'no-cache' });
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      this.questions = await response.json();
-      return true;
-    } catch (error) {
-      console.error("Failed to load questions file:", error);
-      return false;
-    }
-  }
+  // Data & API
+  // ===================================================
+  async loadQuestions() {
+    try {
+      const response = await fetch(this.config.QUESTIONS_URL, { cache: 'no-cache' });
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      this.questions = await response.json();
+      return true;
+    } catch (error) {
+      console.error("Failed to load questions file:", error);
+      return false;
+    }
+  }
 
-  async saveResultsToSupabase(resultsData) {
-    try {
-      const { count, error: countError } = await this.supabase
-        .from('log')
-        .select('id', { count: 'exact', head: true })
-        .eq('device_id', resultsData.device_id);
+  async saveResultsToSupabase(resultsData) {
+    try {
+      const { count, error: countError } = await this.supabase
+        .from('log')
+        .select('id', { count: 'exact', head: true })
+        .eq('device_id', resultsData.device_id);
 
-      if (countError) throw countError;
-      const attemptNumber = (count || 0) + 1;
+      if (countError) throw countError;
+      const attemptNumber = (count || 0) + 1;
 
-      const { error: logError } = await this.supabase
-        .from('log')
-        .insert({ ...resultsData, attempt_number: attemptNumber });
-      if (logError) throw logError;
+      const { error: logError } = await this.supabase
+        .from('log')
+        .insert({ ...resultsData, attempt_number: attemptNumber });
+      if (logError) throw logError;
 
-      const leaderboardData = {
-        device_id: resultsData.device_id,
-        player_id: resultsData.player_id,
-        name: resultsData.name, avatar: resultsData.avatar, score: resultsData.score,
-        level: resultsData.level, accuracy: resultsData.accuracy, total_time: resultsData.total_time,
-        avg_time: resultsData.avg_time, correct_answers: resultsData.correct_answers,
-        wrong_answers: resultsData.wrong_answers, skips: resultsData.skips,
-        attempt_number: attemptNumber, performance_rating: resultsData.performance_rating,
-        is_impossible_finisher: resultsData.completed_all && resultsData.level === 'مستحيل'
-      };
-      const { error: leaderboardError } = await this.supabase.from('leaderboard').upsert(leaderboardData);
-      if (leaderboardError) throw leaderboardError;
+      const leaderboardData = {
+        device_id: resultsData.device_id,
+        player_id: resultsData.player_id,
+        name: resultsData.name, avatar: resultsData.avatar, score: resultsData.score,
+        level: resultsData.level, accuracy: resultsData.accuracy, total_time: resultsData.total_time,
+        avg_time: resultsData.avg_time, correct_answers: resultsData.correct_answers,
+        wrong_answers: resultsData.wrong_answers, skips: resultsData.skips,
+        attempt_number: attemptNumber, performance_rating: resultsData.performance_rating,
+        is_impossible_finisher: resultsData.completed_all && resultsData.level === 'مستحيل'
+      };
+      const { error: leaderboardError } = await this.supabase.from('leaderboard').upsert(leaderboardData);
+      if (leaderboardError) throw leaderboardError;
 
-      this.showToast("تم حفظ نتيجتك بنجاح!", "success");
-      this.sendTelegramNotification('gameResult', { ...resultsData, attempt_number: attemptNumber });
-      return { attemptNumber, error: null };
+      this.showToast("تم حفظ نتيجتك بنجاح!", "success");
+      this.sendTelegramNotification('gameResult', { ...resultsData, attempt_number: attemptNumber });
+      return { attemptNumber, error: null };
 
-    } catch (error) {
-      console.error("Failed to send results to Supabase:", error);
-      return { attemptNumber: null, error: error.message };
-    }
-  }
+    } catch (error) {
+      console.error("Failed to send results to Supabase:", error);
+      return { attemptNumber: null, error: error.message };
+    }
+  } 
 
   async handleReportSubmit(event) {
-    event.preventDefault();
-    const formData = new FormData(event.target);
-    const reportData = {
-      type: formData.get('problemType'),
-      description: formData.get('problemDescription'),
-      name: this.gameState.name || 'لم يبدأ اللعب',
-      player_id: this.gameState.playerId || 'N/A',
-      question_text: this.dom.questionText.textContent || 'لا يوجد'
-    };
+     event.preventDefault();
 
-    this.showToast("جاري إرسال البلاغ...", "info");
-    this.hideModal('advancedReport');
+     const formData = new FormData(event.target);
+     const whereList = formData.getAll('where[]'); // مصفوفة أماكن ظهور المشكلة
 
-    try {
-      const { error } = await this.supabase.from('reports').insert(reportData);
-      if (error) throw error;
-      this.showToast("تم إرسال بلاغك بنجاح. شكراً لك!", "success");
-      this.sendTelegramNotification('report', reportData);
-    } catch (error) {
-      console.error("Supabase report error:", error);
-      this.showToast("حدث خطأ أثناء إرسال البلاغ.", "error");
-    }
-  }
+     // نبني الكائن الأساسي
+     const reportData = {
+       type: formData.get('problemType'),
+       description: formData.get('problemDescription'),
+       name: this.gameState.name || 'لم يبدأ اللعب',
+       player_id: this.gameState.playerId || 'N/A',
+       question_text: this.dom.questionText.textContent || 'لا يوجد'
+     };
 
-  async sendTelegramNotification(type, data) {
-    if (!this.config.APPS_SCRIPT_URL) {
-      console.warn("Apps Script URL is not configured. Skipping notification.");
-      return;
-    }
-    try {
-      await fetch(this.config.APPS_SCRIPT_URL, {
-        method: 'POST', mode: 'no-cors', cache: 'no-cache',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({ type, data })
-      });
-    } catch (error) {
-      console.error('Error sending notification request to Apps Script:', error.message);
-    }
-  }
+     // تشخيص تلقائي (اختياري)
+     let meta = null;
+     if (this.dom.includeAutoDiagnostics?.checked) {
+       meta = this.getAutoDiagnostics();
+       meta.locationHints = whereList;
+     }
+
+     this.showToast("جاري إرسال البلاغ...", "info");
+     this.hideModal('advancedReport');
+
+     try {
+       // 1) رفع الصورة إن وُجدت
+       let image_url = null;
+       const file = this.dom.problemScreenshot.files?.[0];
+       if (file) {
+         const fileName = `report_${Date.now()}_${Math.random().toString(36).slice(2)}.${(file.type.split('/')[1] || 'png').replace(/[^a-z0-9]/gi,'')}`;
+         const { data: up, error: upErr } = await this.supabase.storage
+           .from('reports')                    // تأكد من وجود هذا البكِت
+           .upload(fileName, file, { contentType: file.type, upsert: true });
+         if (upErr) throw upErr;
+
+         const { data: pub } = this.supabase.storage.from('reports').getPublicUrl(up.path);
+         image_url = pub?.publicUrl || null;
+       }
+
+       // 2) إدراج البلاغ في الجدول مع الصورة والمعلومات
+       const payload = { ...reportData, image_url, meta };
+       const { error } = await this.supabase.from('reports').insert(payload);
+       if (error) throw error;
+
+       this.showToast("تم إرسال بلاغك بنجاح. شكراً لك!", "success");
+
+       // 3) إرسال إخطار تيليجرام (كما لديك)
+       this.sendTelegramNotification('report', payload);
+
+     } catch (error) {
+       console.error("Supabase report error:", error);
+       this.showToast("حدث خطأ أثناء إرسال البلاغ.", "error");
+     } finally {
+       // تنظيف الحقول
+       if (this.dom.problemScreenshot) this.dom.problemScreenshot.value = '';
+       if (this.dom.reportImagePreview) { this.dom.reportImagePreview.style.display='none'; this.dom.reportImagePreview.querySelector('img').src=''; }
+     }
+   }
+ 
+  async sendTelegramNotification(type, data) {
+    if (!this.config.APPS_SCRIPT_URL) {
+      console.warn("Apps Script URL is not configured. Skipping notification.");
+      return;
+    }
+    try {
+      await fetch(this.config.APPS_SCRIPT_URL, {
+        method: 'POST', mode: 'no-cors', cache: 'no-cache',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ type, data })
+      });
+    } catch (error) {
+      console.error('Error sending notification request to Apps Script:', error.message);
+    }
+  }
 
   // ===================================================
   // Helpers Use
