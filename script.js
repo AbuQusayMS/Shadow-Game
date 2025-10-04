@@ -848,7 +848,7 @@ class QuizGame {
     const newTheme = document.body.dataset.theme === 'dark' ? 'light' : 'dark';
     document.body.dataset.theme = newTheme;
     localStorage.setItem('theme', newTheme);
-    this.getEl('.theme-toggle-btn').textContent = (newTheme === 'dark') ? '☀️' : '🌙';
+    this.getEl('.theme-toggle-btn').textContent = (newTheme === 'dark') ? '☀️' : '🌙'; // ✅ إصلاح الاقتباس
   }
 
   updateLevelProgressUI() {
