@@ -1,6 +1,6 @@
-// =======================================================
-// 🎮 Quiz Game - Fixed & Hardened by ChatGPT (AbuQusay)
-// =======================================================
+const ICON_SUN  = '\u2600\uFE0F';  // ☀️
+const ICON_MOON = '\uD83C\uDF19';  // 🌙
+
 class QuizGame {
   constructor() {
     // =================================================================
@@ -845,10 +845,10 @@ class QuizGame {
   }
 
   toggleTheme() {
-    const newTheme = document.body.dataset.theme === 'dark' ? 'light' : 'dark';
-    document.body.dataset.theme = newTheme;
-    localStorage.setItem('theme', newTheme);
-    this.getEl('.theme-toggle-btn').textContent = (newTheme === 'dark') ? '☀️' : '🌙'; // ✅ إصلاح الاقتباس
+      const newTheme = document.body.dataset.theme === 'dark' ? 'light' : 'dark';
+      document.body.dataset.theme = newTheme;
+      localStorage.setItem('theme', newTheme);
+      this.getEl('.theme-toggle-btn').textContent = (newTheme === 'dark') ? ICON_SUN : ICON_MOON;
   }
 
   updateLevelProgressUI() {
@@ -1157,10 +1157,12 @@ class QuizGame {
 // Boot
 // =======================================================
 document.addEventListener('DOMContentLoaded', () => {
-  const savedTheme = localStorage.getItem('theme') || 'dark';
-  document.body.dataset.theme = savedTheme;
-  const toggleBtn = document.querySelector('.theme-toggle-btn');
-  if (toggleBtn) toggleBtn.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    document.body.dataset.theme = savedTheme;
+    const toggleBtn = document.querySelector('.theme-toggle-btn');
+    if (toggleBtn) {
+        toggleBtn.textContent = (savedTheme === 'dark') ? ICON_SUN : ICON_MOON;
+    }
 
-  new QuizGame();
+    new QuizGame();
 });
