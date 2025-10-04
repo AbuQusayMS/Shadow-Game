@@ -220,8 +220,12 @@ textarea { resize: vertical; min-height: 100px; }
 .avatar-option:hover, .avatar-upload-btn:hover { transform: scale(1.05); }
 .avatar-option.selected, .avatar-upload-btn.selected { border-color: var(--gold-color); transform: scale(1.1); }
 
-/* 📋 Instructions */
+/* =========================
+   📋 Instructions
+   ========================= */
 #instructionsScreen .content-box { text-align: initial; }
+
+#instructionsScreen .screen-header { text-align: center; }
 
 #instructionsScreen .instructions-content {
   direction: rtl;
@@ -231,6 +235,7 @@ textarea { resize: vertical; min-height: 100px; }
   margin: var(--space-6) 0;
 }
 
+/* عنصر تعليمات (أيقونة + محتوى) */
 #instructionsScreen .instruction-item {
   display: grid;
   grid-template-columns: auto 1fr; /* أيقونة + محتوى */
@@ -251,6 +256,7 @@ textarea { resize: vertical; min-height: 100px; }
   margin-bottom: var(--space-1);
 }
 
+/* قوائم نقطية لبقية الأقسام */
 #instructionsScreen .instruction-item ul {
   list-style: disc;
   margin: var(--space-2) 0 0 0;
@@ -258,10 +264,19 @@ textarea { resize: vertical; min-height: 100px; }
 }
 
 #instructionsScreen .instruction-item li {
-  margin: .25rem 0;
-  line-height: 1.8;
+  margin: .2rem 0;
+  line-height: 1.7;
   font-size: 0.98rem;
 }
+
+/* ——— نمط مختصر لسطر واحد (مثل المستويات) ——— */
+#instructionsScreen .inline-list {
+  font-size: 0.9rem;   /* تصغير بسيط */
+  opacity: 0.9;
+  line-height: 1.8;
+}
+/* إن رغبت بإلغاء المسافة تحت العنوان في هذا السطر */
+#instructionsScreen .inline-list strong { margin-bottom: 0; }
 
 /* روابط الدعم داخل القوائم */
 #instructionsScreen .instruction-item a {
