@@ -443,24 +443,38 @@ class QuizGame {
   }
 
   updateGameStatsUI() {
-    this.getEl('#wrongAnswersCount').textContent = `${this.gameState.wrongAnswers} / ${this.config.MAX_WRONG_ANSWERS}`;
+    this.getEl('#wrongAnswersCount').textContent =
+      `${this.gameState.wrongAnswers} / ${this.config.MAX_WRONG_ANSWERS}`;
     this.getEl('#skipCount').textContent = this.gameState.skips;
+
+    // التخطي مجاني دائمًا (العرض فقط)
     this.getEl('#skipCost').textContent = '(مجانية)';
 
-    const skipCost = this.config.HELPER_COSTS.skipQuestionBase + (this.gameState.skips * this.config.HELPER_COSTS.skipQuestionIncrement);
-    this.getEl('#skipCost').textContent = `(${skipCost})`;
-
     const isImpossible = this.config.LEVELS[this.gameState.level]?.name === 'impossible';
-     this.getAllEl('.helper-btn').forEach(btn => {
-         const type = btn.dataset.type;
-         if (this.isDeveloper()) { btn.disabled = false; return; }
-        
-         if (type === 'skipQuestion') return;
 
-         btn.disabled = isImpossible || this.gameState.helpersUsed[type];
-     });
+    this.getAllEl('.helper-btn').forEach(btn => {
+      const type = btn.dataset.type;
+
+      if (this.isDeveloper()) {            // المطوّر: دائمًا مفعّل
+        btn.disabled = false;
+        return;
+      }
+
+      // في "مستحيل" تُمنع كل المساعدات بما فيها التخطي
+      if (isImpossible) {
+        btn.disabled = true;
+        return;
+      }
+
+      // خارج "مستحيل": يمكن استخدام 50/50 و التجميد مرة واحدة لكل مستوى
+      if (type === 'skipQuestion') {
+        btn.disabled = false; // التخطي مسموح خارج "مستحيل"
+      } else {
+        btn.disabled = this.gameState.helpersUsed[type] === true;
+      }
+    });
   }
- 
+
   _displayFinalStats(stats) {
     this.getEl('#finalName').textContent = stats.name;
     this.getEl('#finalId').textContent = stats.player_id;
@@ -612,18 +626,24 @@ class QuizGame {
     const type = btn.dataset.type;
     const isDev = this.isDeveloper();
     const isSkip = type === 'skipQuestion';
-
-    // التخطي مجاني دائمًا
-    const cost = isSkip ? 0 : this.config.HELPER_COSTS[type];
-
-    // لا تستخدم المساعدات (غير التخطي) في المستوى المستحيل أو إذا استخدمت من قبل
     const isImpossible = this.config.LEVELS[this.gameState.level]?.name === 'impossible';
-    if (!isSkip && !isDev && (isImpossible || this.gameState.helpersUsed[type])) {
-      this.showToast("هذه المساعدة غير متاحة الآن.", "error");
+
+    // في مستوى "مستحيل": لا مساعدات إطلاقًا
+    if (!isDev && isImpossible) {
+      this.showToast("المساعدات غير متاحة في المستوى المستحيل.", "error");
       return;
     }
 
-    // منطق الخصم والرسائل
+    // التخطي مجاني دائمًا (خارج مستحيل)
+    const cost = isSkip ? 0 : this.config.HELPER_COSTS[type];
+
+     // 50/50 و التجميد مرة واحدة فقط لكل مستوى
+    if (!isSkip && !isDev && this.gameState.helpersUsed[type]) {
+      this.showToast("هذه المساعدة استُخدمت بالفعل في هذا المستوى.", "error");
+      return;
+    }
+
+    // خصم النقاط للمساعدات المدفوعة (لو فيه تكلفة)
     if (!isDev && cost > 0) {
       if (this.gameState.currentScore < cost) {
         this.showToast("نقاطك غير كافية!", "error");
@@ -637,17 +657,16 @@ class QuizGame {
       this.showToast(`مساعدة المطور (${type})`, "info");
     }
 
-    // تنفيذ المساعدة
     if (isSkip) {
       clearInterval(this.timer.interval);
       this.gameState.skips++;
       this.gameState.questionIndex++;
       this.updateGameStatsUI();
       this.fetchQuestion();
-      return; // الخروج المبكر بعد التخطي
+      return;
     }
 
-    // المساعدات الأخرى
+    // علِّم أنها استُخدمت (مرة واحدة لكل مستوى)
     if (!isDev) this.gameState.helpersUsed[type] = true;
     this.updateGameStatsUI();
 
@@ -1068,19 +1087,39 @@ class QuizGame {
   // ===================================================
   // Sharing
   // ===================================================
-  getShareText() {
-    const finalScore = this.getEl('#finalScore').textContent;
-    const finalLevel = this.getEl('#finalLevel').textContent;
-    const performance = this.getEl('#performanceText').textContent;
+  getShareTextForX() {
+    // نعتمد على القيم المعروضة في شاشة النهاية
+    const name   = this.getEl('#finalName').textContent || '';
+    const attempt = this.getEl('#finalAttemptNumber').textContent || '';
+    const correct = this.getEl('#finalCorrect').textContent || '0';
+    const skips   = this.getEl('#finalSkips').textContent || '0';
+    const level   = this.getEl('#finalLevel').textContent || '';
+    const acc     = this.getEl('#finalAccuracy').textContent || '0%';
+    const avg     = this.getEl('#finalAvgTime').textContent || '0:00 / سؤال';
+    const perf    = this.getEl('#performanceText').textContent || '';
 
-    return `🏆 لقد حصلت على ${finalScore} نقطة في مسابقة المعلومات!\n\n` +
-           `وصلت إلى المستوى: ${finalLevel}\n` +
-           `تقييم الأداء: ${performance}\n\n`;
-  }
+    return [
+      '🏆 النتائج النهائية 🏆',
+      '',
+      `الاسم: ${name}`,
+      `رقم المحاولة: ${attempt}`,
+      `الإجابات الصحيحة: ${correct}`,
+      `مرات التخطي: ${skips}`,
+      `المستوى الذي وصلت إليه: ${level}`,
+      `نسبة الدقة: ${acc}`,
+      `متوسط وقت الإجابة: ${avg}`,
+      `أداؤك: ${perf}`,
+      '🎉 تهانينا! لقد أكملت المسابقة بنجاح! 🎉',
+      '',
+      '🔗 جرب تحديك أنت أيضًا!',
+      window.location.href
+    ].join('\n');
+  },
 
   shareOnX() {
-    const text = this.getShareText() + `🔗 تحداني الآن!\n${window.location.href}`;
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
+    const text = this.getShareTextForX();
+    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
   }
 
   shareOnInstagram() {
