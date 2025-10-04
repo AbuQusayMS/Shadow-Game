@@ -1114,7 +1114,7 @@ class QuizGame {
       '🔗 جرب تحديك أنت أيضًا!',
       window.location.href
     ].join('\n');
-  },
+  }
 
   shareOnX() {
     const text = this.getShareTextForX();
@@ -1123,7 +1123,7 @@ class QuizGame {
   }
 
   shareOnInstagram() {
-    const textToCopy = this.getShareText();
+    const textToCopy = this.getShareTextForX();
     navigator.clipboard.writeText(textToCopy)
       .then(() => this.showToast("تم نسخ النتيجة لمشاركتها!", "success"))
       .catch(() => this.showToast("فشل نسخ النتيجة.", "error"));
