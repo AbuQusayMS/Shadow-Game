@@ -161,9 +161,9 @@ class QuizGame {
         showConfirmExitModal: () => this.showModal('confirmExit'),
         showDevPasswordModal: () => this.showModal('devPassword'),
         closeModal: () => {
-            const id = target.dataset.modalId || target.dataset.modalKey;
-            if (id === 'avatarEditor' || id === 'avatarEditorModal') this.cleanupAvatarEditor();
-            this.hideModal(id);
+          const id = target.dataset.modalId || target.dataset.modalKey;
+          if (id === 'avatarEditor' || id === 'avatarEditorModal') this.cleanupAvatarEditor();
+          this.hideModal(id);
         },
         endGame: () => this.endGame(),
         nextLevel: () => this.nextLevel(),
@@ -172,9 +172,8 @@ class QuizGame {
         shareOnInstagram: () => this.shareOnInstagram(),
         saveCroppedAvatar: () => this.saveCroppedAvatar(),
         checkDevPassword: () => this.checkDevPassword(),
-        startDevLevel: () => this.startGameFlow(parseInt(target.dataset.levelIndex, 10))
+        startDevLevel: () => this.startGameFlow(parseInt(target.dataset.levelIndex, 10)),
       };
-
       if (actionHandlers[action]) actionHandlers[action]();
     });
 
@@ -184,27 +183,27 @@ class QuizGame {
     this.dom.devPasswordInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') this.checkDevPassword(); });
     this.dom.reportProblemForm.addEventListener('submit', (e) => this.handleReportSubmit(e));
 
-    // Options
+    // خيارات السؤال
     this.dom.optionsGrid.addEventListener('click', e => {
       const btn = e.target.closest('.option-btn');
       if (btn) this.checkAnswer(btn);
-    });
+     });
 
-    // Helpers
+    // أزرار المساعدات
     this.getEl('.helpers').addEventListener('click', e => {
       const btn = e.target.closest('.helper-btn');
       if (btn) this.useHelper(btn);
     });
 
-    // Avatars (grid موجود في DOM)
+    // اختيار الصورة الرمزية
     this.getEl('.avatar-grid').addEventListener('click', (e) => {
       if (e.target.matches('.avatar-option')) this.selectAvatar(e.target);
     });
 
-    // فتح نافذة البلاغ عند الضغط على الأيقونة
+    // فتح نافذة البلاغ من الأيقونة
     this.dom.reportFab.addEventListener('click', () => this.showModal('advancedReport'));
 
-    // إغلاق المودال بالنقر خارج صندوق المحتوى
+   // إغلاق المودال بالنقر خارج المحتوى
     document.querySelectorAll('.modal').forEach(modal => {
       modal.addEventListener('click', (e) => {
         if (e.target.classList.contains('modal')) {
@@ -217,25 +216,29 @@ class QuizGame {
     this.dom.problemScreenshot.addEventListener('change', (e) => {
       const file = e.target.files?.[0];
       const prev = this.dom.reportImagePreview;
-      if (!file) { prev.style.display='none'; prev.querySelector('img').src=''; return; }
+      if (!file) { prev.style.display = 'none'; prev.querySelector('img').src = ''; return; }
       const url = URL.createObjectURL(file);
       prev.style.display = 'block';
       prev.querySelector('img').src = url;
     });
-    
+
+    // إغلاق بأزرار Escape
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
-        // أغلق أول مودال مفتوح
         const open = document.querySelector('.modal.active');
         if (open) open.classList.remove('active');
-       }
+      }
+    }); // ←← كان هذا السطر مفقودًا
 
-    // زر عائم للمطور: تفعيل/تعطيل مؤقت
+    // زر المطوّر العائم (خارج keydown)
     this.dom.devFloatingBtn.addEventListener('click', () => {
       if (!this.isDevSession) { this.showModal('devPassword'); return; }
       this.isDevTemporarilyDisabled = !this.isDevTemporarilyDisabled;
       this.updateDevFab();
-      this.showToast(this.isDevTemporarilyDisabled ? "تم تعطيل صلاحيات المطور مؤقتًا" : "تم تفعيل صلاحيات المطور", "info"); 
+      this.showToast(
+        this.isDevTemporarilyDisabled ? "تم تعطيل صلاحيات المطور مؤقتًا" : "تم تفعيل صلاحيات المطور",
+        "info"
+      );
     });
   }
 
