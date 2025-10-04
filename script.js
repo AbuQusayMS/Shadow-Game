@@ -34,8 +34,8 @@ class QuizGame {
       HELPER_COSTS: {
         fiftyFifty: 100,
         freezeTime: 100,
-        skipQuestionBase: 20,
-        skipQuestionIncrement: 20
+        skipQuestionBase: 0,
+        skipQuestionIncrement: 0
       }
     };
 
@@ -160,7 +160,11 @@ class QuizGame {
         toggleTheme: () => this.toggleTheme(),
         showConfirmExitModal: () => this.showModal('confirmExit'),
         showDevPasswordModal: () => this.showModal('devPassword'),
-        closeModal: () => this.hideModal(target.dataset.modalId || target.dataset.modalKey),
+        closeModal: () => {
+            const id = target.dataset.modalId || target.dataset.modalKey;
+            if (id === 'avatarEditor' || id === 'avatarEditorModal') this.cleanupAvatarEditor();
+            this.hideModal(id);
+        },
         endGame: () => this.endGame(),
         nextLevel: () => this.nextLevel(),
         playAgain: () => window.location.reload(),
@@ -225,6 +229,13 @@ class QuizGame {
         const open = document.querySelector('.modal.active');
         if (open) open.classList.remove('active');
        }
+
+    // زر عائم للمطور: تفعيل/تعطيل مؤقت
+    this.dom.devFloatingBtn.addEventListener('click', () => {
+      if (!this.isDevSession) { this.showModal('devPassword'); return; }
+      this.isDevTemporarilyDisabled = !this.isDevTemporarilyDisabled;
+      this.updateDevFab();
+      this.showToast(this.isDevTemporarilyDisabled ? "تم تعطيل صلاحيات المطور مؤقتًا" : "تم تفعيل صلاحيات المطور", "info"); 
     });
   }
 
@@ -267,6 +278,7 @@ class QuizGame {
 
   startLevel() {
     const currentLevel = this.config.LEVELS[this.gameState.level];
+    this.gameState.helpersUsed = { fiftyFifty: false, freezeTime: false };
     document.body.dataset.level = currentLevel.name;
     this.getEl('#currentLevelBadge').textContent = currentLevel.label;
 
@@ -430,21 +442,22 @@ class QuizGame {
   updateGameStatsUI() {
     this.getEl('#wrongAnswersCount').textContent = `${this.gameState.wrongAnswers} / ${this.config.MAX_WRONG_ANSWERS}`;
     this.getEl('#skipCount').textContent = this.gameState.skips;
+    this.getEl('#skipCost').textContent = '(مجانية)';
 
     const skipCost = this.config.HELPER_COSTS.skipQuestionBase + (this.gameState.skips * this.config.HELPER_COSTS.skipQuestionIncrement);
     this.getEl('#skipCost').textContent = `(${skipCost})`;
 
     const isImpossible = this.config.LEVELS[this.gameState.level]?.name === 'impossible';
-    this.getAllEl('.helper-btn').forEach(btn => {
-      const type = btn.dataset.type;
-      if (this.isDeveloper()) {
-        btn.disabled = false;
-        return;
-      }
-      btn.disabled = isImpossible || (type !== 'skipQuestion' && this.gameState.helpersUsed[type]);
-    });
-  }
+     this.getAllEl('.helper-btn').forEach(btn => {
+         const type = btn.dataset.type;
+         if (this.isDeveloper()) { btn.disabled = false; return; }
+        
+         if (type === 'skipQuestion') return;
 
+         btn.disabled = isImpossible || this.gameState.helpersUsed[type];
+     });
+  }
+ 
   _displayFinalStats(stats) {
     this.getEl('#finalName').textContent = stats.name;
     this.getEl('#finalId').textContent = stats.player_id;
@@ -595,46 +608,59 @@ class QuizGame {
   useHelper(btn) {
     const type = btn.dataset.type;
     const isDev = this.isDeveloper();
-    const cost = type === 'skipQuestion'
-      ? this.config.HELPER_COSTS.skipQuestionBase + (this.gameState.skips * this.config.HELPER_COSTS.skipQuestionIncrement)
-      : this.config.HELPER_COSTS[type];
+    const isSkip = type === 'skipQuestion';
 
-    if (!isDev && this.gameState.currentScore < cost) {
-      this.showToast("نقاطك غير كافية!", "error");
+    // التخطي مجاني دائمًا
+    const cost = isSkip ? 0 : this.config.HELPER_COSTS[type];
+
+    // لا تستخدم المساعدات (غير التخطي) في المستوى المستحيل أو إذا استخدمت من قبل
+    const isImpossible = this.config.LEVELS[this.gameState.level]?.name === 'impossible';
+    if (!isSkip && !isDev && (isImpossible || this.gameState.helpersUsed[type])) {
+      this.showToast("هذه المساعدة غير متاحة الآن.", "error");
       return;
     }
 
-    if (!isDev) {
+    // منطق الخصم والرسائل
+    if (!isDev && cost > 0) {
+      if (this.gameState.currentScore < cost) {
+        this.showToast("نقاطك غير كافية!", "error");
+        return;
+      }
       this.updateScore(this.gameState.currentScore - cost);
       this.showToast(`تم استخدام المساعدة! -${cost} نقطة`, "info");
-    } else {
+    } else if (isSkip) {
+      this.showToast("تم تخطي السؤال.", "info");
+    } else if (isDev) {
       this.showToast(`مساعدة المطور (${type})`, "info");
     }
 
-    if (type === 'skipQuestion') {
+    // تنفيذ المساعدة
+    if (isSkip) {
       clearInterval(this.timer.interval);
       this.gameState.skips++;
       this.gameState.questionIndex++;
       this.updateGameStatsUI();
       this.fetchQuestion();
-    } else {
-      if (!isDev) this.gameState.helpersUsed[type] = true;
-      this.updateGameStatsUI();
+      return; // الخروج المبكر بعد التخطي
+    }
 
-      if (type === 'fiftyFifty') {
-        const wrongOptions = Array.from(this.getAllEl('.option-btn:not([data-correct="true"])'));
-        this.shuffleArray(wrongOptions).slice(0, 2).forEach(b => b.classList.add('hidden'));
-      } else if (type === 'freezeTime') {
-        this.timer.isFrozen = true;
-        this.getEl('.timer-bar').classList.add('frozen');
-        setTimeout(() => {
-          this.timer.isFrozen = false;
-          this.getEl('.timer-bar').classList.remove('frozen');
-        }, 10000);
-      }
+    // المساعدات الأخرى
+    if (!isDev) this.gameState.helpersUsed[type] = true;
+    this.updateGameStatsUI();
+
+    if (type === 'fiftyFifty') {
+      const wrongOptions = this.getAllEl('.option-btn:not([data-correct="true"])');
+      this.shuffleArray(Array.from(wrongOptions)).slice(0, 2).forEach(b => b.classList.add('hidden'));
+    } else if (type === 'freezeTime') {
+      this.timer.isFrozen = true;
+      this.getEl('.timer-bar').classList.add('frozen');
+      setTimeout(() => {
+        this.timer.isFrozen = false;
+        this.getEl('.timer-bar').classList.remove('frozen');
+      }, 10000);
     }
   }
-
+  
   // ===================================================
   // Timer (JS-driven so freeze works visually)
   // ===================================================
@@ -774,14 +800,21 @@ class QuizGame {
   }
 
   activateDevSession(fromModal = true) {
-    this.isDevSession = true;
-    if (fromModal) this.hideModal('devPassword');
-    this.showToast("تم تفعيل وضع المطور", "success");
+      this.isDevSession = true;
+      if (fromModal) this.hideModal('devPassword');
+      this.showToast("تم تفعيل وضع المطور", "success");
+    
+      this.isDevTemporarilyDisabled = false;
+      this.updateDevFab();
+  }
+
+  updateDevFab() {
     const fab = this.dom.devFloatingBtn;
+    if (!fab) return;
     fab.style.display = 'flex';
-    fab.classList.add('active');
-    fab.classList.remove('inactive');
-    fab.querySelector('span').innerHTML = '⚡';
+    fab.classList.toggle('active', !this.isDevTemporarilyDisabled);
+    fab.classList.toggle('inactive', this.isDevTemporarilyDisabled);
+    fab.title = this.isDevTemporarilyDisabled ? 'تشغيل صلاحيات المطور' : 'إيقاف صلاحيات المطور مؤقتًا';
   }
 
   // ===================================================
@@ -815,7 +848,7 @@ class QuizGame {
     const newTheme = document.body.dataset.theme === 'dark' ? 'light' : 'dark';
     document.body.dataset.theme = newTheme;
     localStorage.setItem('theme', newTheme);
-    this.getEl('.theme-toggle-btn').textContent = (newTheme === 'dark') ? '☀️' : '🌙'; // ✅ إصلاح الاقتباس
+    this.getEl('.theme-toggle-btn').textContent = (newTheme === 'dark') ? '☀️' : '🌙';
   }
 
   updateLevelProgressUI() {
@@ -1017,6 +1050,16 @@ class QuizGame {
     customAvatar.src = croppedUrl;
     this.selectAvatar(customAvatar);
     this.hideModal('avatarEditor');
+    this.cleanupAvatarEditor();
+  }
+
+  cleanupAvatarEditor() {
+    try {
+      if (this.cropper) { this.cropper.destroy(); this.cropper = null; }
+    } catch (e) {}
+    if (this.dom?.imageToCrop) this.dom.imageToCrop.src = '';
+    const input = this.getEl('#avatarUploadInput');
+    if (input) input.value = ''; // يسمح باختيار نفس الملف مرة أخرى
   }
 
   // ===================================================
