@@ -838,7 +838,7 @@ class QuizGame {
   validateNameInput() {
     const name = (this.dom.nameInput.value || '').trim();
     const isValid = name.length >= 3;
-    this.dom.nameError.textContent = isValid ? "" : "الاسم يجب أن يتكون من ٣ أحرف على الأقل.";
+    this.dom.nameError.textContent = isValid ? "" : "يجب أن يتراوح طول الاسم بين 3 و15 حرفًا";
     this.dom.nameError.classList.toggle('show', !isValid);
     this.dom.confirmNameBtn.disabled = !isValid;
   }
