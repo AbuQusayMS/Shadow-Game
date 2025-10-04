@@ -220,14 +220,64 @@ textarea { resize: vertical; min-height: 100px; }
 .avatar-option:hover, .avatar-upload-btn:hover { transform: scale(1.05); }
 .avatar-option.selected, .avatar-upload-btn.selected { border-color: var(--gold-color); transform: scale(1.1); }
 
-/* =========================
-   📋 Instructions
-   ========================= */
-.instructions-content { text-align: right; margin: var(--space-6) 0; }
-.instruction-item { display: flex; align-items: flex-start; margin-bottom: var(--space-4); gap: var(--space-3); }
-.instruction-icon { font-size: 1.5rem; flex-shrink: 0; }
-.instructions-content a { color: var(--accent-color); text-decoration: none; font-weight: 700; }
-.instructions-content a:hover { text-decoration: underline; }
+/* 📋 Instructions */
+#instructionsScreen .content-box { text-align: initial; }
+
+#instructionsScreen .instructions-content {
+  direction: rtl;
+  text-align: right;
+  display: grid;
+  gap: var(--space-4);
+  margin: var(--space-6) 0;
+}
+
+#instructionsScreen .instruction-item {
+  display: grid;
+  grid-template-columns: auto 1fr; /* أيقونة + محتوى */
+  align-items: start;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+#instructionsScreen .instruction-icon {
+  font-size: 1.4rem;
+  line-height: 1;
+  translate: 0 .2rem; /* مواءمة رأس السطر */
+  flex-shrink: 0;
+}
+
+#instructionsScreen .instruction-item strong {
+  display: inline-block;
+  margin-bottom: var(--space-1);
+}
+
+#instructionsScreen .instruction-item ul {
+  list-style: disc;
+  margin: var(--space-2) 0 0 0;
+  padding: 0 var(--space-4) 0 0; /* مسافة لنقطة القائمة في RTL */
+}
+
+#instructionsScreen .instruction-item li {
+  margin: .25rem 0;
+  line-height: 1.8;
+  font-size: 0.98rem;
+}
+
+/* روابط الدعم داخل القوائم */
+#instructionsScreen .instruction-item a {
+  text-decoration: none;
+  font-weight: 700;
+}
+#instructionsScreen .instruction-item a:hover { text-decoration: underline; }
+
+/* استجابة للجوال */
+@media (max-width: 420px) {
+  #instructionsScreen .instruction-item {
+    grid-template-columns: 1.25rem 1fr;
+    gap: var(--space-2);
+  }
+  #instructionsScreen .instruction-icon { font-size: 1.2rem; }
+}
 
 /* =========================
    🎮 Game Container
