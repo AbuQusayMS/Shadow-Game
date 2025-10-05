@@ -544,7 +544,7 @@ textarea { resize: vertical; min-height: 100px; }
    ========================= */
 #playerDetailsModal .modal-content {
   direction: rtl;
-  text-align: right;
+  text-align: center;
   max-width: 34rem;
 }
 .stats-grid {
@@ -601,4 +601,52 @@ textarea { resize: vertical; min-height: 100px; }
   .circle-progress {
     --size: 132px;
   }
+}
+
+/* 2) إضافة تنسيق الهيدر (الصورة + الاسم + ID) */
+#playerDetailsModal .player-details-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .45rem;
+  margin-bottom: .85rem;
+}
+
+#playerDetailsModal #detailsAvatar {
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--gold-color);
+  box-shadow: var(--shadow-md);
+}
+
+#playerDetailsModal #detailsName {
+  font-size: 1.25rem;
+  font-weight: 800;
+  line-height: 1.1;
+  overflow-wrap: anywhere;     /* للأسماء الطويلة */
+}
+
+#playerDetailsModal #detailsPlayerId {
+  font-size: .85rem;
+  opacity: .85;
+  letter-spacing: .5px;
+  direction: ltr;              /* لعرض الأرقام/الحروف بشكل صحيح */
+  unicode-bidi: plaintext;     /* يثبّت اتجاه الـID داخل RTL */
+}
+
+
+/* 3) جعل بطاقات الإحصاءات لليمين مع خط فاصل */
+#playerDetailsModal .stats-grid {
+  text-align: right;
+  border-top: 1px solid var(--border-color);
+  padding-top: .75rem;
+}
+
+/* بطاقة الدقة في مودال التفاصيل */
+#playerDetailsModal .stat-card.accuracy .circle-progress { --size: 136px; }
+
+@media (max-width: 420px){
+  #playerDetailsModal .stat-card.accuracy .circle-progress { --size: 128px; }
 }
