@@ -258,6 +258,23 @@
   <div id="leaderboardScreen" class="screen screen--align-top">
     <div class="content-box">
       <header class="screen-header"><h2>🏆 لوحة الصدارة 🏆</h2></header>
+      
+      <div class="lb-filters">
+        <select id="lbMode" aria-label="نمط ترتيب اللوحة">
+          <option value="best" selected>أفضل نتيجة (لكل جهاز)</option>
+          <option value="attempt">حسب رقم المحاولة…</option>
+          <option value="accuracy">أعلى دقة</option>
+          <option value="time">أقل وقت</option>
+        </select>
+        <select id="lbAttempt" disabled aria-label="اختر رقم المحاولة">
+          <option value="1">المحاولة 1</option>
+          <option value="2">المحاولة 2</option>
+          <option value="3">المحاولة 3</option>
+          <option value="4">المحاولة 4</option>
+          <option value="5">المحاولة 5</option>
+        </select>
+      </div>
+      
       <div id="leaderboardContent" aria-live="polite"></div>
       <div class="button-group">
         <button class="btn-secondary" data-action="showStartScreen">العودة</button>
@@ -384,6 +401,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" defer></script>
 
   <!-- App JS -->
-  <script src="script.js?v=8" defer></script>
+  <script src="script.js?v=9" defer></script>
 </body>
 </html>
