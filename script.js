@@ -819,6 +819,7 @@ class QuizGame {
     } catch (e) {
       return { error: String(e) };
     }
+ }
 
       // ==============================
   // Performance Rating (advanced)
