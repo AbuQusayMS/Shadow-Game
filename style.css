@@ -521,30 +521,6 @@ textarea { resize: vertical; min-height: 100px; }
 }
 
 /* =========================
-   👤 Player Details
-   ========================= */
-.player-details-header {
-  margin-bottom: var(--space-4); display: flex; flex-direction: column; align-items: center;
-  gap: var(--space-2); padding-bottom: var(--space-4); border-bottom: 1px solid var(--border-color);
-}
-.player-details-avatar { width: 5rem; height: 5rem; border-radius: 50%; border: 3px solid var(--gold-color); }
-.player-details-body { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); text-align: right; }
-.detail-item {
-  display: flex; flex-direction: column; background-color: var(--secondary-color);
-  padding: var(--space-3); border-radius: var(--radius-lg); border: 1px solid var(--border-color);
-}
-.detail-item.full-width { grid-column: 1 / -1; }
-.detail-item .label { font-size: .8rem; opacity: .8; margin-bottom: var(--space-1); }
-.detail-item .value { font-size: var(--font-size-lg); font-weight: 700; overflow-wrap: anywhere; }
-.detail-item .value.score { color: var(--gold-color); }
-
-.progress-bar-container {
-  width: 100%; height: 8px; background-color: var(--border-color);
-  border-radius: var(--radius-full); margin-top: var(--space-2); overflow: hidden;
-}
-.progress-bar { height: 100%; background-color: var(--success-color); border-radius: var(--radius-full); transition: width var(--transition-normal); }
-
-/* =========================
    📱 Responsive
    ========================= */
 @media (min-width: 768px) {
@@ -563,104 +539,66 @@ textarea { resize: vertical; min-height: 100px; }
   * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
 
-/* ===== Player Details • New Compact Layout ===== */
-#playerDetailsModal .modal-content{
+/* =========================
+   Player Details (Final Version)
+   ========================= */
+#playerDetailsModal .modal-content {
   direction: rtl;
   text-align: right;
-  max-width: 34rem;       /* مساحة كافية للحلقة الكبيرة */
+  max-width: 34rem;
 }
-
-/* اخفِ الهيدر القديم داخل المودال */
-#playerDetailsModal .player-details-header{ display:none; }
-
-/* رأس جديد: هوية + حلقة */
-.pd-header{
-  display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: center;
-  gap: .8rem;
-  padding-bottom: .5rem;
-  margin-bottom: .75rem;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.pd-identity{
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: .6rem;
-  align-items: center;
-  min-width: 0;
-}
-.pd-avatar{
-  width: 48px; height: 48px;
-  border-radius: var(--radius-full);
-  border: 3px solid var(--gold-color);
-  object-fit: cover;
-}
-.pd-name-id{
-  display: flex; gap: .5rem; align-items: baseline; flex-wrap: wrap;
-  min-width: 0;
-}
-.pd-name{ font-weight: 800; font-size: 1.05rem; }
-.pd-id{ opacity:.75; font-size:.84rem; overflow:hidden; text-overflow:ellipsis; }
-
-.pd-ring{
-  display: grid; gap: .35rem; justify-items: center;
-}
-.pd-ring .caption{ font-size:.8rem; opacity:.85; }
-
-/* الحلقة الكبيرة (نعتمد نفس circle-progress لديك) */
-.pd-ring .circle-progress{
-  --size: 150px;               /* 140–160px */
-  --track: var(--border-color);
-  /* --bar يُمرَّر inline من JS */
-}
-@media (max-width:420px){
-  .pd-ring .circle-progress{ --size: 132px; }
-}
-
-/* شبكة البطاقات السطرية */
-.pd-lines{
+.stats-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: .6rem;
+  gap: .75rem;
 }
-
-/* بطاقات سطرية قصيرة */
-.line-card, .pill-card{
+.stat-card {
   background: var(--secondary-color);
   border: 1px solid var(--border-color);
-  border-radius: .65rem;
+  border-radius: .75rem;
   box-shadow: var(--shadow-sm);
-  padding: .65rem .75rem;      /* 10–12px تقريبًا */
-  min-height: 56px;            /* ارتفاع صغير */
-  display: grid; gap: .25rem;
+  padding: .7rem .85rem;
+  min-height: 58px;
 }
-
-/* بطاقة بارزة للمستوى والنقاط */
-.pill-card .title{ font-size:.86rem; opacity:.85; line-height:1; }
-.pill-card .value{
-  font-size: 1.15rem; font-weight: 900; line-height:1.2;
+.stat-card .label {
+  font-size: .86rem;
+  opacity: .85;
+  line-height: 1;
 }
-.pill-card .value.score{ color: var(--gold-color); }
-
-/* صفّين داخل البطاقة المجمّعة */
-.line-row{
-  display:flex; align-items:center; justify-content:space-between;
-  gap:.5rem; line-height:1.2;
+.stat-card .value {
+  font-size: 1.18rem;
+  font-weight: 900;
+  line-height: 1.2;
 }
-.line-k{ font-size:.84rem; opacity:.85; white-space:nowrap; }
-.line-v{ font-size:1.05rem; font-weight:800; }
-.line-v.pos{ color: var(--success-color); }
-.line-v.neg{ color: var(--error-color); }
-
-/* اجعل النص صغيرًا جدًا عند الحاجة */
-@media (max-width:360px){
-  .line-k{ font-size:.8rem; }
-  .line-v{ font-size:1rem; }
+.stat-card .value.score {
+  color: var(--gold-color);
 }
-
-/* لو كانت الشاشة أضيق جدًّا، حوِّلها لعمود واحد */
-@media (max-width: 380px){
-  .pd-lines{ grid-template-columns: 1fr; }
+/* بطاقة الدقّة بعرض كامل */
+.stat-card.accuracy {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: .95rem .6rem 1.15rem;
+}
+/* حلقة الدقّة (progress ring) */
+.circle-progress {
+  --size: 120px;
+  --track: var(--border-color);
+  --bar: var(--success-color);
+  --val: 0;
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  margin-inline: auto;
+  background: radial-gradient( closest-side, var(--primary-color) calc(50% - 8px), transparent 0), conic-gradient(var(--bar) calc(var(--val) * 1%), var(--track) 0);
+}
+.circle-progress > span {
+  font-weight: 900;
+  font-size: 1.05rem;
+}
+@media (max-width: 420px) {
+  .circle-progress {
+    --size: 132px;
+  }
 }
