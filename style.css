@@ -599,6 +599,12 @@ textarea { resize: vertical; min-height: 100px; }
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+  .stat-card.ring {
+    grid-column: 1 / -1;
+  }
+  .circle-progress {
+    --size: 68px;
+  }
 }
 .stat-card {
   background-color: var(--secondary-color);
@@ -655,3 +661,14 @@ textarea { resize: vertical; min-height: 100px; }
 }
 
 @media (max-width:360px){ .circle-progress{ --size: 54px; } }
+
+/* اجعل بطاقة الحلقة في وسط الشبكة على الشاشات المعتدلة */
+@media (min-width: 421px) {
+  .stat-card.ring {
+    grid-column: 2;
+    grid-row: 2;
+  }
+  .circle-progress {
+    --size: 76px;
+  }
+}
