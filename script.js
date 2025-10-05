@@ -1204,71 +1204,72 @@ getAccuracyBarColor(pct) {
 }
 
 showPlayerDetails(player) {
-  // --- رأس المودال (يبقى كما هو: صورة + اسم + كود) ---
+  /* الهيدر القديم يبقى كما هو (صورة + اسم + كود) */
   this.getEl('#detailsName').textContent = player.name || 'غير معروف';
   this.getEl('#detailsPlayerId').textContent = player.player_id || 'N/A';
   const avatarEl = this.getEl('#detailsAvatar');
   avatarEl.src = player.avatar || '';
   avatarEl.style.visibility = player.avatar ? 'visible' : 'hidden';
 
-  // --- القيم ---
+  /* القيم */
   const score   = Number(player.score || 0);
   const level   = player.level || 'N/A';
   const correct = Number(player.correct_answers || 0);
   const wrong   = Number(player.wrong_answers || 0);
-  const timeAll = this.formatTime(player.total_time || 0);
-  const avg     = this.formatTime(player.avg_time || 0);
+  const timeAll = this.formatTime(player.total_time || 0);   // نص "دقائق:ثواني"
+  const avg     = this.formatTime(player.avg_time || 0);     // نص "ثوانٍ/سؤال"
   const accNum  = Math.max(0, Math.min(100, Math.round(Number(player.accuracy || 0))));
   const skips   = Number(player.skips || 0);
   const att     = Number(player.attempt_number || 0);
   const perf    = player.performance_rating || 'جيد';
 
-  // --- HTML الشبكة 2×N + بطاقة الدقّة أسفل ---
-  // ملاحظة: نعتمد أصنافك الحالية (stat-card / circle-progress)،
-  // ونستخدم قليلاً من الستايل inline لضبط الارتفاعات والفراغات بدون تعديل CSS.
-  const gcss = 'display:grid;grid-template-columns:repeat(2,1fr);gap:.75rem;';
+  /* مُنشئات البطاقات */
   const card = (title, value, extra = '') => `
-    <div class="stat-card" style="padding:.7rem .8rem;min-height:58px;${extra}">
-      <div class="label" style="font-size:.86rem;opacity:.85;line-height:1">${title}</div>
-      <div class="value" style="font-size:1.15rem;font-weight:900;line-height:1.2">${value}</div>
+    <div class="stat-card" style="${extra}">
+      <div class="label">${title}</div>
+      <div class="value">${value}</div>
     </div>`;
 
-  const twoRows = (r1k, r1v, r2k, r2v, extra='') => `
-    <div class="stat-card" style="padding:.65rem .75rem;min-height:58px;display:grid;gap:.35rem;${extra}">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem">
-        <span style="font-size:.85rem;opacity:.85">${r1k}</span>
-        <span style="font-size:1.05rem;font-weight:800">${r1v}</span>
+  const twoRows = (k1, v1, k2, v2, extra='') => `
+    <div class="stat-card" style="display:grid;gap:.38rem;${extra}">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:.6rem">
+        <span class="label" style="margin:0">${k1}</span>
+        <span class="value" style="font-size:1.06rem">${v1}</span>
       </div>
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem">
-        <span style="font-size:.85rem;opacity:.85">${r2k}</span>
-        <span style="font-size:1.05rem;font-weight:800">${r2v}</span>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:.6rem">
+        <span class="label" style="margin:0">${k2}</span>
+        <span class="value" style="font-size:1.06rem">${v2}</span>
       </div>
     </div>`;
 
   const pos = v => `<span style="color:var(--success-color)">${this.formatNumber(v)}</span>`;
   const neg = v => `<span style="color:var(--error-color)">${this.formatNumber(v)}</span>`;
 
+  /* الشبكة 2×N + بطاقة الدقّة أسفل بعرض كامل — نفس ترتيب صورتك */
   const html = `
-    <div class="stats-grid" style="${gcss}">
+    <div class="stats-grid">
+
       ${card('⭐ النقاط', `<span class="value score">${this.formatNumber(score)}</span>`)}
       ${card('👑 المستوى', level)}
 
       ${twoRows('✅ الصحيحة', pos(correct), '❌ الخاطئة', neg(wrong))}
-      ${twoRows('⏱️ الوقت', this.formatNumber(timeAll), '⏳ المتوسط', `${avg} / سؤال`)}
+      ${twoRows('⏱️ الوقت', timeAll, '⏳ المتوسط', `${avg} / سؤال`)}
 
       ${card('📊 الأداء', perf)}
       ${card('⏭️ التخطّي', this.formatNumber(skips))}
+      ${card('🔢 المحاولة', this.formatNumber(att))}
 
-      ${card('🔢 المحاولة', this.formatNumber(att), 'grid-column:2')}
-      <div class="stat-card" style="grid-column:1 / -1;text-align:center;padding:.9rem .5rem 1.1rem;">
-        <div class="label" style="font-size:.9rem;opacity:.9;margin-bottom:.25rem">🎯 الدقّة</div>
-        <div style="display:grid;place-items:center;padding:.25rem 0">
+      <!-- بطاقة الدقّة -->
+      <div class="stat-card accuracy">
+        <div class="label" style="margin-bottom:.3rem">🎯 الدقّة</div>
+        <div style="display:grid;place-items:center">
           <div class="circle-progress"
-               style="--val:${accNum};--bar:${this.getAccuracyBarColor(accNum)};--size:120px">
-            <span style="font-size:1.05rem;font-weight:900">${accNum}%</span>
+               style="--val:${accNum};--bar:${this.getAccuracyBarColor(accNum)};">
+            <span>${accNum}%</span>
           </div>
         </div>
       </div>
+
     </div>`;
 
   this.getEl('#playerDetailsContent').innerHTML = html;
