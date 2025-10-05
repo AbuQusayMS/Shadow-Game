@@ -36,7 +36,8 @@ class QuizGame {
         freezeTime: 100,
         skipQuestionBase: 0,
         skipQuestionIncrement: 0
-      }
+      },
+      SKIP_WEIGHT: 0.7, // === NEW: وزن التخطي ضمن الدقة (يمكن تعديله)
     };
 
     // Internal State
@@ -136,6 +137,8 @@ class QuizGame {
       reportImagePreview: byId('reportImagePreview'),
       includeAutoDiagnostics: byId('includeAutoDiagnostics')
     };
+    this.dom.lbMode    = byId('lbMode');       // === NEW
+    this.dom.lbAttempt = byId('lbAttempt');    // === NEW
   }
   getEl(selector, parent = document) { return parent.querySelector(selector); }
   getAllEl(selector, parent = document) { return parent.querySelectorAll(selector); }
@@ -240,6 +243,14 @@ class QuizGame {
         "info"
       );
     });
+
+    // === NEW: مستمعو فلاتر لوحة الصدارة
+    this.dom.lbMode?.addEventListener('change', ()=>{
+      const m = this.dom.lbMode.value;
+      if (this.dom.lbAttempt) this.dom.lbAttempt.disabled = (m !== 'attempt');
+      this.displayLeaderboard();
+    });
+    this.dom.lbAttempt?.addEventListener('change', ()=> this.displayLeaderboard());
   }
 
   // ===================================================
@@ -360,21 +371,29 @@ class QuizGame {
   this.showScreen('end');
   }
 
-  _calculateFinalStats(completedAll) {
+  _calculateFinalStats(completedAll) {   // === CHANGED
     const totalTimeSeconds = (new Date() - this.gameState.startTime) / 1000;
     const currentLevelLabel = this.config.LEVELS[Math.min(this.gameState.level, this.config.LEVELS.length - 1)].label;
-    const totalAnswered = this.gameState.correctAnswers + this.gameState.wrongAnswers;
-    const accuracy = totalAnswered > 0 ? parseFloat(((this.gameState.correctAnswers / totalAnswered) * 100).toFixed(1)) : 0.0;
-    const avgTime = totalAnswered > 0 ? parseFloat((totalTimeSeconds / totalAnswered).toFixed(1)) : 0.0;
+
+    const corr  = this.gameState.correctAnswers;
+    const wrong = this.gameState.wrongAnswers;
+    const skips = this.gameState.skips;
+
+    // NEW: التخطي له وزن في المقام
+    const denom = corr + wrong + (this.config.SKIP_WEIGHT * skips);
+    const accuracy = denom > 0 ? parseFloat(((corr / denom) * 100).toFixed(1)) : 0.0;
+
+    const answeredCount = (corr + wrong) || 1; // المتوسط لأسئلة أُجيب عنها فقط
+    const avgTime = parseFloat((totalTimeSeconds / answeredCount).toFixed(1));
 
     return {
       name: this.gameState.name,
       player_id: this.gameState.playerId,
       device_id: this.gameState.deviceId,
       avatar: this.gameState.avatar,
-      correct_answers: this.gameState.correctAnswers,
-      wrong_answers: this.gameState.wrongAnswers,
-      skips: this.gameState.skips,
+      correct_answers: corr,
+      wrong_answers: wrong,
+      skips: skips,
       score: this.gameState.currentScore,
       total_time: totalTimeSeconds,
       level: currentLevelLabel,
@@ -556,65 +575,74 @@ class QuizGame {
     }
   } 
 
-  async handleReportSubmit(event) {
-     event.preventDefault();
+  async handleReportSubmit(event) {  // === CHANGED
+    event.preventDefault();
 
-     const formData = new FormData(event.target);
-     const whereList = formData.getAll('where[]'); // مصفوفة أماكن ظهور المشكلة
+    const formData = new FormData(event.target);
+    const whereList = formData.getAll('where[]');
 
-     // نبني الكائن الأساسي
-     const reportData = {
-       type: formData.get('problemType'),
-       description: formData.get('problemDescription'),
-       name: this.gameState.name || 'لم يبدأ اللعب',
-       player_id: this.gameState.playerId || 'N/A',
-       question_text: this.dom.questionText.textContent || 'لا يوجد'
-     };
+    const reportData = {
+      type: formData.get('problemType'),
+      description: formData.get('problemDescription'),
+      name: this.gameState.name || 'لم يبدأ اللعب',
+      player_id: this.gameState.playerId || 'N/A',
+      question_text: this.dom.questionText.textContent || 'لا يوجد'
+    };
 
-     // تشخيص تلقائي (اختياري)
-     let meta = null;
-     if (this.dom.includeAutoDiagnostics?.checked) {
-       meta = this.getAutoDiagnostics();
-       meta.locationHints = whereList;
-     }
+    // تشخيص تلقائي (اختياري)
+    let meta = null;
+    if (this.dom.includeAutoDiagnostics?.checked) {
+      meta = this.getAutoDiagnostics();
+      meta.locationHints = whereList;
+    }
 
-     this.showToast("جاري إرسال البلاغ...", "info");
-     this.hideModal('advancedReport');
+    // NEW: بناء سياق دقيق للسؤال الحالي
+    const ctx = this.buildQuestionRef();
 
-     try {
-       // 1) رفع الصورة إن وُجدت
-       let image_url = null;
-       const file = this.dom.problemScreenshot.files?.[0];
-       if (file) {
-         const fileName = `report_${Date.now()}_${Math.random().toString(36).slice(2)}.${(file.type.split('/')[1] || 'png').replace(/[^a-z0-9]/gi,'')}`;
-         const { data: up, error: upErr } = await this.supabase.storage
-           .from('reports')                    // تأكد من وجود هذا البكِت
-           .upload(fileName, file, { contentType: file.type, upsert: true });
-         if (upErr) throw upErr;
+    this.showToast("جاري إرسال البلاغ...", "info");
+    this.hideModal('advancedReport');
 
-         const { data: pub } = this.supabase.storage.from('reports').getPublicUrl(up.path);
-         image_url = pub?.publicUrl || null;
-       }
+    try {
+      // 1) رفع صورة (إن وُجدت)
+      let image_url = null;
+      const file = this.dom.problemScreenshot.files?.[0];
+      if (file) {
+        const fileName = `report_${Date.now()}_${Math.random().toString(36).slice(2)}.${(file.type.split('/')[1] || 'png').replace(/[^a-z0-9]/gi,'')}`;
+        const { data: up, error: upErr } = await this.supabase.storage
+          .from('reports')
+          .upload(fileName, file, { contentType: file.type, upsert: true });
+        if (upErr) throw upErr;
 
-       // 2) إدراج البلاغ في الجدول مع الصورة والمعلومات
-       const payload = { ...reportData, image_url, meta };
-       const { error } = await this.supabase.from('reports').insert(payload);
-       if (error) throw error;
+        const { data: pub } = this.supabase.storage.from('reports').getPublicUrl(up.path);
+        image_url = pub?.publicUrl || null;
+      }
 
-       this.showToast("تم إرسال بلاغك بنجاح. شكراً لك!", "success");
+      // 2) إدراج في Supabase: نخزّن السياق داخل meta (حتى لا نضيف عمود جديد)
+      const payloadDB = {
+        ...reportData,
+        image_url,
+        meta: { ...(meta || {}), context: ctx } // === NEW
+      };
+      const { error } = await this.supabase.from('reports').insert(payloadDB);
+      if (error) throw error;
 
-       // 3) إرسال إخطار تيليجرام (كما لديك)
-       this.sendTelegramNotification('report', payload);
+      this.showToast("تم إرسال بلاغك بنجاح. شكراً لك!", "success");
 
-     } catch (error) {
-       console.error("Supabase report error:", error);
-       this.showToast("حدث خطأ أثناء إرسال البلاغ.", "error");
-     } finally {
-       // تنظيف الحقول
-       if (this.dom.problemScreenshot) this.dom.problemScreenshot.value = '';
-       if (this.dom.reportImagePreview) { this.dom.reportImagePreview.style.display='none'; this.dom.reportImagePreview.querySelector('img').src=''; }
-     }
-   }
+      // 3) إخطار تيليغرام: نرسل السياق كحقل مستقل أيضًا
+      const payloadMsg = { ...reportData, image_url, meta, context: ctx }; // === NEW
+      this.sendTelegramNotification('report', payloadMsg);
+
+    } catch (err) {
+      console.error("Supabase report error:", err);
+      this.showToast("حدث خطأ أثناء إرسال البلاغ.", "error");
+    } finally {
+      if (this.dom.problemScreenshot) this.dom.problemScreenshot.value = '';
+      if (this.dom.reportImagePreview) {
+        this.dom.reportImagePreview.style.display='none';
+        this.dom.reportImagePreview.querySelector('img').src='';
+      }
+    }
+  }
  
   async sendTelegramNotification(type, data) {
     if (!this.config.APPS_SCRIPT_URL) {
@@ -821,7 +849,32 @@ class QuizGame {
     }
  }
 
-      // ==============================
+  // ======= NEW: مرجع السؤال الحالي للسياق في البلاغ =======
+  buildQuestionRef() {
+    const levelObj = this.config.LEVELS[this.gameState.level] || {};
+    const levelName  = levelObj.name || '';
+    const levelLabel = levelObj.label || '';
+    const qIndex1 = (this.gameState.questionIndex ?? 0) + 1;
+    const total = (this.gameState.shuffledQuestions || []).length;
+    const qText = (this.dom.questionText?.textContent || '').trim();
+    const options = [...this.getAllEl('.option-btn')].map(b => (b.textContent || '').trim());
+    const hash = this.simpleHash(`${levelName}|${qIndex1}|${qText}|${options.join('|')}`);
+    return {
+      level_name: levelName,
+      level_label: levelLabel,
+      question_index: qIndex1,
+      total_questions: total,
+      question_text: qText,
+      options,
+      ref: `${levelName}:${qIndex1}:${hash.slice(0,6)}`
+    };
+  },
+  simpleHash(s) {
+    let h = 0; for (let i=0;i<s.length;i++){ h=((h<<5)-h)+s.charCodeAt(i); h|=0; }
+    return String(Math.abs(h));
+  }
+
+  // ==============================
   // Performance Rating (advanced)
   // ==============================
 
@@ -902,7 +955,7 @@ class QuizGame {
     const cpmBonus = Math.min(20, Math.round(cpm * 4));
 
     // 6) عقوبات خفيفة
-    const penalty = (wrong * 4) + (skips * 1);
+    const penalty = (wrong * 4) + (skips * 2);  // === CHANGED: التخطي يؤثر أكثر
 
     // 7) مكافأة التاريخ
     let historyBonus = 0;
@@ -1031,23 +1084,60 @@ class QuizGame {
   // ===================================================
   // Leaderboard
   // ===================================================
-  async displayLeaderboard() {
+  async displayLeaderboard() {  // === CHANGED
     this.showScreen('leaderboard');
     this.dom.leaderboardContent.innerHTML = '<div class="spinner"></div>';
 
-    try {
-      const { data: players, error } = await this.supabase
-        .from('leaderboard')
-        .select('*')
-        .order('is_impossible_finisher', { ascending: false })
-        .order('score', { ascending: false })
-        .order('accuracy', { ascending: false })
-        .order('total_time', { ascending: true })
-        .limit(100);
+    const mode = this.dom.lbMode?.value || 'best';
+    const attemptN = Number(this.dom.lbAttempt?.value || 1);
 
-      if (error) throw error;
-      this.renderLeaderboard(players || []);
-      this.subscribeToLeaderboardChanges();
+    try {
+      let rows = [];
+      if (mode === 'attempt') {
+        // من جدول log لمحاولة محددة
+        const { data, error } = await this.supabase
+          .from('log')
+          .select('*')
+          .eq('attempt_number', attemptN)
+          .order('score', { ascending: false })
+          .order('accuracy', { ascending: false })
+          .order('total_time', { ascending: true })
+          .limit(500);
+        if (error) throw error;
+        rows = data || [];
+      } else {
+        // من leaderboard (أفضل/دقة/وقت)
+        let q = this.supabase.from('leaderboard').select('*');
+        if (mode === 'accuracy') {
+          q = q.order('accuracy', { ascending: false })
+               .order('score', { ascending: false })
+               .order('total_time', { ascending: true });
+        } else if (mode === 'time') {
+          q = q.order('total_time', { ascending: true })
+               .order('accuracy', { ascending: false })
+               .order('score', { ascending: false });
+        } else { // best
+          q = q.order('is_impossible_finisher', { ascending: false })
+               .order('score', { ascending: false })
+               .order('accuracy', { ascending: false })
+               .order('total_time', { ascending: true });
+        }
+        const { data, error } = await q.limit(500);
+        if (error) throw error;
+        rows = data || [];
+
+        // منع تكرار الأجهزة في best (احتياطًا لو وُجد تكرار)
+        if (mode === 'best') {
+          const seen = new Map();
+          for (const r of rows) if (!seen.has(r.device_id)) seen.set(r.device_id, r);
+          rows = [...seen.values()];
+        }
+      }
+
+      this.renderLeaderboard(rows.slice(0, 100));
+      // الاشتراك على تغيّر leaderboard فقط عند وضع best/accuracy/time
+      if (mode !== 'attempt') this.subscribeToLeaderboardChanges();
+
     } catch (error) {
       console.error("Error loading leaderboard:", error);
       this.dom.leaderboardContent.innerHTML = '<p>حدث خطأ في تحميل لوحة الصدارة.</p>';
