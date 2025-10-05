@@ -1190,36 +1190,96 @@ class QuizGame {
   subscribeToLeaderboardChanges() {
     if (this.leaderboardSubscription) this.leaderboardSubscription.unsubscribe();
 
-    this.leaderboardSubscription = this.supabase
-      .channel('public:leaderboard')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'leaderboard' }, () => this.displayLeaderboard())
-      .subscribe();
+  this.leaderboardSubscription = this.supabase
+     .channel('public:leaderboard')
+     .on('postgres_changes', { event: '*', schema: 'public', table: 'leaderboard' }, () => this.displayLeaderboard())
+     .subscribe();
   }
 
   showPlayerDetails(player) {
+    // الهيدر
     this.getEl('#detailsName').textContent = player.name || 'غير معروف';
     this.getEl('#detailsPlayerId').textContent = player.player_id || 'N/A';
     const avatar = this.getEl('#detailsAvatar');
     avatar.src = player.avatar || '';
     avatar.style.visibility = player.avatar ? 'visible' : 'hidden';
 
+    // القيم المعروضة (مطابقة لرسالة البوت)
+    const score   = Number(player.score || 0);
+    const level   = player.level || 'N/A';
+    const correct = Number(player.correct_answers || 0);
+    const wrong   = Number(player.wrong_answers || 0);
+    const timeAll = this.formatTime(player.total_time || 0);
+    const avg     = this.formatTime(player.avg_time || 0);
+    const acc     = Number(player.accuracy || 0);
+    const skips   = Number(player.skips || 0);
+    const att     = Number(player.attempt_number || 0);
+    const perf    = player.performance_rating || 'جيد';
+
+    // شبكة بطاقات مضغوطة + دائرة الدقة
     this.getEl('#playerDetailsContent').innerHTML = `
-      <div class="detail-item"><span class="label">⭐ النقاط النهائية</span><span class="value score">${this.formatNumber(player.score || 0)}</span></div>
-      <div class="detail-item"><span class="label">👑 المستوى</span><span class="value">${player.level || 'N/A'}</span></div>
-      <div class="detail-item"><span class="label">✅ الصحيحة</span><span class="value">${this.formatNumber(player.correct_answers || 0)}</span></div>
-      <div class="detail-item"><span class="label">❌ الخاطئة</span><span class="value">${this.formatNumber(player.wrong_answers || 0)}</span></div>
-      <div class="detail-item"><span class="label">⏱️ الوقت</span><span class="value">${this.formatTime(player.total_time || 0)}</span></div>
-      <div class="detail-item"><span class="label">⏳ المتوسط</span><span class="value">${this.formatTime(player.avg_time || 0)}/س</span></div>
-      <div class="detail-item full-width">
-        <span class="label">🎯 نسبة الدقة</span><span class="value">${player.accuracy || 0}%</span>
-        <div class="progress-bar-container"><div class="progress-bar" style="width: ${player.accuracy || 0}%;"></div></div>
+      <div class="stats-grid">
+
+        <div class="stat-card">
+          <div class="label">👑 المستوى</div>
+          <div class="value">${level}</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="label">⭐ النقاط</div>
+          <div class="value score">${this.formatNumber(score)}</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="label">⏱️ الوقت</div>
+          <div class="value">${timeAll}</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="label">✅ الصحيحة</div>
+          <div class="value">${this.formatNumber(correct)}</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="label">❌ الخاطئة</div>
+          <div class="value">${this.formatNumber(wrong)}</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="label">📊 الأداء</div>
+          <div class="value">${perf}</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="label">🎯 الدقة</div>
+          <div class="value">
+            <div class="circle-progress" style="--val:${acc};">
+              <span>${acc}%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="label">⏳ المتوسط/س</div>
+          <div class="value">${avg}/س</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="label">⏭️ التخطي</div>
+          <div class="value">${this.formatNumber(skips)}</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="label">🔢 المحاولة</div>
+          <div class="value">${this.formatNumber(att)}</div>
+        </div>
+
       </div>
-      <div class="detail-item"><span class="label">⏭️ التخطي</span><span class="value">${this.formatNumber(player.skips || 0)}</span></div>
-      <div class="detail-item"><span class="label">🔢 المحاولة</span><span class="value">${this.formatNumber(player.attempt_number || 0)}</span></div>
-      <div class="detail-item full-width"><span class="label">📊 الأداء</span><span class="value">${player.performance_rating || 'جيد'}</span></div>
     `;
+
     this.showModal('playerDetails');
   }
+
 
   // ===================================================
   // Avatars
