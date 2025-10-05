@@ -820,37 +820,29 @@ class QuizGame {
       return { error: String(e) };
     }
 
-      // ==============================
+  // ==============================
   // Performance Rating (advanced)
   // ==============================
-
-  /**
-   * يحوّل قيمة بين مجالين (مثلاً: avg_time من 3..20 ث إلى 100..0 نقطة)
-   */
-  normalizeTo100 = (value, min, max) => {
+    
+  /** يحوّل قيمة بين مجالين إلى 0..100 */
+  normalizeTo100(value, min, max) {
     const v = Math.max(min, Math.min(max, Number(value) || 0));
     return Math.round(((max - v) / (max - min)) * 100);
-  };
+  }
 
-  /**
-   * انحراف معياري بسيط
-   */
-  stdDev = (arr) => {
+  /** انحراف معياري بسيط */
+  stdDev(arr) {
     if (!arr || arr.length < 2) return 0;
     const mean = arr.reduce((a,b)=>a+Number(b||0),0)/arr.length;
     const variance = arr.reduce((s,v)=> s + Math.pow(Number(v||0) - mean, 2), 0) / (arr.length - 1);
     return Math.sqrt(variance);
-  };
+  }
 
-  /**
-   * تحويل درجة رقمية (0..100) إلى تصنيف نصي غني
-   */
-  mapPerformanceLabel = (score, { completed_all=false, level='' } = {}) => {
-    // ضمان حد أدنى محترم إذا أنهى "مستحيل"
+  /** تحويل الدرجة إلى تصنيف نصي غني */
+  mapPerformanceLabel(score, { completed_all=false, level='' } = {}) {
     if (completed_all && (level === 'مستحيل' || level === 'impossible')) {
       score = Math.max(score, 80);
     }
-
     if (score >= 97) return 'احترافي 🧠';
     if (score >= 92) return 'مذهل 🌟';
     if (score >= 85) return 'ممتاز 🏆';
@@ -859,14 +851,14 @@ class QuizGame {
     if (score >= 50) return 'مقبول 👌';
     if (score >= 35) return 'يحتاج إلى تحسين 📈';
     return 'ضعيف 🧩';
-  };
+  }
 
   /**
-   * يحسب “درجة أداء مركّبة” اعتمادًا على نتيجة المحاولة الحالية + سجل اللاعب (آخر 20 محاولة)
+   * يحسب درجة أداء مركّبة اعتمادًا على المحاولة الحالية + آخر 20 محاولة
    * يعيد: { score, label, details }
    */
   async ratePerformance(current) {
-    // 1) حمّل التاريخ (آخر 20) لهذا الجهاز
+    // 1) تاريخ آخر 20
     let history = [];
     try {
       const { data, error } = await this.supabase
@@ -875,19 +867,17 @@ class QuizGame {
         .eq('device_id', current.device_id)
         .order('created_at', { ascending: false })
         .limit(20);
-
       if (!error && Array.isArray(data)) history = data;
-    } catch (_) { /* تجاهل */ }
+    } catch (_) {}
 
-    // استبعد الحالية لو كانت مضافة يدويًا قبل الاستدعاء (عادة ليست مضافة)
     const histAcc = history.map(h => Number(h.accuracy || 0)).filter(n => n>=0);
     const histAvg = history.map(h => Number(h.avg_time || 0)).filter(n => n>=0);
     const histDone = history.filter(h => h.completed_all === true).length;
     const histCount = history.length;
 
-    // 2) مؤشرات المحاولة الحالية
-    const accuracy = Number(current.accuracy || 0);           // 0..100
-    const avgTime  = Number(current.avg_time || 0);           // ثواني/سؤال
+    // 2) مؤشرات الحالية
+    const accuracy = Number(current.accuracy || 0);
+    const avgTime  = Number(current.avg_time || 0);
     const totalSec = Number(current.total_time || 0);
     const corr     = Number(current.correct_answers || 0);
     const wrong    = Number(current.wrong_answers || 0);
@@ -896,49 +886,45 @@ class QuizGame {
     const completedAll = !!current.completed_all;
 
     // 3) نقاط أساسية
-    const accScore   = Math.max(0, Math.min(100, accuracy));  // 0..100
-    const speedScore = this.normalizeTo100(avgTime, 3, 20);   // 3s => 100, 20s => 0
+    const accScore   = Math.max(0, Math.min(100, accuracy));
+    const speedScore = this.normalizeTo100(avgTime, 3, 20); // 3s => 100, 20s => 0
 
-    // 4) مكافأة المستوى/الإنجاز
+    // 4) مكافآت المستوى/الإنجاز
     let levelBonus = 0;
     if (lvlName === 'متوسط' || lvlName === 'medium')   levelBonus += 10;
     else if (lvlName === 'صعب' || lvlName === 'hard')  levelBonus += 25;
     else if (lvlName === 'مستحيل' || lvlName === 'impossible') levelBonus += 40;
     if (completedAll) levelBonus += 15;
 
-    // 5) إنتاجية صحيحة/دقيقة
-    const cpm = totalSec > 0 ? corr / (totalSec / 60) : 0; // correct per minute
-    const cpmBonus = Math.min(20, Math.round(cpm * 4));    // كل 0.25 cpm = نقطة تقريبًا حتى 20
+    // 5) إنتاجية صحيح/دقيقة
+    const cpm = totalSec > 0 ? corr / (totalSec / 60) : 0;
+    const cpmBonus = Math.min(20, Math.round(cpm * 4));
 
-  // 6) عقوبات خفيفة
-  const penalty = (wrong * 4) + (skips * 1);
-
-    // 7) اتساق/تحسّن عبر التاريخ
+    // 6) عقوبات خفيفة
+    const penalty = (wrong * 4) + (skips * 1);
+ 
+    // 7) مكافأة التاريخ (اتساق/تحسّن)
     let historyBonus = 0;
     if (histCount > 0) {
-      const avgAccHist = histAcc.reduce((a,b)=>a+b,0) / histAcc.length || 0;
+      const avgAccHist  = histAcc.reduce((a,b)=>a+b,0) / (histAcc.length || 1);
       const avgTimeHist = histAvg.reduce((a,b)=>a+b,0) / (histAvg.length || 1);
 
-      const accDelta = accuracy - avgAccHist;     // تحسّن/تراجع
+      const accDelta = accuracy - avgAccHist;
       if (accDelta >= 10) historyBonus += 8;
       else if (accDelta >= 5) historyBonus += 4;
       else if (accDelta <= -10) historyBonus -= 6;
 
-      // ثبات الأداء (انحراف معياري منخفض) + دقة جيدة
       const sdAcc = this.stdDev(histAcc);
       if (sdAcc <= 8 && avgAccHist >= 70) historyBonus += 5;
 
-      // نسبة إنهاء سابقة
       const doneRate = (histDone / histCount) * 100;
       if (doneRate >= 50) historyBonus += 5;
       else if (doneRate >= 25) historyBonus += 2;
 
-      // تحسّن السرعة مقارنة بمتوسطه
       if (avgTimeHist && avgTime < avgTimeHist - 2) historyBonus += 3;
     }
 
-    // 8) تركيب الدرجة
-    // أوزان: دقة 45%، سرعة 25%، مكافآت المستوى والإنجاز والقابلية الإنتاجية والتاريخ والعقوبات
+    // 8) الدرجة النهائية (0..100)
     let score =
       (0.45 * accScore) +
       (0.25 * speedScore) +
@@ -947,15 +933,12 @@ class QuizGame {
       historyBonus -
       penalty;
 
-    // ضبط إلى 0..100
     score = Math.max(0, Math.min(100, Math.round(score)));
-
     const label = this.mapPerformanceLabel(score, { completed_all: completedAll, level: lvlName });
 
     return { score, label, details: { accScore, speedScore, levelBonus, cpmBonus, historyBonus, penalty } };
   }
-  }
-
+    
   // ===================================================
   // Dev Mode
   // ===================================================
