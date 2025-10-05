@@ -644,9 +644,29 @@ textarea { resize: vertical; min-height: 100px; }
   padding-top: .75rem;
 }
 
-/* بطاقة الدقة في مودال التفاصيل */
-#playerDetailsModal .stat-card.accuracy .circle-progress { --size: 136px; }
+/* دائرة الدقة في مودال تفاصيل اللاعب — أصغر فقط */
+#playerDetailsModal .stat-card.accuracy .circle-progress {
+  --size: 104px;
+}
+#playerDetailsModal .stat-card.accuracy .circle-progress > span {
+  font-size: .95rem;
+}
 
-@media (max-width: 420px){
-  #playerDetailsModal .stat-card.accuracy .circle-progress { --size: 128px; }
+/* جوّالات صغيرة عرضًا */
+@media (max-width: 420px) {
+  #playerDetailsModal .stat-card.accuracy .circle-progress {
+    --size: 94px;
+  }
+}
+
+/* شاشات قصيرة الارتفاع */
+@media (max-height: 740px) {
+  #playerDetailsModal .stat-card.accuracy .circle-progress {
+    --size: 90px;
+  }
+}
+@media (max-height: 660px) {
+  #playerDetailsModal .stat-card.accuracy .circle-progress {
+    --size: 86px;
+  }
 }
