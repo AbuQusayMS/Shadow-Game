@@ -1211,10 +1211,12 @@ class QuizGame {
     const wrong   = Number(player.wrong_answers || 0);
     const timeAll = this.formatTime(player.total_time || 0);
     const avg     = this.formatTime(player.avg_time || 0);
-    const acc     = Number(player.accuracy || 0);
     const skips   = Number(player.skips || 0);
     const att     = Number(player.attempt_number || 0);
     const perf    = player.performance_rating || 'جيد';
+    const acc = Math.max(0, Math.min(100, Math.round(Number(player.accuracy || 0))));
+    const hue = Math.round((acc / 100) * 120);        // 0=أحمر → 120=أخضر
+    const ringColor = `hsl(${hue} 70% 45%)`;
 
     // شبكة بطاقات مضغوطة + دائرة الدقة
     this.getEl('#playerDetailsContent').innerHTML = `
@@ -1250,18 +1252,18 @@ class QuizGame {
           <div class="value">${perf}</div>
         </div>
 
-        <div class="stat-card">
+        <div class="stat-card ring">
           <div class="label">🎯 الدقة</div>
           <div class="value">
-            <div class="circle-progress" style="--val:${acc};">
+            <div class="circle-progress" style="--val:${acc}; --bar:${ringColor}">
               <span>${acc}%</span>
             </div>
           </div>
         </div>
 
         <div class="stat-card">
-          <div class="label">⏳ المتوسط/س</div>
-          <div class="value">${avg}/س</div>
+          <div class="label">⏳ المتوسط</div>
+          <div class="value">${avg} /سؤال</div>
         </div>
 
         <div class="stat-card">
