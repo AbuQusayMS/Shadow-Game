@@ -562,3 +562,94 @@ textarea { resize: vertical; min-height: 100px; }
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+/* ===== Player Details • Compact Card ===== */
+#playerDetailsModal .modal-content {
+  max-width: 28rem;
+  padding: var(--space-4);
+}
+#playerDetailsModal .player-details-header {
+  gap: .25rem;
+  padding-bottom: .75rem;
+  margin-bottom: .75rem;
+}
+#playerDetailsModal .player-details-avatar {
+  width: 4.25rem;
+  height: 4.25rem;
+  border-width: 3px;
+}
+#playerDetailsModal #playerDetailsTitle {
+  font-size: 1.35rem;
+  margin-top: .25rem;
+}
+#playerDetailsModal #detailsName {
+  font-weight: 800;
+}
+#playerDetailsModal #detailsPlayerId {
+  opacity: .7;
+  font-size: .78rem;
+}
+/* شبكة بطاقات مصغّرة */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: .6rem;
+}
+@media (max-width: 420px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+.stat-card {
+  background-color: var(--secondary-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: .65rem .7rem;
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+  display: grid;
+  gap: .35rem;
+  min-height: 72px;
+}
+.stat-card .label {
+  font-size: .78rem;
+  opacity: .85;
+  line-height: 1;
+  white-space: nowrap;
+}
+.stat-card .value {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text-color);
+  line-height: 1.15;
+}
+.stat-card .value.score {
+  color: var(--gold-color);
+}
+/* دائرة نسبة الدقة */
+.circle-progress {
+  --size: 60px;
+  --track: var(--border-color);
+  --bar: var(--success-color);
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  margin: 0 auto;
+  background: conic-gradient(var(--bar) calc(var(--val) * 1%), var(--track) 0);
+  position: relative;
+}
+.circle-progress::after {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  background: var(--secondary-color);
+  border-radius: 50%;
+}
+.circle-progress > span {
+  position: relative;
+  z-index: 1;
+  font-size: .95rem;
+  font-weight: 900;
+}
