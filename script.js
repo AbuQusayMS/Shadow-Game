@@ -1197,92 +1197,79 @@ class QuizGame {
   }
 
   showPlayerDetails(player) {
-    // الهيدر
-    this.getEl('#detailsName').textContent = player.name || 'غير معروف';
-    this.getEl('#detailsPlayerId').textContent = player.player_id || 'N/A';
-    const avatar = this.getEl('#detailsAvatar');
-    avatar.src = player.avatar || '';
-    avatar.style.visibility = player.avatar ? 'visible' : 'hidden';
-
-    // القيم المعروضة (مطابقة لرسالة البوت)
+    // القيم
+    const name    = player.name || 'غير معروف';
+    const pid     = player.player_id || 'N/A';
+    const avatar  = player.avatar || '';
     const score   = Number(player.score || 0);
     const level   = player.level || 'N/A';
     const correct = Number(player.correct_answers || 0);
     const wrong   = Number(player.wrong_answers || 0);
     const timeAll = this.formatTime(player.total_time || 0);
     const avg     = this.formatTime(player.avg_time || 0);
+    const accNum  = Math.max(0, Math.min(100, Math.round(Number(player.accuracy || 0))));
     const skips   = Number(player.skips || 0);
     const att     = Number(player.attempt_number || 0);
     const perf    = player.performance_rating || 'جيد';
-    const acc = Math.max(0, Math.min(100, Math.round(Number(player.accuracy || 0))));
-    const hue = Math.round((acc / 100) * 120);        // 0=أحمر → 120=أخضر
+
+    // لون حلقة الدقة (أحمر→أصفر→أخضر)
+    const hue = Math.round((accNum / 100) * 120);
     const ringColor = `hsl(${hue} 70% 45%)`;
 
-    // شبكة بطاقات مضغوطة + دائرة الدقة
+    // ✅ الهيدر + الشبكة 2×N
     this.getEl('#playerDetailsContent').innerHTML = `
-      <div class="stats-grid">
+      <div class="pd-header">
+        <div class="pd-identity">
+          <img src="${avatar}" class="pd-avatar" alt="Avatar" style="visibility:${avatar ? 'visible' : 'hidden'}">
+          <div class="pd-name-id">
+            <span class="pd-name">${name}</span>
+            <span class="pd-id">${pid}</span>
+          </div>
+        </div>
+        <div class="pd-ring">
+          <div class="circle-progress" style="--val:${accNum}; --bar:${ringColor}">
+            <span>${accNum}%</span>
+          </div>
+          <div class="caption">الدقّة</div>
+        </div>
+      </div>
 
-        <div class="stat-card">
-          <div class="label">👑 المستوى</div>
+      <div class="pd-lines">
+
+        <div class="pill-card">
+          <div class="title">👑 المستوى</div>
           <div class="value">${level}</div>
         </div>
 
-        <div class="stat-card">
-          <div class="label">⭐ النقاط</div>
+        <div class="pill-card">
+          <div class="title">⭐ النقاط</div>
           <div class="value score">${this.formatNumber(score)}</div>
         </div>
 
-        <div class="stat-card">
-          <div class="label">⏱️ الوقت</div>
-          <div class="value">${timeAll}</div>
+        <div class="line-card">
+          <div class="line-row"><span class="line-k">⏱️ الوقت</span><span class="line-v">${timeAll}</span></div>
+          <div class="line-row"><span class="line-k">⏳ المتوسط</span><span class="line-v">${avg} /سؤال</span></div>
         </div>
 
-        <div class="stat-card">
-          <div class="label">✅ الصحيحة</div>
-          <div class="value">${this.formatNumber(correct)}</div>
+        <div class="line-card">
+          <div class="line-row"><span class="line-k">✅ الصحيحة</span><span class="line-v pos">${this.formatNumber(correct)}</span></div>
+          <div class="line-row"><span class="line-k">❌ الخاطئة</span><span class="line-v neg">${this.formatNumber(wrong)}</span></div>
         </div>
 
-        <div class="stat-card">
-          <div class="label">❌ الخاطئة</div>
-          <div class="value">${this.formatNumber(wrong)}</div>
+        <div class="line-card">
+          <div class="line-row"><span class="line-k">⏭️ التخطي</span><span class="line-v">${this.formatNumber(skips)}</span></div>
+          <div class="line-row"><span class="line-k">🔢 المحاولة</span><span class="line-v">${this.formatNumber(att)}</span></div>
         </div>
 
-        <div class="stat-card">
-          <div class="label">📊 الأداء</div>
-          <div class="value">${perf}</div>
+        <div class="pill-card">
+            <div class="title">📊 الأداء</div>
+            <div class="value">${perf}</div>
         </div>
-
-        <div class="stat-card ring">
-          <div class="label">🎯 الدقة</div>
-          <div class="value">
-            <div class="circle-progress" style="--val:${acc}; --bar:${ringColor}">
-              <span>${acc}%</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="stat-card">
-          <div class="label">⏳ المتوسط</div>
-          <div class="value">${avg} /سؤال</div>
-        </div>
-
-        <div class="stat-card">
-          <div class="label">⏭️ التخطي</div>
-          <div class="value">${this.formatNumber(skips)}</div>
-        </div>
-
-        <div class="stat-card">
-          <div class="label">🔢 المحاولة</div>
-          <div class="value">${this.formatNumber(att)}</div>
-        </div>
-
       </div>
     `;
 
     this.showModal('playerDetails');
   }
-
-
   // ===================================================
   // Avatars
   // ===================================================
