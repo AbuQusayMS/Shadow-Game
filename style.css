@@ -506,6 +506,19 @@ textarea { resize: vertical; min-height: 100px; }
 .leaderboard-details { flex-grow: 1; display: flex; justify-content: space-between; align-items: center; gap: var(--space-4); min-width: 0; }
 .leaderboard-name { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .leaderboard-score { font-weight: 700; color: var(--gold-color); font-size: var(--font-size-lg); flex-shrink: 0; }
+/* === NEW: فلاتر لوحة الصدارة === */
+.lb-filters{
+  display:flex; gap:.5rem; justify-content:center; margin: .5rem 0 0.75rem;
+}
+.lb-filters select{
+  padding:.4rem .6rem; border-radius:10px; border:1px solid var(--border-color);
+  background:var(--secondary-color); color:var(--text-color);
+}
+
+/* === NEW: شبكة مضغوطة أكثر لتفاصيل اللاعب على الشاشات المتوسطة === */
+@media (min-width: 540px){
+  .player-details-body{ grid-template-columns: repeat(3, minmax(0,1fr)); }
+}
 
 /* =========================
    👤 Player Details
