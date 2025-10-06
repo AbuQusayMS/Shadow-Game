@@ -575,8 +575,7 @@ textarea { resize: vertical; min-height: 100px; }
 }
 /* بطاقة الدقّة بعرض كامل */
 .stat-card.accuracy {
-  grid-column: 1 / -1;
-  text-align: center;
+  text-align: right;
   padding: .95rem .6rem 1.15rem;
 }
 /* حلقة الدقّة (progress ring) */
