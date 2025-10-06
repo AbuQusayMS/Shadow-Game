@@ -519,7 +519,7 @@ class QuizGame {
     this.getEl('#totalTime').textContent = this.formatTime(stats.total_time);
     this.getEl('#finalLevel').textContent = stats.level;
     this.getEl('#finalAccuracy').textContent = `${stats.accuracy}%`;
-    this.getEl('#finalAvgTime').textContent = `${this.formatTime(stats.avg_time)} / سؤال`;
+    this.getEl('#finalAvgTime').textContent = `${this.formatTime(stats.avg_time)}`;
     this.getEl('#performanceText').textContent = stats.performance_rating;
   }
 
@@ -1249,15 +1249,15 @@ showPlayerDetails(player) {
   const html = `
     <div class="stats-grid">
 
-      ${card('⭐ النقاط', `<span class="value score">${this.formatNumber(score)}</span>`)}
       ${card('👑 المستوى', level)}
+      ${card('⭐ النقاط', `<span class="value score">${this.formatNumber(score)}</span>`)}
 
       ${twoRows('✅ الصحيحة', pos(correct), '❌ الخاطئة', neg(wrong))}
-      ${twoRows('⏱️ الوقت', timeAll, '⏳ المتوسط', `${avg} / سؤال`)}
+      ${twoRows('⏱️ الوقت', timeAll, '⏳ المتوسط', `${avg}`)}
 
-      ${card('📊 الأداء', perf)}
-      ${card('⏭️ التخطّي', this.formatNumber(skips))}
       ${card('🔢 المحاولة', this.formatNumber(att))}
+      ${card('⏭️ التخطّي', this.formatNumber(skips))}
+      ${card('📊 الأداء', perf)}
 
       <!-- بطاقة الدقّة -->
       <div class="stat-card accuracy">
