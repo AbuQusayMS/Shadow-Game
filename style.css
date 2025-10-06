@@ -662,7 +662,7 @@ textarea { resize: vertical; min-height: 100px; }
 /* شاشات قصيرة الارتفاع */
 @media (max-height: 740px) {
   #playerDetailsModal .stat-card.accuracy .circle-progress {
-    --size: 90px;
+    --size: 50px;
   }
 }
 @media (max-height: 660px) {
