@@ -137,6 +137,8 @@ class QuizGame {
         this.dom.filters[select.id] = select;
       });
     }
+  }
+  
   getEl(selector, parent = document) { return parent.querySelector(selector); }
   getAllEl(selector, parent = document) { return parent.querySelectorAll(selector); }
 
