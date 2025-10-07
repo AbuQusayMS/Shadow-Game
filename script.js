@@ -512,12 +512,11 @@ class QuizGame {
     }
   }
 
-  // ✅ جلب أكبر رقم محاولة وتعبئة قائمة الاختيار ديناميكيًا
+  // ✅ الوظيفة الأساسية لتعبئة فلتر المحاولات ديناميكيًا (مُعاد إضافتها)
   async getAvailableAttemptNumbers() {
     if (!this.supabase || !this.dom.lbAttempt) return;
 
     try {
-      // جلب أكبر رقم محاولة من سجلات اللعب
       const { data, error } = await this.supabase
         .from('log')
         .select('attempt_number')
@@ -533,11 +532,11 @@ class QuizGame {
     }
   }
 
+  // ✅ تعبئة قائمة اختيار المحاولة (مُعاد إضافتها)
   populateLbAttemptSelect(maxAttempt) {
     const select = this.dom.lbAttempt;
     if (!select) return;
 
-    // حفظ القيمة الحالية قبل التحديث
     const currentValue = select.value;
     select.innerHTML = '';
     
@@ -547,7 +546,6 @@ class QuizGame {
         return;
     }
 
-    // تعبئة الخيارات من 1 حتى أكبر رقم محاولة
     for (let i = 1; i <= maxAttempt; i++) {
       const option = document.createElement('option');
       option.value = i;
@@ -555,7 +553,6 @@ class QuizGame {
       select.appendChild(option);
     }
     
-    // استعادة القيمة المحفوظة أو تحديد أكبر رقم محاولة كافتراضي
     select.value = currentValue <= maxAttempt ? currentValue : maxAttempt;
     select.disabled = (this.dom.lbMode?.value !== 'attempt');
   }
@@ -601,6 +598,7 @@ class QuizGame {
     event.preventDefault();
 
     const formData = new FormData(event.target);
+    // MODIFIED: Get single value from the new dropdown
     const problemLocation = formData.get('problemLocation');
 
     const reportData = {
@@ -611,18 +609,22 @@ class QuizGame {
       question_text: this.dom.questionText.textContent || 'لا يوجد'
     };
 
+    // تشخيص تلقائي (اختياري)
     let meta = null;
     if (this.dom.includeAutoDiagnostics?.checked) {
       meta = this.getAutoDiagnostics();
+      // MODIFIED: Use the new single value
       meta.locationHint = problemLocation;
     }
 
+    // NEW: بناء سياق دقيق للسؤال الحالي
     const ctx = this.buildQuestionRef();
 
     this.showToast("جاري إرسال البلاغ...", "info");
     this.hideModal('advancedReport');
 
     try {
+      // 1) رفع صورة (إن وُجدت)
       let image_url = null;
       const file = this.dom.problemScreenshot.files?.[0];
       if (file) {
@@ -636,6 +638,7 @@ class QuizGame {
         image_url = pub?.publicUrl || null;
       }
 
+      // 2) إدراج في Supabase: نخزّن السياق داخل meta (حتى لا نضيف عمود جديد)
       const payloadDB = {
         ...reportData,
         image_url,
@@ -646,6 +649,7 @@ class QuizGame {
 
       this.showToast("تم إرسال بلاغك بنجاح. شكراً لك!", "success");
 
+      // 3) إخطار تيليغرام: نرسل السياق كحقل مستقل أيضًا
       const payloadMsg = { ...reportData, image_url, meta, context: ctx };
       this.sendTelegramNotification('report', payloadMsg);
 
