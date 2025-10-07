@@ -1052,6 +1052,21 @@ class QuizGame {
         }
       }
 
+      const sortFilter = document.getElementById("leaderboardSortFilter").value;
+
+      if (sortFilter === "all") {
+        // لا تغيّر الترتيب، اعرض النتائج كما هي
+        rows = [...rows]; // نستخدم rows بدلاً من players
+      } else if (sortFilter === "best") {
+        rows.sort((a, b) => b.score - a.score); // نستخدم rows
+      } else if (sortFilter === "attempt") {
+        rows.sort((a, b) => a.attempt_number - b.attempt_number); // نستخدم rows و attempt_number
+      } else if (sortFilter === "accuracy") {
+        rows.sort((a, b) => b.accuracy - a.accuracy); // نستخدم rows
+      } else if (sortFilter === "time") {
+        rows.sort((a, b) => a.total_time - b.total_time); // نستخدم rows و total_time
+      }
+
       this.renderLeaderboard(rows.slice(0, 100));
       if (mode !== 'attempt') this.subscribeToLeaderboardChanges();
 
