@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="description" content="مسابقة معلومات تفاعلية لاختبار ثقافتك في مستويات متعددة.">
   <title>🧠 مسابقة المعلومات | Hybrid Edition</title>
 
@@ -39,8 +39,6 @@
   <!-- ✅ إصلاح العنصر المكسور -->
   <div id="reportErrorFab" class="report-fab" role="button" aria-label="الإبلاغ عن مشكلة">⚠️</div>
 
-  <div id="devFloatingBtn" class="dev-fab" role="button" title="تبديل وضع المطور" style="display: none;"><span>⚡</span></div>
-
   <!-- SCREENS -->
   <div id="loader" class="screen active" role="status" aria-label="جاري التحميل">
     <div class="spinner" aria-hidden="true"></div>
@@ -56,7 +54,6 @@
       <div class="button-group">
         <button data-action="showAvatarScreen" class="btn-main">ابدأ اللعب</button>
         <button data-action="showLeaderboard" class="btn-secondary">لوحة الصدارة</button>
-        <button data-action="showDevPasswordModal" class="btn-secondary">وضع المطور</button>
       </div>
     </div>
   </div>
@@ -135,19 +132,6 @@
 
       <div class="button-group">
         <button class="btn-main" data-action="postInstructionsStart">حسناً، لنبدأ</button>
-      </div>
-    </div>
-  </div>
-
-  
-  <div id="levelSelectScreen" class="screen">
-    <div class="content-box">
-      <header class="screen-header"><h2>اختر مستوى للبدء (وضع المطور)</h2></header>
-      <div class="level-selection-grid">
-        <button class="btn-secondary" data-level-index="0" data-action="startDevLevel">سهل</button>
-        <button class="btn-secondary" data-level-index="1" data-action="startDevLevel">متوسط</button>
-        <button class="btn-secondary" data-level-index="2" data-action="startDevLevel">صعب</button>
-        <button class="btn-secondary" data-level-index="3" data-action="startDevLevel">مستحيل</button>
       </div>
     </div>
   </div>
@@ -258,7 +242,7 @@
   <div id="leaderboardScreen" class="screen screen--align-top">
     <div class="content-box">
       <header class="screen-header"><h2>🏆 لوحة الصدارة 🏆</h2></header>
-      
+     
       <div class="lb-filters">
         <select id="lbMode" aria-label="نمط ترتيب اللوحة">
           <option value="best" selected>أفضل نتيجة (لكل جهاز)</option>
@@ -274,7 +258,7 @@
           <option value="5">المحاولة 5</option>
         </select>
       </div>
-      
+     
       <div id="leaderboardContent" aria-live="polite"></div>
       <div class="button-group">
         <button class="btn-secondary" data-action="showStartScreen">العودة</button>
@@ -313,16 +297,17 @@
         </div>
 
         <div class="form-group">
-          <label>أين ظهرت المشكلة؟ (اختياري)</label>
-          <div class="detail-item" style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;">
-            <label><input type="checkbox" name="where[]" value="start"> شاشة البداية</label>
-            <label><input type="checkbox" name="where[]" value="avatar"> اختيار الصورة الرمزية</label>
-            <label><input type="checkbox" name="where[]" value="name"> إدخال الاسم</label>
-            <label><input type="checkbox" name="where[]" value="instructions"> التعليمات</label>
-            <label><input type="checkbox" name="where[]" value="game"> أثناء الأسئلة</label>
-            <label><input type="checkbox" name="where[]" value="leaderboard"> لوحة الصدارة</label>
-            <label><input type="checkbox" name="where[]" value="end"> شاشة النتيجة</label>
-          </div>
+          <label for="problemLocation">أين ظهرت المشكلة؟ (اختياري)</label>
+          <select id="problemLocation" name="problemLocation">
+            <option value="unspecified">لم أحدد...</option>
+            <option value="start">شاشة البداية</option>
+            <option value="avatar">اختيار الصورة الرمزية</option>
+            <option value="name">إدخال الاسم</option>
+            <option value="instructions">التعليمات</option>
+            <option value="game">أثناء الأسئلة</option>
+            <option value="leaderboard">لوحة الصدارة</option>
+            <option value="end">شاشة النتيجة</option>
+          </select>
         </div>
 
         <div class="form-group">
@@ -363,22 +348,6 @@
     </div>
   </div>
 
-  <div id="devPasswordModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="devPasswordTitle">
-    <div class="modal-content">
-      <h3 id="devPasswordTitle">وضع المطور</h3>
-      <p>الرجاء إدخال كلمة المرور.</p>
-      <div class="form-group" style="margin: 1rem 0 0.5rem;">
-        <label for="devPasswordInput" class="sr-only">كلمة المرور</label>
-        <input type="password" id="devPasswordInput" placeholder="كلمة المرور" aria-describedby="devPasswordError">
-      </div>
-      <div id="devPasswordError" class="error-message" aria-live="polite"></div>
-      <div class="modal-buttons">
-        <button class="btn-main" data-action="checkDevPassword">دخول</button>
-        <button class="btn-secondary" data-action="closeModal" data-modal-id="devPasswordModal">إلغاء</button>
-      </div>
-    </div>
-  </div>
-
   <div id="playerDetailsModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="playerDetailsTitle">
     <div class="modal-content">
       <header class="player-details-header">
@@ -401,6 +370,8 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" defer></script>
 
   <!-- App JS -->
-  <script src="script.js?v=18" defer></script>
+  <script src="script.js" defer></script>
 </body>
 </html>
+
+
