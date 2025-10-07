@@ -10,12 +10,16 @@ class QuizGame {
       // هام: استبدل بالبيانات الخاصة بك.
       SUPABASE_URL: 'https://qffcnljopolajeufkrah.supabase.co',
       SUPABASE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFmZmNubGpvcG9sYWpldWZrcmFoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkwNzkzNjMsImV4cCI6MjA3NDY1NTM2M30.0vst_km_pweyF2IslQ24JzMF281oYeaaeIEQM0aKkUg',
-      APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbx0cVV4vnwhYtB1__nYjKRvIpBC9lILEgyfgYomlb7pJh266i7QAItNo5BVPUfCyLq4A/exec',
+      APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbx0cVV4vnwhYtB1__nYjKRvIpBC9lILEgyfgYomlb7pJh266i7QAItNo5BVPUvFCyLq4A/exec',
       QUESTIONS_URL: 'https://abuqusayms.github.io/Shadow-Game/questions.json',
+
+      // Developer Settings
+      DEVELOPER_NAME: "AbuQusay",
+      DEVELOPER_PASSWORD: "AbuQusay",
 
       // Gameplay Settings
       RANDOMIZE_QUESTIONS: true,
-      RANDOMIZE_ANSWERS: true, // ✅ تم الإضافة: عشوائية ترتيب الإجابات
+      RANDOMIZE_ANSWERS: true, // ✅ مطلوب: عشوائية ترتيب الإجابات
       QUESTION_TIME: 80,
       MAX_WRONG_ANSWERS: 3,
       STARTING_SCORE: 100,
@@ -33,17 +37,19 @@ class QuizGame {
         skipQuestionBase: 0,
         skipQuestionIncrement: 0
       },
-      SKIP_WEIGHT: 0.7,
+      SKIP_WEIGHT: 0.7, // === NEW: وزن التخطي ضمن الدقة (يمكن تعديله)
     };
 
     // Internal State
     this.supabase = null;
-    this.questions = {};
+    this.questions = {};        // قد تكون {easy:[],...} أو مصفوفة واحدة
     this.gameState = {};
     this.timer = { interval: null, isFrozen: false, total: 0 };
     this.dom = {};
     this.cropper = null;
     this.leaderboardSubscription = null;
+    this.isDevSession = false;
+    this.isDevTemporarilyDisabled = false;
     this.recentErrors = [];
     window.addEventListener('error', (ev) => {
       this.recentErrors.push({
@@ -88,8 +94,8 @@ class QuizGame {
 
     const questionsLoaded = await this.loadQuestions();
     
-    // ✅ جلب وتعبئة خيارات المحاولة الديناميكية
-    await this.getAvailableAttemptNumbers();
+    // ✅ تحديث قائمة المحاولات عند التحميل الأولي
+    await this.getAvailableAttemptNumbers(); 
 
     if (questionsLoaded) {
       this.showScreen('start');
@@ -108,12 +114,12 @@ class QuizGame {
       screens: {
         loader: byId('loader'), start: byId('startScreen'), avatar: byId('avatarScreen'),
         nameEntry: byId('nameEntryScreen'), instructions: byId('instructionsScreen'),
-        game: byId('gameContainer'),
+        levelSelect: byId('levelSelectScreen'), game: byId('gameContainer'),
         levelComplete: byId('levelCompleteScreen'), end: byId('endScreen'), leaderboard: byId('leaderboardScreen')
       },
       modals: {
         confirmExit: byId('confirmExitModal'), advancedReport: byId('advancedReportModal'),
-        avatarEditor: byId('avatarEditorModal'),
+        avatarEditor: byId('avatarEditorModal'), devPassword: byId('devPasswordModal'),
         playerDetails: byId('playerDetailsModal')
       },
       nameInput: byId('nameInput'),
@@ -122,6 +128,9 @@ class QuizGame {
       confirmAvatarBtn: byId('confirmAvatarBtn'),
       reportProblemForm: byId('reportProblemForm'),
       imageToCrop: byId('image-to-crop'),
+      devPasswordInput: byId('devPasswordInput'),
+      devPasswordError: byId('devPasswordError'),
+      devFloatingBtn: byId('devFloatingBtn'),
       leaderboardContent: byId('leaderboardContent'),
       questionText: byId('questionText'),
       optionsGrid: this.getEl('.options-grid'),
@@ -131,8 +140,8 @@ class QuizGame {
       reportImagePreview: byId('reportImagePreview'),
       includeAutoDiagnostics: byId('includeAutoDiagnostics')
     };
-    this.dom.lbMode    = byId('lbMode');
-    this.dom.lbAttempt = byId('lbAttempt');
+    this.dom.lbMode    = byId('lbMode');      // === NEW
+    this.dom.lbAttempt = byId('lbAttempt');    // === NEW
   }
   getEl(selector, parent = document) { return parent.querySelector(selector); }
   getAllEl(selector, parent = document) { return parent.querySelectorAll(selector); }
@@ -156,6 +165,7 @@ class QuizGame {
         showStartScreen: () => this.showScreen('start'),
         toggleTheme: () => this.toggleTheme(),
         showConfirmExitModal: () => this.showModal('confirmExit'),
+        showDevPasswordModal: () => this.showModal('devPassword'),
         closeModal: () => {
           const id = target.dataset.modalId || target.dataset.modalKey;
           if (id === 'avatarEditor' || id === 'avatarEditorModal') this.cleanupAvatarEditor();
@@ -167,6 +177,8 @@ class QuizGame {
         shareOnX: () => this.shareOnX(),
         shareOnInstagram: () => this.shareOnInstagram(),
         saveCroppedAvatar: () => this.saveCroppedAvatar(),
+        checkDevPassword: () => this.checkDevPassword(),
+        startDevLevel: () => this.startGameFlow(parseInt(target.dataset.levelIndex, 10)),
       };
       if (actionHandlers[action]) actionHandlers[action]();
     });
@@ -174,29 +186,30 @@ class QuizGame {
     // Inputs & forms
     this.dom.nameInput.addEventListener('input', () => this.validateNameInput());
     this.dom.nameInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') this.handleNameConfirmation(); });
+    this.dom.devPasswordInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') this.checkDevPassword(); });
     this.dom.reportProblemForm.addEventListener('submit', (e) => this.handleReportSubmit(e));
 
-    // Question options
+    // خيارات السؤال
     this.dom.optionsGrid.addEventListener('click', e => {
       const btn = e.target.closest('.option-btn');
       if (btn) this.checkAnswer(btn);
      });
 
-    // Helpers
+    // أزرار المساعدات
     this.getEl('.helpers').addEventListener('click', e => {
       const btn = e.target.closest('.helper-btn');
       if (btn) this.useHelper(btn);
     });
 
-    // Avatar selection
+    // اختيار الصورة الرمزية
     this.getEl('.avatar-grid').addEventListener('click', (e) => {
       if (e.target.matches('.avatar-option')) this.selectAvatar(e.target);
     });
 
-    // Report FAB
+    // فتح نافذة البلاغ من الأيقونة
     this.dom.reportFab.addEventListener('click', () => this.showModal('advancedReport'));
 
-    // Close modal on outside click
+   // إغلاق المودال بالنقر خارج المحتوى
     document.querySelectorAll('.modal').forEach(modal => {
       modal.addEventListener('click', (e) => {
         if (e.target.classList.contains('modal')) {
@@ -205,7 +218,7 @@ class QuizGame {
       });
     });
 
-    // Report screenshot preview
+    // معاينة صورة البلاغ
     this.dom.problemScreenshot.addEventListener('change', (e) => {
       const file = e.target.files?.[0];
       const prev = this.dom.reportImagePreview;
@@ -215,15 +228,26 @@ class QuizGame {
       prev.querySelector('img').src = url;
     });
 
-    // Close with Escape key
+    // إغلاق بأزرار Escape
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         const open = document.querySelector('.modal.active');
         if (open) open.classList.remove('active');
       }
+    }); // ←← كان هذا السطر مفقودًا
+
+    // زر المطوّر العائم (خارج keydown)
+    this.dom.devFloatingBtn.addEventListener('click', () => {
+      if (!this.isDevSession) { this.showModal('devPassword'); return; }
+      this.isDevTemporarilyDisabled = !this.isDevTemporarilyDisabled;
+      this.updateDevFab();
+      this.showToast(
+        this.isDevTemporarilyDisabled ? "تم تعطيل صلاحيات المطور مؤقتًا" : "تم تفعيل صلاحيات المطور",
+        "info"
+      );
     });
 
-    // Leaderboard filters
+    // === NEW: مستمعو فلاتر لوحة الصدارة
     this.dom.lbMode?.addEventListener('change', ()=>{
       const m = this.dom.lbMode.value;
       if (this.dom.lbAttempt) this.dom.lbAttempt.disabled = (m !== 'attempt');
@@ -237,13 +261,17 @@ class QuizGame {
   // ===================================================
   postInstructionsStart() {
     this.setupInitialGameState();
-    this.startGameFlow(0);
+    if (this.isDevSession) {
+      this.showScreen('levelSelect');
+    } else {
+      this.startGameFlow(0);
+    }
   }
 
   setupInitialGameState() {
     this.gameState = {
       name: (this.dom.nameInput.value || '').trim(),
-      avatar: this.gameState.avatar, // Keep selected avatar
+      avatar: this.gameState.avatar, // احتفاظ باختيار الصورة
       playerId: `PL${Math.random().toString(36).substring(2, 11).toUpperCase()}`,
       deviceId: this.getOrSetDeviceId(),
       level: 0,
@@ -273,10 +301,8 @@ class QuizGame {
 
     const levelQuestions = this.getLevelQuestions(currentLevel.name);
     
-    // ✅ عشوائية الأسئلة لكل مستوى (يتم تطبيقه على جميع الأسئلة المتاحة للمستوى)
+    // ✅ مطلوب 2 & 4: عشوائية الأسئلة + عدد مرن (كل الأسئلة المتاحة)
     if (this.config.RANDOMIZE_QUESTIONS) this.shuffleArray(levelQuestions);
-    
-    // ✅ عدد أسئلة مرن: يتم استخدام جميع الأسئلة المتوفرة للمستوى
     this.gameState.shuffledQuestions = levelQuestions; 
 
     this.updateLevelProgressUI();
@@ -324,30 +350,36 @@ class QuizGame {
 
     const baseStats = this._calculateFinalStats(completedAllLevels);
 
-    try {
-        const perf = await this.ratePerformance(baseStats);
-        baseStats.performance_rating = perf.label;
-        baseStats.performance_score  = perf.score;
-    } catch (_) {
-        const acc = Number(baseStats.accuracy || 0);
-        baseStats.performance_rating = (acc >= 90) ? "ممتاز 🏆" :
-                                        (acc >= 75) ? "جيد جدًا ⭐" :
-                                        (acc >= 60) ? "جيد 👍" :
-                                        (acc >= 40) ? "مقبول 👌" : "يحتاج إلى تحسين 📈";
-    }
+  // ⚡ احسب التقييم المتقدم المعتمد على السجل
+  try {
+    const perf = await this.ratePerformance(baseStats);
+    baseStats.performance_rating = perf.label;
+    baseStats.performance_score  = perf.score;   // يتطلب عمودًا اختياريًا في DB
+  } catch (_) {
+    // في حال فشل القراءة من Supabase: أرجع لتقييم مبسّط
+    const acc = Number(baseStats.accuracy || 0);
+    baseStats.performance_rating = (acc >= 90) ? "ممتاز 🏆" :
+                                    (acc >= 75) ? "جيد جدًا ⭐" :
+                                    (acc >= 60) ? "جيد 👍" :
+                                    (acc >= 40) ? "مقبول 👌" : "يحتاج إلى تحسين 📈";
+  }
 
+  if (!this.isDevSession) {
     const { attemptNumber, error } = await this.saveResultsToSupabase(baseStats);
     if (error) this.showToast("فشل إرسال النتائج إلى السيرفر", "error");
     baseStats.attempt_number = attemptNumber ?? 'N/A';
-    
-    // ✅ تحديث قائمة المحاولات بعد الانتهاء من محاولة جديدة
-    this.getAvailableAttemptNumbers(); 
+  } else {
+    baseStats.attempt_number = 'DEV';
+  }
+  
+  // ✅ مطلوب 1: تحديث قائمة المحاولات بعد الانتهاء من محاولة جديدة
+  this.getAvailableAttemptNumbers(); 
 
-    this._displayFinalStats(baseStats);
-    this.showScreen('end');
+  this._displayFinalStats(baseStats);
+  this.showScreen('end');
   }
 
-  _calculateFinalStats(completedAll) {
+  _calculateFinalStats(completedAll) {    // === CHANGED
     const totalTimeSeconds = (new Date() - this.gameState.startTime) / 1000;
     const currentLevelLabel = this.config.LEVELS[Math.min(this.gameState.level, this.config.LEVELS.length - 1)].label;
 
@@ -355,14 +387,15 @@ class QuizGame {
     const wrong = this.gameState.wrongAnswers;
     const skips = this.gameState.skips;
 
+    // NEW: التخطي له وزن في المقام
     const denom = corr + wrong + (this.config.SKIP_WEIGHT * skips);
     const accuracy = denom > 0 ? parseFloat(((corr / denom) * 100).toFixed(1)) : 0.0;
 
-    const answeredCount = (corr + wrong) || 1;
+    const answeredCount = (corr + wrong) || 1; // المتوسط لأسئلة أُجيب عنها فقط
     const avgTime = parseFloat((totalTimeSeconds / answeredCount).toFixed(1));
 
     return {
-      name: this.gameState.name,
+      name: (this.dom.nameInput.value || '').trim(), // تم التعديل لأخذ الاسم الأحدث
       player_id: this.gameState.playerId,
       device_id: this.gameState.deviceId,
       avatar: this.gameState.avatar,
@@ -386,20 +419,18 @@ class QuizGame {
   displayQuestion(questionData) {
     this.answerSubmitted = false;
 
-    // الحصول على بيانات السؤال والنص الصحيح
+    // 🔧 دعم صيغ متعددة للسؤال
     const { text, options: originalOptions, correctText } = this.resolveQuestionFields(questionData);
-
-    // حفظ النص الصحيح للنورماليزيشن
-    const correctTextNormalized = this.normalize(correctText);
-
-    // ✅ عشوائية ترتيب الإجابات مع حفظ الصحة
-    let displayOptions = [...originalOptions];
-    if (this.config.RANDOMIZE_ANSWERS) this.shuffleArray(displayOptions);
+    const correctTextNormalized = this.normalize(correctText); // نص الإجابة الصحيحة
 
     const totalQuestions = (this.gameState.shuffledQuestions || []).length;
     this.getEl('#questionCounter').textContent = `السؤال ${this.gameState.questionIndex + 1} من ${totalQuestions}`;
     this.dom.questionText.textContent = text;
     this.dom.optionsGrid.innerHTML = '';
+
+    // ✅ مطلوب 3: عشوائية ترتيب الإجابات مع حفظ الصحة
+    let displayOptions = [...originalOptions];
+    if (this.config.RANDOMIZE_ANSWERS) this.shuffleArray(displayOptions);
 
     const frag = document.createDocumentFragment();
     displayOptions.forEach(opt => {
@@ -421,15 +452,13 @@ class QuizGame {
     this.answerSubmitted = true;
     clearInterval(this.timer.interval);
 
+    // تعطيل جميع الأزرار
     this.getAllEl('.option-btn').forEach(b => b.classList.add('disabled'));
 
+    // تحديد صحة الإجابة بأمان
     let isCorrect = false;
-    // التحقق من أن الزر المختار موجود ولديه خاصية dataset
     if (selectedButton && selectedButton.dataset) {
       isCorrect = selectedButton.dataset.correct === 'true';
-    } else {
-      // إذا كان null (أي بسبب timeout)، يعتبر خطأ
-      isCorrect = false;
     }
 
     if (isCorrect) {
@@ -447,9 +476,8 @@ class QuizGame {
     }
 
     this.gameState.questionIndex++;
+    const isGameOver = this.gameState.wrongAnswers >= this.config.MAX_WRONG_ANSWERS && !this.isDeveloper();
     this.updateGameStatsUI();
-
-    const isGameOver = this.gameState.wrongAnswers >= this.config.MAX_WRONG_ANSWERS;
 
     setTimeout(() => {
       if (isGameOver) this.endGame(false);
@@ -462,6 +490,7 @@ class QuizGame {
       `${this.gameState.wrongAnswers} / ${this.config.MAX_WRONG_ANSWERS}`;
     this.getEl('#skipCount').textContent = this.gameState.skips;
 
+    // التخطي مجاني دائمًا (العرض فقط)
     this.getEl('#skipCost').textContent = '(مجانية)';
 
     const isImpossible = this.config.LEVELS[this.gameState.level]?.name === 'impossible';
@@ -469,13 +498,20 @@ class QuizGame {
     this.getAllEl('.helper-btn').forEach(btn => {
       const type = btn.dataset.type;
 
+      if (this.isDeveloper()) {        // المطوّر: دائمًا مفعّل
+        btn.disabled = false;
+        return;
+      }
+
+      // في "مستحيل" تُمنع كل المساعدات بما فيها التخطي
       if (isImpossible) {
         btn.disabled = true;
         return;
       }
 
+      // خارج "مستحيل": يمكن استخدام 50/50 و التجميد مرة واحدة لكل مستوى
       if (type === 'skipQuestion') {
-        btn.disabled = false;
+        btn.disabled = false; // التخطي مسموح خارج "مستحيل"
       } else {
         btn.disabled = this.gameState.helpersUsed[type] === true;
       }
@@ -512,11 +548,12 @@ class QuizGame {
     }
   }
 
-  // ✅ جلب أكبر رقم محاولة وتعبئة قائمة الاختيار ديناميكيًا
+  // ✅ مطلوب 1: جلب أكبر رقم محاولة وتعبئة قائمة الاختيار ديناميكيًا
   async getAvailableAttemptNumbers() {
     if (!this.supabase || !this.dom.lbAttempt) return;
 
     try {
+      // جلب أكبر رقم محاولة من سجلات اللعب
       const { data, error } = await this.supabase
         .from('log')
         .select('attempt_number')
@@ -532,7 +569,7 @@ class QuizGame {
     }
   }
 
-  // ✅ تعبئة قائمة اختيار المحاولة (مُعاد إضافتها)
+  // ✅ مطلوب 1: تعبئة قائمة اختيار المحاولة
   populateLbAttemptSelect(maxAttempt) {
     const select = this.dom.lbAttempt;
     if (!select) return;
@@ -553,6 +590,7 @@ class QuizGame {
       select.appendChild(option);
     }
     
+    // استعادة القيمة المحفوظة أو تحديد أكبر رقم محاولة كافتراضي
     select.value = currentValue <= maxAttempt ? currentValue : maxAttempt;
     select.disabled = (this.dom.lbMode?.value !== 'attempt');
   }
@@ -665,28 +703,17 @@ class QuizGame {
     }
   }
  
-  /**
-   * ✅ دالة إرسال الإخطارات إلى تيليغرام عبر Google Apps Script
-   * تم تعديلها للعمل بوضع `no-cors` و `text/plain` لتوافق Apps Script.
-   */
   async sendTelegramNotification(type, data) {
     if (!this.config.APPS_SCRIPT_URL) {
       console.warn("Apps Script URL is not configured. Skipping notification.");
       return;
     }
-    
-    const payload = JSON.stringify({ type, data });
-    
     try {
-      // إصلاح: العودة إلى 'text/plain' و 'no-cors' لتجنب مشاكل Preflight CORS مع Apps Script
       await fetch(this.config.APPS_SCRIPT_URL, {
-        method: 'POST', 
-        mode: 'no-cors', // 💡 هذا هو المفتاح لتجنب Preflight CORS
-        cache: 'no-cache',
-        headers: { 'Content-Type': 'text/plain' }, // 💡 إرسال البيانات كنص
-        body: payload
+        method: 'POST', mode: 'no-cors', cache: 'no-cache',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ type, data })
       });
-      // لا يمكننا التحقق من حالة 200 هنا بسبب 'no-cors'، لكن الطلب يجب أن يمر
     } catch (error) {
       console.error('Error sending notification request to Apps Script:', error.message);
     }
@@ -697,22 +724,27 @@ class QuizGame {
   // ===================================================
   useHelper(btn) {
     const type = btn.dataset.type;
+    const isDev = this.isDeveloper();
     const isSkip = type === 'skipQuestion';
     const isImpossible = this.config.LEVELS[this.gameState.level]?.name === 'impossible';
 
-    if (isImpossible) {
+    // في مستوى "مستحيل": لا مساعدات إطلاقًا
+    if (!isDev && isImpossible) {
       this.showToast("المساعدات غير متاحة في المستوى المستحيل.", "error");
       return;
     }
 
+    // التخطي مجاني دائمًا (خارج مستحيل)
     const cost = isSkip ? 0 : this.config.HELPER_COSTS[type];
 
-    if (!isSkip && this.gameState.helpersUsed[type]) {
+     // 50/50 و التجميد مرة واحدة فقط لكل مستوى
+    if (!isSkip && !isDev && this.gameState.helpersUsed[type]) {
       this.showToast("هذه المساعدة استُخدمت بالفعل في هذا المستوى.", "error");
       return;
     }
 
-    if (cost > 0) {
+    // خصم النقاط للمساعدات المدفوعة (لو فيه تكلفة)
+    if (!isDev && cost > 0) {
       if (this.gameState.currentScore < cost) {
         this.showToast("نقاطك غير كافية!", "error");
         return;
@@ -721,6 +753,8 @@ class QuizGame {
       this.showToast(`تم استخدام المساعدة! -${cost} نقطة`, "info");
     } else if (isSkip) {
       this.showToast("تم تخطي السؤال.", "info");
+    } else if (isDev) {
+      this.showToast(`مساعدة المطور (${type})`, "info");
     }
 
     if (isSkip) {
@@ -732,7 +766,8 @@ class QuizGame {
       return;
     }
 
-    this.gameState.helpersUsed[type] = true;
+    // علِّم أنها استُخدمت (مرة واحدة لكل مستوى)
+    if (!isDev) this.gameState.helpersUsed[type] = true;
     this.updateGameStatsUI();
 
     if (type === 'fiftyFifty') {
@@ -759,12 +794,13 @@ class QuizGame {
     const bar = this.getEl('.timer-bar');
     const label = this.getEl('.timer-text');
 
+    // إعداد أولي
     label.textContent = timeLeft;
     bar.style.transition = 'width 200ms linear';
     bar.style.width = '100%';
 
     const update = () => {
-      if (this.timer.isFrozen) return;
+      if (this.timer.isFrozen) return;     // أثناء التجميد ما مننقص
       timeLeft = Math.max(0, timeLeft - 1);
       label.textContent = timeLeft;
       const pct = (timeLeft / this.timer.total) * 100;
@@ -773,21 +809,25 @@ class QuizGame {
       if (timeLeft <= 0) {
         clearInterval(this.timer.interval);
         this.showToast("انتهى الوقت!", "error");
+        // مهلة الوقت: اعتبرها إجابة خاطئة بدون تمرير عنصر
         this.handleTimeout();
       }
     };
 
-    update();
+    // إعادة ضبط العرض فورًا
+    update(); // يضع الوقت الأولي
+    // ثم كل ثانية
     this.timer.interval = setInterval(update, 1000);
   }
 
   handleTimeout() {
+    // لو في زر خطأ ظاهر، مرّره للدالة ليصير عليه تأثير بصري؛ وإلا مرّر null
     const anyWrongBtn = this.dom.optionsGrid.querySelector('.option-btn:not([data-correct="true"])');
     this.checkAnswer(anyWrongBtn || null);
   }
 
   updateScore(newScore, isReset = false) {
-    this.gameState.currentScore = newScore;
+    this.gameState.currentScore = (this.isDeveloper() && !isReset) ? this.gameState.currentScore : newScore;
     this.dom.scoreDisplay.textContent = this.formatNumber(this.gameState.currentScore);
     this.updateGameStatsUI();
   }
@@ -811,6 +851,8 @@ class QuizGame {
     }
     return deviceId;
   }
+
+  isDeveloper() { return this.isDevSession && !this.isDevTemporarilyDisabled; }
 
   getPerformanceRating(accuracy) {
     if (accuracy >= 90) return "ممتاز 🏆";
@@ -866,6 +908,7 @@ class QuizGame {
     }
   }
 
+  // ======= NEW: مرجع السؤال الحالي للسياق في البلاغ =======
   buildQuestionRef() {
     const levelObj = this.config.LEVELS[this.gameState.level] || {};
     const levelName  = levelObj.name || '';
@@ -895,11 +938,13 @@ class QuizGame {
   // Performance Rating (advanced)
   // ==============================
 
+  /** يحوّل قيمة بين مجالين إلى 0..100 */
   normalizeTo100(value, min, max) {
     const v = Math.max(min, Math.min(max, Number(value) || 0));
     return Math.round(((max - v) / (max - min)) * 100);
   }
 
+  /** انحراف معياري بسيط */
   stdDev(arr) {
     if (!arr || arr.length < 2) return 0;
     const mean = arr.reduce((a,b)=>a+Number(b||0),0)/arr.length;
@@ -907,6 +952,7 @@ class QuizGame {
     return Math.sqrt(variance);
   }
 
+  /** يحوّل الدرجة إلى تصنيف نصي */
   mapPerformanceLabel(score, { completed_all=false, level='' } = {}) {
     if (completed_all && (level === 'مستحيل' || level === 'impossible')) {
       score = Math.max(score, 80);
@@ -917,10 +963,16 @@ class QuizGame {
     if (score >= 75) return 'جيد جدًا ⭐';
     if (score >= 62) return 'جيد 👍';
     if (score >= 50) return 'مقبول 👌';
+    if (score >= 35) return 'يحتاج إلى تحسين 📈';
     return 'ضعيف 🧩';
   }
 
+  /**
+   * درجة أداء مركّبة اعتمادًا على المحاولة الحالية + آخر 20 محاولة
+   * يرجع { score, label, details }
+   */
   async ratePerformance(current) {
+    // 1) تاريخ آخر 20
     let history = [];
     try {
       const { data, error } = await this.supabase
@@ -937,6 +989,7 @@ class QuizGame {
     const histDone  = history.filter(h => h.completed_all === true).length;
     const histCount = history.length;
 
+    // 2) مؤشرات الحالية
     const accuracy      = Number(current.accuracy || 0);
     const avgTime       = Number(current.avg_time || 0);
     const totalSec      = Number(current.total_time || 0);
@@ -946,20 +999,25 @@ class QuizGame {
     const lvlName       = (current.level || '').toString();
     const completedAll = !!current.completed_all;
 
+    // 3) نقاط أساسية
     const accScore   = Math.max(0, Math.min(100, accuracy));
-    const speedScore = this.normalizeTo100(avgTime, 3, 20);
+    const speedScore = this.normalizeTo100(avgTime, 3, 20); // 3s => 100, 20s => 0
 
+    // 4) مكافآت
     let levelBonus = 0;
     if (lvlName === 'متوسط' || lvlName === 'medium')   levelBonus += 10;
     else if (lvlName === 'صعب' || lvlName === 'hard')    levelBonus += 25;
     else if (lvlName === 'مستحيل' || lvlName === 'impossible') levelBonus += 40;
     if (completedAll) levelBonus += 15;
 
+    // 5) إنتاجية صحيح/دقيقة
     const cpm = totalSec > 0 ? corr / (totalSec / 60) : 0;
     const cpmBonus = Math.min(20, Math.round(cpm * 4));
 
-    const penalty = (wrong * 4) + (skips * 2);
+    // 6) عقوبات خفيفة
+    const penalty = (wrong * 4) + (skips * 2);  // === CHANGED: التخطي يؤثر أكثر
 
+    // 7) مكافأة التاريخ
     let historyBonus = 0;
     if (histCount > 0) {
       const avgAccHist  = histAcc.reduce((a,b)=>a+b,0) / (histAcc.length || 1);
@@ -980,6 +1038,7 @@ class QuizGame {
       if (avgTimeHist && avgTime < avgTimeHist - 2) historyBonus += 3;
     }
 
+    // 8) الدرجة النهائية (0..100)
     let score =
       (0.45 * accScore) +
       (0.25 * speedScore) +
@@ -991,6 +1050,37 @@ class QuizGame {
     score = Math.max(0, Math.min(100, Math.round(score)));
     const label = this.mapPerformanceLabel(score, { completed_all: completedAll, level: lvlName });
     return { score, label, details: { accScore, speedScore, levelBonus, cpmBonus, historyBonus, penalty } };
+  }
+
+  // ===================================================
+  // Dev Mode
+  // ===================================================
+  checkDevPassword() {
+    const input = (this.dom.devPasswordInput.value || '').trim();
+    if (input.toLowerCase() === this.config.DEVELOPER_PASSWORD.toLowerCase()) {
+      this.activateDevSession();
+    } else {
+      this.dom.devPasswordError.textContent = "كلمة المرور غير صحيحة.";
+      this.dom.devPasswordError.classList.add('show');
+    }
+  }
+
+  activateDevSession(fromModal = true) {
+      this.isDevSession = true;
+      if (fromModal) this.hideModal('devPassword');
+      this.showToast("تم تفعيل وضع المطور", "success");
+     
+      this.isDevTemporarilyDisabled = false;
+      this.updateDevFab();
+  }
+
+  updateDevFab() {
+    const fab = this.dom.devFloatingBtn;
+    if (!fab) return;
+    fab.style.display = 'flex';
+    fab.classList.toggle('active', !this.isDevTemporarilyDisabled);
+    fab.classList.toggle('inactive', this.isDevTemporarilyDisabled);
+    fab.title = this.isDevTemporarilyDisabled ? 'تشغيل صلاحيات المطور' : 'إيقاف صلاحيات المطور مؤقتًا';
   }
 
   // ===================================================
@@ -1036,13 +1126,16 @@ class QuizGame {
 
   handleNameConfirmation() {
     if (!this.dom.confirmNameBtn.disabled) {
+      if (this.dom.nameInput.value.trim().toLowerCase() === this.config.DEVELOPER_NAME.toLowerCase()) {
+        this.activateDevSession(false);
+      }
       this.showScreen('instructions');
     }
   }
 
   validateNameInput() {
     const name = (this.dom.nameInput.value || '').trim();
-    const isValid = name.length >= 3 && name.length <= 15; // Added max length check for safety
+    const isValid = name.length >= 3;
     this.dom.nameError.textContent = isValid ? "" : "يجب أن يتراوح طول الاسم بين ٣ - ١٥ حرفًا";
     this.dom.nameError.classList.toggle('show', !isValid);
     this.dom.confirmNameBtn.disabled = !isValid;
@@ -1051,24 +1144,24 @@ class QuizGame {
   // ===================================================
   // Leaderboard
   // ===================================================
-  async displayLeaderboard() {
+  async displayLeaderboard() {  // === CHANGED
     this.showScreen('leaderboard');
     this.dom.leaderboardContent.innerHTML = '<div class="spinner"></div>';
 
     const mode = this.dom.lbMode?.value || 'best';
     const attemptN = Number(this.dom.lbAttempt?.value || 1);
-
-    // ✅ إعادة تحديث خيارات المحاولة لضمان التزامن مع أي حذف/إضافة
-    this.getAvailableAttemptNumbers(); 
     
+    // ✅ مطلوب 1: إعادة تحديث خيارات المحاولة لضمان التزامن مع أي حذف/إضافة
+    this.getAvailableAttemptNumbers(); 
+
     try {
       let rows = [];
       if (mode === 'attempt') {
-        // ✅ استخدام lbAttempt لتصفية رقم المحاولة
+        // من جدول log لمحاولة محددة
         const { data, error } = await this.supabase
           .from('log')
           .select('*')
-          .eq('attempt_number', attemptN) 
+          .eq('attempt_number', attemptN)
           .order('score', { ascending: false })
           .order('accuracy', { ascending: false })
           .order('total_time', { ascending: true })
@@ -1076,6 +1169,7 @@ class QuizGame {
         if (error) throw error;
         rows = data || [];
       } else {
+        // من leaderboard (أفضل/دقة/وقت)
         let q = this.supabase.from('leaderboard').select('*');
         if (mode === 'accuracy') {
           q = q.order('accuracy', { ascending: false })
@@ -1095,6 +1189,7 @@ class QuizGame {
         if (error) throw error;
         rows = data || [];
 
+        // منع تكرار الأجهزة في best (احتياطًا لو وُجد تكرار)
         if (mode === 'best') {
           const seen = new Map();
           for (const r of rows) if (!seen.has(r.device_id)) seen.set(r.device_id, r);
@@ -1103,6 +1198,7 @@ class QuizGame {
       }
 
       this.renderLeaderboard(rows.slice(0, 100));
+      // الاشتراك على تغيّر leaderboard فقط عند وضع best/accuracy/time
       if (mode !== 'attempt') this.subscribeToLeaderboardChanges();
 
     } catch (error) {
@@ -1158,35 +1254,38 @@ class QuizGame {
 
   this.leaderboardSubscription = this.supabase
      .channel('public:leaderboard')
-     // ✅ استدعاء displayLeaderboard عند التغيير لضمان التحديث التلقائي
      .on('postgres_changes', { event: '*', schema: 'public', table: 'leaderboard' }, () => this.displayLeaderboard())
      .subscribe();
   }
 
+// لون شريط الدائرة بحسب نسبة الدقة (أخضر ↔ أصفر ↔ أحمر)
 getAccuracyBarColor(pct) {
   const p = Math.max(0, Math.min(100, Number(pct) || 0));
-  const hue = Math.round((p / 100) * 120);
+  const hue = Math.round((p / 100) * 120); // 0=أحمر, 120=أخضر
   return `hsl(${hue} 70% 45%)`;
 }
 
 showPlayerDetails(player) {
+  /* الهيدر القديم يبقى كما هو (صورة + اسم + كود) */
   this.getEl('#detailsName').textContent = player.name || 'غير معروف';
   this.getEl('#detailsPlayerId').textContent = player.player_id || 'N/A';
   const avatarEl = this.getEl('#detailsAvatar');
   avatarEl.src = player.avatar || '';
   avatarEl.style.visibility = player.avatar ? 'visible' : 'hidden';
 
+  /* القيم */
   const score   = Number(player.score || 0);
   const level   = player.level || 'N/A';
   const correct = Number(player.correct_answers || 0);
   const wrong   = Number(player.wrong_answers || 0);
-  const timeAll = this.formatTime(player.total_time || 0);
-  const avg     = this.formatTime(player.avg_time || 0);
+  const timeAll = this.formatTime(player.total_time || 0);    // نص "دقائق:ثواني"
+  const avg     = this.formatTime(player.avg_time || 0);      // نص "ثوانٍ/سؤال"
   const accNum  = Math.max(0, Math.min(100, Math.round(Number(player.accuracy || 0))));
   const skips   = Number(player.skips || 0);
   const att     = Number(player.attempt_number || 0);
   const perf    = player.performance_rating || 'جيد';
 
+  /* مُنشئات البطاقات */
   const card = (title, value, extra = '') => `
     <div class="stat-card" style="${extra}">
       <div class="label">${title}</div>
@@ -1208,15 +1307,21 @@ showPlayerDetails(player) {
   const pos = v => `<span style="color:var(--success-color)">${this.formatNumber(v)}</span>`;
   const neg = v => `<span style="color:var(--error-color)">${this.formatNumber(v)}</span>`;
 
+  /* الشبكة 2×N + بطاقة الدقّة أسفل بعرض كامل — نفس ترتيب صورتك */
   const html = `
     <div class="stats-grid">
+
       ${card('👑 المستوى', level)}
       ${card('⭐ النقاط', `<span class="value score">${this.formatNumber(score)}</span>`)}
+
       ${twoRows('✅ الصحيحة', pos(correct), '❌ الخاطئة', neg(wrong))}
       ${twoRows('⏱️ الوقت', timeAll, '⏳ المتوسط', `${avg}`)}
+
       ${card('🔢 المحاولة', this.formatNumber(att))}
       ${card('⏭️ التخطّي', this.formatNumber(skips))}
       ${card('📊 الأداء', perf)}
+
+      <!-- بطاقة الدقّة -->
       <div class="stat-card accuracy">
         <div class="label" style="margin-bottom:.3rem">🎯 الدقّة</div>
         <div style="display:grid;place-items:center">
@@ -1226,6 +1331,7 @@ showPlayerDetails(player) {
           </div>
         </div>
       </div>
+
     </div>`;
 
   this.getEl('#playerDetailsContent').innerHTML = html;
@@ -1314,13 +1420,14 @@ showPlayerDetails(player) {
     } catch (e) {}
     if (this.dom?.imageToCrop) this.dom.imageToCrop.src = '';
     const input = this.getEl('#avatarUploadInput');
-    if (input) input.value = '';
+    if (input) input.value = ''; // يسمح باختيار نفس الملف مرة أخرى
   }
 
   // ===================================================
   // Sharing
   // ===================================================
   getShareTextForX() {
+    // نعتمد على القيم المعروضة في شاشة النهاية
     const name    = this.getEl('#finalName').textContent || '';
     const attempt = this.getEl('#finalAttemptNumber').textContent || '';
     const correct = this.getEl('#finalCorrect').textContent || '0';
@@ -1373,13 +1480,16 @@ showPlayerDetails(player) {
   normalize(s) { return String(s || '').trim().toLowerCase(); }
 
   resolveQuestionFields(q) {
+    // يدعم صيغ مثل:
+    // { q: "نص", options: [...], correct: 2 }
+    // { question: "نص", options: [...], answer: "النص الصحيح" }
+    // { text: "نص", choices: [...], correctIndex: 1 }
     const text = q.q || q.question || q.text || '';
     const options = Array.isArray(q.options) ? q.options
                     : Array.isArray(q.choices) ? q.choices
                     : [];
     let correctText = '';
 
-    // 1. تحديد نص الإجابة الصحيحة بناءً على index أو نص صريح
     if (typeof q.correct === 'number' && options[q.correct] !== undefined) {
       correctText = options[q.correct];
     } else if (typeof q.answer === 'string') {
@@ -1395,10 +1505,10 @@ showPlayerDetails(player) {
     return { text, options, correctText };
   }
 
-  // ✅ تعمل على جلب جميع الأسئلة المتاحة للمستوى (عدد مرن)
   getLevelQuestions(levelName) {
-    // 1. التعامل مع حالة كون ملف الأسئلة مصفوفة شاملة
+    // يحاول إيجاد الأسئلة بطُرق متعددة حسب شكل الملف
     if (Array.isArray(this.questions)) {
+      // مصفوفة واحدة، يمكن أن يكون فيها حقل level
       const arr = this.questions.filter(q =>
         (this.normalize(q.level) === this.normalize(levelName)) ||
         (this.normalize(q.difficulty) === this.normalize(levelName))
@@ -1406,7 +1516,7 @@ showPlayerDetails(player) {
       return arr.length ? arr : [...this.questions]; // fallback: الكل
     }
 
-    // 2. التعامل مع حالة كون ملف الأسئلة كائن مفتاحه هو اسم المستوى
+    // كائن بمفاتيح
     const direct =
       this.questions[levelName] ||
       this.questions[levelName + 'Questions'] ||
@@ -1415,9 +1525,10 @@ showPlayerDetails(player) {
 
     if (Array.isArray(direct)) return [...direct];
 
-    // 3. Fallback: إذا فشل التحديد، البحث في المفتاح العام 'questions' أو دمج كل المصفوفات
+    // fallback: لو في مفتاح عام مثل questions
     if (Array.isArray(this.questions.questions)) return [...this.questions.questions];
 
+    // آخر حل: اجمع كل المصفوفات الموجودة
     const merged = Object.values(this.questions).filter(Array.isArray).flat();
     return merged.length ? merged : [];
   }
