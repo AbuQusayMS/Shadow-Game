@@ -33,7 +33,7 @@
   --color-black: #000000;
   --color-gray-500: #6b7280;
 
-  /* Shadows - Fixed inconsistent px usage */
+  /* Shadows */
   --shadow-sm: 0 1px 2px 0 rgba(0,0,0,.05);
   --shadow-md: 0 4px 6px -1px rgba(0,0,0,.1), 0 2px 4px -1px rgba(0,0,0,.06);
   --shadow-lg: 0 10px 15px -3px rgba(0,0,0,.1), 0 4px 6px -2px rgba(0,0,0,.05);
@@ -121,11 +121,13 @@ html {
 }
 
 body {
-  /* Anit-aliasing and Font Families set in Critical CSS */
   min-height: 100vh;
+  font-family: var(--font-family);
   background-color: var(--bg-color);
   color: var(--text-color);
   line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   -webkit-tap-highlight-color: transparent;
   transition: background-color var(--transition-normal), color var(--transition-normal);
   overflow-x: hidden;
@@ -143,7 +145,6 @@ img { display: block; max-width: 100%; }
 .screen {
   position: fixed; inset: 0; display: flex;
   flex-direction: column; justify-content: center; align-items: center;
-  /* Using CSS variables for spacing */
   padding: calc(var(--space-8) + env(safe-area-inset-top))
            calc(var(--space-4) + env(safe-area-inset-right))
            calc(var(--space-8) + env(safe-area-inset-bottom))
@@ -172,7 +173,6 @@ img { display: block; max-width: 100%; }
 }
 .game-title {
   font-size: var(--font-size-3xl); font-weight: 900; color: var(--gold-color);
-  /* Refined to use CSS variable spacing if applicable, kept as is since it's a fixed design choice */
   text-shadow: 2px 2px 4px rgba(0,0,0,.3);
 }
 .game-subtitle { opacity: .8; margin-top: var(--space-2); font-size: .9rem; }
@@ -205,10 +205,7 @@ h3 { font-size: var(--font-size-xl); }
 .btn-secondary { background-color: var(--secondary-color); color: var(--text-color); border-color: var(--border-color); }
 .btn-secondary:hover:not(:disabled) { background-color: var(--accent-color); border-color: var(--accent-color); color: var(--color-white); }
 
-/* Fix: Removed !important and relied on specificity */
-button:disabled { opacity: .6; cursor: not-allowed; }
-button:disabled:hover { transform: none; }
-
+button:disabled { opacity: .6; cursor: not-allowed; transform: none !important; }
 
 button:focus-visible, .btn-main:focus-visible, .btn-secondary:focus-visible,
 .option-btn:focus-visible, .helper-btn:focus-visible, .theme-toggle-btn:focus-visible,
@@ -240,16 +237,10 @@ textarea { resize: vertical; min-height: 100px; }
     gap: var(--space-4);
     margin-bottom: var(--space-6);
 }
-/* Updated .avatar-option to be a button container for accessibility */
 .avatar-option, .avatar-upload-btn {
   width: 100%; aspect-ratio: 1/1; border-radius: var(--radius-full); object-fit: cover;
   cursor: pointer; border: 3px solid transparent; transition: all var(--transition-fast);
   display: flex; justify-content: center; align-items: center; background-color: var(--secondary-color);
-  padding: 0; /* Important for button/image container */
-  position: relative;
-}
-.avatar-option img {
-    width: 100%; height: 100%; border-radius: inherit; object-fit: cover;
 }
 .avatar-upload-btn { font-size: 2rem; color: var(--text-color); }
 .avatar-option:hover, .avatar-upload-btn:hover { transform: scale(1.05); }
@@ -281,8 +272,7 @@ textarea { resize: vertical; min-height: 100px; }
 #instructionsScreen .instruction-icon {
   font-size: 1.4rem;
   line-height: 1;
-  /* Refined usage, still using rem for relative scaling */
-  translate: 0 var(--space-1);
+  translate: 0 .2rem;
   flex-shrink: 0;
 }
 
@@ -349,7 +339,7 @@ textarea { resize: vertical; min-height: 100px; }
 }
 .level-indicator.active { color: var(--color-white); background-color: var(--level-color); border-color: var(--level-color); }
 .level-indicator[data-tooltip]::after {
-  content: attr(data-tooltip); position: absolute; bottom: calc(-1 * var(--space-8)); left: 50%; transform: translateX(-50%);
+  content: attr(data-tooltip); position: absolute; bottom: -2.5rem; left: 50%; transform: translateX(-50%);
   background-color: var(--primary-color); color: var(--text-color); padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-lg); font-size: .75rem; white-space: nowrap; opacity: 0; visibility: hidden;
   transition: opacity var(--transition-fast), visibility var(--transition-fast); z-index: 100;
@@ -407,7 +397,7 @@ textarea { resize: vertical; min-height: 100px; }
 }
 .timer-bar {
   height: 100%; background: linear-gradient(90deg, var(--accent-color), var(--gold-color));
-  border-radius: var(--radius-full); width: 100%;
+  border-radius: var(--radius-full); transition: width 1s linear; width: 100%;
 }
 .timer-bar.frozen { background: #3b82f6; }
 .timer-text {
@@ -426,7 +416,7 @@ textarea { resize: vertical; min-height: 100px; }
   box-shadow: var(--shadow-md); text-align: center; position: relative;
 }
 .level-badge {
-  position: absolute; top: calc(-1 * var(--space-3)); left: 50%; transform: translateX(-50%);
+  position: absolute; top: -0.75rem; left: 50%; transform: translateX(-50%);
   background-color: var(--level-color); color: #fff; padding: 0.25rem 0.75rem; border-radius: 1rem; font-weight: bold; font-size: .875rem;
 }
 #questionCounter { color: var(--gold-color); font-size: var(--font-size-lg); }
@@ -466,38 +456,14 @@ textarea { resize: vertical; min-height: 100px; }
 .share-btn.instagram { background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); }
 
 /* =========================
-   🪟 Modals (Updated to use <dialog>)
+   🪟 Modals
    ========================= */
-dialog.modal {
-  border: none;
-  padding: 0;
-  background-color: rgba(0,0,0,.0); /* Use backdrop for background */
-  display: none; /* Default state for dialog */
-  position: fixed; inset: 0; z-index: 6000;
+.modal {
+  position: fixed; inset: 0; background-color: rgba(0,0,0,.7);
+  display: flex; justify-content: center; align-items: center; z-index: 6000;
+  opacity: 0; visibility: hidden; transition: opacity var(--transition-normal), visibility var(--transition-normal);
 }
-/* Style the backdrop */
-dialog.modal::backdrop {
-  background-color: rgba(0,0,0,.7);
-  opacity: 0;
-  transition: opacity var(--transition-normal);
-}
-/* Active state simulation via JS (modal.showModal()) */
-dialog.modal[open] {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  /* Add custom animation */
-  animation: fadeIn 300ms ease-out;
-}
-dialog.modal[open]::backdrop {
-  opacity: 1;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
-}
-
+.modal.active { opacity: 1; visibility: visible; }
 .modal-content {
   background-color: var(--primary-color); border-radius: var(--radius-2xl);
   padding: var(--space-4);
@@ -512,6 +478,8 @@ dialog.modal[open]::backdrop {
 }
 
 #reportImagePreview img { display:block; max-height: 240px; object-fit: contain; }
+.modal { cursor: default; }
+.modal .modal-content { cursor: auto; }
 
 /* =========================
    🔔 Toasts
@@ -540,10 +508,10 @@ dialog.modal[open]::backdrop {
    ⏳ Loader
    ========================= */
 .spinner {
-  /* Animation defined in critical CSS */
   width: 2.5rem; height: 2.5rem; border: 4px solid var(--secondary-color); border-top: 4px solid var(--gold-color);
-  border-radius: 50%; margin: 0 auto;
+  border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto;
 }
+@keyframes spin { 100% { transform: rotate(360deg); } }
 
 /* =========================
    🧷 Floating Action Buttons
