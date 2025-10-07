@@ -238,6 +238,7 @@ class QuizGame {
         this.displayLeaderboard();
       });
     });
+  }
 
   // ===================================================
   // Game Flow
