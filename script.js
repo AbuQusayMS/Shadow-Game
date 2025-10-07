@@ -284,7 +284,8 @@ class QuizGame {
       return;
     }
     const questionData = questions[this.gameState.questionIndex];
-    this.displayQuestion(questionData);
+    this.dom.questionText.style.opacity = 0;
+    setTimeout(() => this.displayQuestion(questionData), 200);
   }
 
   levelComplete() {
@@ -398,6 +399,7 @@ class QuizGame {
 
     this.updateGameStatsUI();
     this.startTimer();
+    this.dom.questionText.style.opacity = 1;
   }
 
   checkAnswer(selectedButton = null) {
@@ -429,7 +431,10 @@ class QuizGame {
     this.gameState.questionIndex++;
     this.updateGameStatsUI();
 
-    const isGameOver = this.gameState.wrongAnswers >= this.config.MAX_WRONG_ANSWERS;
+    const isGameOver = (
+      this.gameState.wrongAnswers >= this.config.MAX_WRONG_ANSWERS ||
+      this.gameState.questionIndex >= (this.gameState.shuffledQuestions?.length || 0)
+    );
 
     setTimeout(() => {
       if (isGameOver) this.endGame(false);
@@ -485,6 +490,7 @@ class QuizGame {
       const response = await fetch(this.config.QUESTIONS_URL, { cache: 'no-cache' });
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       this.questions = await response.json();
+      console.info(`✅ تم تحميل ${Object.keys(this.questions).length} فئة من الأسئلة.`);
       return true;
     } catch (error) {
       console.error("Failed to load questions file:", error);
@@ -970,6 +976,11 @@ class QuizGame {
   // Leaderboard
   // ===================================================
   async displayLeaderboard() {
+    if (this.leaderboardSubscription) {
+    try { this.leaderboardSubscription.unsubscribe(); } catch (_) {}
+    this.leaderboardSubscription = null;
+  }
+    
     this.showScreen('leaderboard');
     this.dom.leaderboardContent.innerHTML = '<div class="spinner"></div>';
 
@@ -978,10 +989,11 @@ class QuizGame {
 
     try {
       // 🔹 تحديث قائمة المحاولات ديناميكيًا
-      const { data: attemptsData, error: attemptsErr } = await this.supabase
-        .from('log')
-        .select('attempt_number')
-        .order('attempt_number', { ascending: true });
+    const { data: attemptsData, error: attemptsErr } = await this.supabase
+      .from('log')
+      .select('attempt_number')
+      .not('attempt_number', 'is', null)
+      .order('attempt_number', { ascending: true });
 
       if (!attemptsErr && Array.isArray(attemptsData)) {
         const allAttempts = [...new Set(attemptsData.map(r => r.attempt_number).filter(n => n > 0))].sort((a,b)=>a-b);
@@ -1195,6 +1207,7 @@ showPlayerDetails(player) {
       img.alt = `صورة رمزية ${i + 1}`;
       img.className = 'avatar-option';
       img.loading = 'lazy';
+      img.decode?.().catch(()=>{}); 
       grid.appendChild(img);
     });
   }
@@ -1257,7 +1270,7 @@ showPlayerDetails(player) {
     const skips   = this.getEl('#finalSkips').textContent || '0';
     const level   = this.getEl('#finalLevel').textContent || '';
     const acc     = this.getEl('#finalAccuracy').textContent || '0%';
-    const avg     = this.getEl('#finalAvgTime').textContent || '0:00 / سؤال';
+    const avg = this.getEl('#finalAvgTime').textContent?.replace(' / سؤال', '') || '0:00';
     const perf    = this.getEl('#performanceText').textContent || '';
 
     return [
