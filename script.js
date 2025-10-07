@@ -663,19 +663,26 @@ class QuizGame {
  
   /**
    * ✅ دالة إرسال الإخطارات إلى تيليغرام عبر Google Apps Script
-   * تم استرجاعها وتأكيد وجودها في الكود المحدث.
+   * تم تعديلها للعمل بوضع `no-cors` و `text/plain` لتوافق Apps Script.
    */
   async sendTelegramNotification(type, data) {
     if (!this.config.APPS_SCRIPT_URL) {
       console.warn("Apps Script URL is not configured. Skipping notification.");
       return;
     }
+    
+    const payload = JSON.stringify({ type, data });
+    
     try {
+      // إصلاح: العودة إلى 'text/plain' و 'no-cors' لتجنب مشاكل Preflight CORS مع Apps Script
       await fetch(this.config.APPS_SCRIPT_URL, {
-        method: 'POST', mode: 'no-cors', cache: 'no-cache',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({ type, data })
+        method: 'POST', 
+        mode: 'no-cors', // 💡 هذا هو المفتاح لتجنب Preflight CORS
+        cache: 'no-cache',
+        headers: { 'Content-Type': 'text/plain' }, // 💡 إرسال البيانات كنص
+        body: payload
       });
+      // لا يمكننا التحقق من حالة 200 هنا بسبب 'no-cors'، لكن الطلب يجب أن يمر
     } catch (error) {
       console.error('Error sending notification request to Apps Script:', error.message);
     }
