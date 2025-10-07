@@ -128,9 +128,15 @@ class QuizGame {
       reportImagePreview: byId('reportImagePreview'),
       includeAutoDiagnostics: byId('includeAutoDiagnostics')
     };
-    this.dom.lbMode    = byId('lbMode');
-    this.dom.lbAttempt = byId('lbAttempt');
-  }
+    // 🔹 البحث الديناميكي عن الفلاتر داخل لوحة الصدارة
+    const leaderboardFilters = document.querySelector('#leaderboardScreen .lb-filters');
+    this.dom.filters = {};
+
+    if (leaderboardFilters) {
+      leaderboardFilters.querySelectorAll('select').forEach(select => {
+        this.dom.filters[select.id] = select;
+      });
+    }
   getEl(selector, parent = document) { return parent.querySelector(selector); }
   getAllEl(selector, parent = document) { return parent.querySelectorAll(selector); }
 
@@ -220,14 +226,16 @@ class QuizGame {
       }
     });
 
-    // Leaderboard filters
-    this.dom.lbMode?.addEventListener('change', ()=>{
-      const m = this.dom.lbMode.value;
-      if (this.dom.lbAttempt) this.dom.lbAttempt.disabled = (m !== 'attempt');
-      this.displayLeaderboard();
+    // 🔹 إضافة الأحداث تلقائيًا لكل الفلاتر
+    Object.values(this.dom.filters).forEach(select => {
+      select.addEventListener('change', () => {
+        // تفعيل / تعطيل فلاتر أخرى حسب السياق
+        if (this.dom.filters.lbAttempt && select.id !== 'lbAttempt') {
+           this.dom.filters.lbAttempt.disabled = (this.dom.filters.leaderboardSortFilter?.value !== 'attempt');
+        }
+        this.displayLeaderboard();
+      });
     });
-    this.dom.lbAttempt?.addEventListener('change', ()=> this.displayLeaderboard());
-  }
 
   // ===================================================
   // Game Flow
@@ -991,8 +999,8 @@ class QuizGame {
     this.showScreen('leaderboard');
     this.dom.leaderboardContent.innerHTML = '<div class="spinner"></div>';
 
-    const mode = this.dom.lbMode?.value || 'best';
-    let attemptN = Number(this.dom.lbAttempt?.value || 1);
+    const sortMode = this.dom.filters?.leaderboardSortFilter?.value || 'best';
+    const attemptN = Number(this.dom.filters?.lbAttempt?.value || 1);
 
     try {
       // 🔹 تحديث قائمة المحاولات ديناميكيًا
