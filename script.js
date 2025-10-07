@@ -974,57 +974,74 @@ class QuizGame {
     this.dom.leaderboardContent.innerHTML = '<div class="spinner"></div>';
 
     const mode = this.dom.lbMode?.value || 'best';
-    const attemptN = Number(this.dom.lbAttempt?.value || 1);
+    let attemptN = Number(this.dom.lbAttempt?.value || 1);
 
     try {
-      let rows = [];
-      if (mode === 'attempt') {
-        const { data, error } = await this.supabase
-          .from('log')
-          .select('*')
-          .eq('attempt_number', attemptN)
-          .order('score', { ascending: false })
-          .order('accuracy', { ascending: false })
-          .order('total_time', { ascending: true })
-          .limit(500);
-        if (error) throw error;
-        rows = data || [];
-      } else {
-        let q = this.supabase.from('leaderboard').select('*');
-        if (mode === 'accuracy') {
-          q = q.order('accuracy', { ascending: false })
-               .order('score', { ascending: false })
-               .order('total_time', { ascending: true });
-        } else if (mode === 'time') {
-          q = q.order('total_time', { ascending: true })
-               .order('accuracy', { ascending: false })
-               .order('score', { ascending: false });
-        } else { // best
-          q = q.order('is_impossible_finisher', { ascending: false })
-               .order('score', { ascending: false })
-               .order('accuracy', { ascending: false })
-               .order('total_time', { ascending: true });
-        }
-        const { data, error } = await q.limit(500);
-        if (error) throw error;
-        rows = data || [];
+      // 🔹 تحديث قائمة المحاولات ديناميكيًا
+      const { data: attemptsData, error: attemptsErr } = await this.supabase
+        .from('log')
+        .select('attempt_number')
+        .order('attempt_number', { ascending: true });
 
-        if (mode === 'best') {
-          const seen = new Map();
-          for (const r of rows) if (!seen.has(r.device_id)) seen.set(r.device_id, r);
-          rows = [...seen.values()];
+      if (!attemptsErr && Array.isArray(attemptsData)) {
+        const allAttempts = [...new Set(attemptsData.map(r => r.attempt_number).filter(n => n > 0))].sort((a,b)=>a-b);
+        const select = this.dom.lbAttempt;
+        if (select) {
+          select.innerHTML = allAttempts.map(n => `<option value="${n}">المحاولة ${n}</option>`).join('');
+          // إن لم يوجد الرقم الحالي، عدّل القيمة لأكبر محاولة متوفرة
+          if (!allAttempts.includes(attemptN)) attemptN = allAttempts.at(-1) || 1;
+          select.value = attemptN;
         }
       }
 
-      this.renderLeaderboard(rows.slice(0, 100));
-      if (mode !== 'attempt') this.subscribeToLeaderboardChanges();
-
-    } catch (error) {
-      console.error("Error loading leaderboard:", error);
-      this.dom.leaderboardContent.innerHTML = '<p>حدث خطأ في تحميل لوحة الصدارة.</p>';
+    let rows = [];
+    if (mode === 'attempt') {
+      const { data, error } = await this.supabase
+        .from('log')
+        .select('*')
+        .eq('attempt_number', attemptN)
+        .order('score', { ascending: false })
+        .order('accuracy', { ascending: false })
+        .order('total_time', { ascending: true })
+        .limit(500);
+      if (error) throw error;
+      rows = data || [];
+    } else {
+      // باقي الأكواد كما هي (best/accuracy/time)
+      let q = this.supabase.from('leaderboard').select('*');
+      if (mode === 'accuracy') {
+        q = q.order('accuracy', { ascending: false })
+             .order('score', { ascending: false })
+             .order('total_time', { ascending: true });
+      } else if (mode === 'time') {
+        q = q.order('total_time', { ascending: true })
+             .order('accuracy', { ascending: false })
+             .order('score', { ascending: false });
+      } else {
+        q = q.order('is_impossible_finisher', { ascending: false })
+             .order('score', { ascending: false })
+             .order('accuracy', { ascending: false })
+             .order('total_time', { ascending: true });
+      }
+      const { data, error } = await q.limit(500);
+      if (error) throw error;
+      rows = data || [];
+      if (mode === 'best') {
+        const seen = new Map();
+        for (const r of rows) if (!seen.has(r.device_id)) seen.set(r.device_id, r);
+        rows = [...seen.values()];
+      }
     }
-  }
 
+    this.renderLeaderboard(rows.slice(0, 100));
+    if (mode !== 'attempt') this.subscribeToLeaderboardChanges();
+
+  } catch (error) {
+    console.error("Error loading leaderboard:", error);
+    this.dom.leaderboardContent.innerHTML = '<p>حدث خطأ في تحميل لوحة الصدارة.</p>';
+  }
+}
+  
   renderLeaderboard(players) {
     if (!players.length) {
       this.dom.leaderboardContent.innerHTML = '<p>لوحة الصدارة فارغة حاليًا!</p>';
@@ -1308,28 +1325,27 @@ showPlayerDetails(player) {
   }
 
   getLevelQuestions(levelName) {
-    if (Array.isArray(this.questions)) {
-      const arr = this.questions.filter(q =>
-        (this.normalize(q.level) === this.normalize(levelName)) ||
-        (this.normalize(q.difficulty) === this.normalize(levelName))
-      );
-      return arr.length ? arr : [...this.questions];
-    }
-
-    const direct =
-      this.questions[levelName] ||
-      this.questions[levelName + 'Questions'] ||
-      this.questions[levelName + '_questions'] ||
-      this.questions[levelName + '_list'];
-
-    if (Array.isArray(direct)) return [...direct];
-
-    if (Array.isArray(this.questions.questions)) return [...this.questions.questions];
-
-    const merged = Object.values(this.questions).filter(Array.isArray).flat();
-    return merged.length ? merged : [];
+  const normalize = s => String(s || '').trim().toLowerCase();
+  if (Array.isArray(this.questions)) {
+    const arr = this.questions.filter(q =>
+      normalize(q.level) === normalize(levelName) ||
+      normalize(q.difficulty) === normalize(levelName)
+    );
+    return arr.length ? this.shuffleArray([...arr]) : this.shuffleArray([...this.questions]);
   }
-}
+
+  const direct =
+    this.questions[levelName] ||
+    this.questions[levelName + 'Questions'] ||
+    this.questions[levelName + '_questions'] ||
+    this.questions[levelName + '_list'];
+
+  if (Array.isArray(direct)) return this.shuffleArray([...direct]);
+  if (Array.isArray(this.questions.questions)) return this.shuffleArray([...this.questions.questions]);
+
+  const merged = Object.values(this.questions).filter(Array.isArray).flat();
+  return this.shuffleArray(merged.length ? merged : []);
+  }
 
 // =======================================================
 // Boot
