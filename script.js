@@ -661,6 +661,10 @@ class QuizGame {
     }
   }
  
+  /**
+   * ✅ دالة إرسال الإخطارات إلى تيليغرام عبر Google Apps Script
+   * تم استرجاعها وتأكيد وجودها في الكود المحدث.
+   */
   async sendTelegramNotification(type, data) {
     if (!this.config.APPS_SCRIPT_URL) {
       console.warn("Apps Script URL is not configured. Skipping notification.");
@@ -1358,7 +1362,6 @@ showPlayerDetails(player) {
   // ===================================================
   normalize(s) { return String(s || '').trim().toLowerCase(); }
 
-  // ✅ تم تحديثها لضمان العمل مع الترتيب العشوائي للخيارات
   resolveQuestionFields(q) {
     const text = q.q || q.question || q.text || '';
     const options = Array.isArray(q.options) ? q.options
@@ -1390,7 +1393,7 @@ showPlayerDetails(player) {
         (this.normalize(q.level) === this.normalize(levelName)) ||
         (this.normalize(q.difficulty) === this.normalize(levelName))
       );
-      return arr.length ? arr : [...this.questions];
+      return arr.length ? arr : [...this.questions]; // fallback: الكل
     }
 
     // 2. التعامل مع حالة كون ملف الأسئلة كائن مفتاحه هو اسم المستوى
