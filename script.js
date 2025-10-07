@@ -1325,27 +1325,28 @@ showPlayerDetails(player) {
   }
 
   getLevelQuestions(levelName) {
-  const normalize = s => String(s || '').trim().toLowerCase();
-  if (Array.isArray(this.questions)) {
-    const arr = this.questions.filter(q =>
-      normalize(q.level) === normalize(levelName) ||
-      normalize(q.difficulty) === normalize(levelName)
-    );
-    return arr.length ? this.shuffleArray([...arr]) : this.shuffleArray([...this.questions]);
+    if (Array.isArray(this.questions)) {
+      const arr = this.questions.filter(q =>
+        (this.normalize(q.level) === this.normalize(levelName)) ||
+        (this.normalize(q.difficulty) === this.normalize(levelName))
+      );
+      return arr.length ? arr : [...this.questions];
+    }
+
+    const direct =
+      this.questions[levelName] ||
+      this.questions[levelName + 'Questions'] ||
+      this.questions[levelName + '_questions'] ||
+      this.questions[levelName + '_list'];
+
+    if (Array.isArray(direct)) return [...direct];
+
+    if (Array.isArray(this.questions.questions)) return [...this.questions.questions];
+
+    const merged = Object.values(this.questions).filter(Array.isArray).flat();
+    return merged.length ? merged : [];
   }
-
-  const direct =
-    this.questions[levelName] ||
-    this.questions[levelName + 'Questions'] ||
-    this.questions[levelName + '_questions'] ||
-    this.questions[levelName + '_list'];
-
-  if (Array.isArray(direct)) return this.shuffleArray([...direct]);
-  if (Array.isArray(this.questions.questions)) return this.shuffleArray([...this.questions.questions]);
-
-  const merged = Object.values(this.questions).filter(Array.isArray).flat();
-  return this.shuffleArray(merged.length ? merged : []);
-  }
+}
 
 // =======================================================
 // Boot
