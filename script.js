@@ -974,9 +974,26 @@ class QuizGame {
     this.dom.leaderboardContent.innerHTML = '<div class="spinner"></div>';
 
     const mode = this.dom.lbMode?.value || 'best';
-    const attemptN = Number(this.dom.lbAttempt?.value || 1);
+    let attemptN = Number(this.dom.lbAttempt?.value || 1);
 
     try {
+      // 🔹 تحديث قائمة المحاولات ديناميكيًا
+      const { data: attemptsData, error: attemptsErr } = await this.supabase
+        .from('log')
+        .select('attempt_number')
+        .order('attempt_number', { ascending: true });
+
+      if (!attemptsErr && Array.isArray(attemptsData)) {
+        const allAttempts = [...new Set(attemptsData.map(r => r.attempt_number).filter(n => n > 0))].sort((a,b)=>a-b);
+        const select = this.dom.lbAttempt;
+        if (select) {
+          select.innerHTML = allAttempts.map(n => `<option value="${n}">المحاولة ${n}</option>`).join('');
+          // إن لم يوجد الرقم الحالي، عدّل القيمة لأكبر محاولة متوفرة
+          if (!allAttempts.includes(attemptN)) attemptN = allAttempts.at(-1) || 1;
+          select.value = attemptN;
+        }
+      }
+
       let rows = [];
       if (mode === 'attempt') {
         const { data, error } = await this.supabase
@@ -1308,12 +1325,13 @@ showPlayerDetails(player) {
   }
 
   getLevelQuestions(levelName) {
+    const normalize = s => String(s || '').trim().toLowerCase();
     if (Array.isArray(this.questions)) {
       const arr = this.questions.filter(q =>
-        (this.normalize(q.level) === this.normalize(levelName)) ||
-        (this.normalize(q.difficulty) === this.normalize(levelName))
+        normalize(q.level) === normalize(levelName) ||
+        normalize(q.difficulty) === normalize(levelName)
       );
-      return arr.length ? arr : [...this.questions];
+      return arr.length ? this.shuffleArray([...arr]) : this.shuffleArray([...this.questions]);
     }
 
     const direct =
@@ -1322,12 +1340,11 @@ showPlayerDetails(player) {
       this.questions[levelName + '_questions'] ||
       this.questions[levelName + '_list'];
 
-    if (Array.isArray(direct)) return [...direct];
-
-    if (Array.isArray(this.questions.questions)) return [...this.questions.questions];
+    if (Array.isArray(direct)) return this.shuffleArray([...direct]);
+    if (Array.isArray(this.questions.questions)) return this.shuffleArray([...this.questions.questions]);
 
     const merged = Object.values(this.questions).filter(Array.isArray).flat();
-    return merged.length ? merged : [];
+    return this.shuffleArray(merged.length ? merged : []);
   }
 }
 
