@@ -522,8 +522,15 @@ class QuizGame {
         performance_score: resultsData.performance_score ?? null,
         is_impossible_finisher: resultsData.completed_all && resultsData.level === 'مستحيل'
       };
-      const { error: leaderboardError } = await this.supabase.from('leaderboard').upsert(leaderboardData);
-      if (leaderboardError) throw leaderboardError;
+      
+     const { error: leaderboardError } = await this.supabase
+       .from('leaderboard')
+       .insert({
+         ...leaderboardData,
+         created_at: new Date().toISOString() // (اختياري) لإضافة طابع زمني
+       });
+
+     if (leaderboardError) throw leaderboardError;
 
       this.showToast("تم حفظ نتيجتك بنجاح!", "success");
       this.sendTelegramNotification('gameResult', { ...resultsData, attempt_number: attemptNumber });
