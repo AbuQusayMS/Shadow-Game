@@ -757,19 +757,20 @@ async loadQuestions() {
     this.gameState.helpersUsed[type] = true;
     this.updateGameStatsUI();
 
-    if (type === 'fiftyFifty') {
-    if (type === 'fiftyFifty') {
-      const wrongOptions = this.getAllEl('.option-btn:not([data-correct="true"])');
-      this.shuffleArray(Array.from(wrongOptions)).slice(0, 2).forEach(b => b.classList.add('hidden'));
-    } else if (type === 'freezeTime') {
-      this.timer.isFrozen = true;
-      this.getEl('.timer-bar').classList.add('frozen');
-      this.audio?.play('notify', 0.8);
-      setTimeout(() => {
-        this.timer.isFrozen = false;
-        this.getEl('.timer-bar').classList.remove('frozen');
-      }, 10000);
-    }
+   if (type === 'fiftyFifty') {
+     const wrongOptions = this.getAllEl('.option-btn:not([data-correct="true"])');
+     this.shuffleArray(Array.from(wrongOptions))
+       .slice(0, 2)
+       .forEach(b => b.classList.add('hidden'));
+   } else if (type === 'freezeTime') {
+     this.timer.isFrozen = true;
+     this.getEl('.timer-bar').classList.add('frozen');
+     this.audio?.play('notify', 0.8);
+     setTimeout(() => {
+       this.timer.isFrozen = false;
+       this.getEl('.timer-bar').classList.remove('frozen');
+    }, 10000);
+  }
  
   // ===================================================
   // Timer (JS-driven so freeze works visually)
@@ -1224,6 +1225,7 @@ async displayLeaderboard() {
     this.dom.leaderboardContent.innerHTML = '<p>حدث خطأ في تحميل لوحة الصدارة.</p>';
   }
 }
+      
   renderLeaderboard(players) {
     if (!players || !players.length) {
       this.dom.leaderboardContent.innerHTML = '<p>لوحة الصدارة فارغة حاليًا!</p>';
@@ -1232,7 +1234,7 @@ async displayLeaderboard() {
 
     const list = document.createElement('ul');
     list.className = 'leaderboard-list';
-    const medals = ['🥇', '🥈', '🥉'];
+    const medals = ['🥇','🥈','🥉'];
     let rankCounter = 1;
 
     players.forEach(player => {
