@@ -188,18 +188,18 @@ class QuizGame {
   getEl(selector, parent = document) { return parent.querySelector(selector); }
   getAllEl(selector, parent = document) { return parent.querySelectorAll(selector); }
 
-  // ===================================================
-  // Events
-  // ===================================================
-  bindEventListeners() {
-    // Delegation
-    document.body.addEventListener('click', (e) => {
-      const target = e.target.closest('[data-action]');
-      if (!target) return;
+  // ===================================================
+  // Events
+  // ===================================================
+  bindEventListeners() {
+    // Delegation
+    document.body.addEventListener('click', (e) => {
+      const target = e.target.closest('[data-action]');
+      if (!target) return;
 
-      this.audio?.play('click', 0.3);  // 🔊 كل نقرة زر واجهة
+      this.audio?.play('click', 0.3);  // 🔊 NEW: تشغيل صوت النقر
 
-      const action = target.dataset.action;
+      const action = target.dataset.action;
       const actionHandlers = {
         showAvatarScreen: () => this.showScreen('avatar'),
         showNameEntryScreen: () => this.showScreen('nameEntry'),
@@ -285,14 +285,14 @@ class QuizGame {
     this.dom.lbAttempt?.addEventListener('change', ()=> this.displayLeaderboard());
   }
 
-  // ===================================================
-  // Game Flow
-  // ===================================================
-  postInstructionsStart() {
-    this.audio?.play('start');   // 🔊 بدء اللعبة
-    this.setupInitialGameState();
-    this.startGameFlow(0);
-  }
+  // ===================================================
+  // Game Flow
+  // ===================================================
+  postInstructionsStart() {
+    this.audio?.play('start');   // 🔊 NEW: بدء اللعبة
+    this.setupInitialGameState();
+    this.startGameFlow(0);
+  }
 
   setupInitialGameState() {
     this.gameState = {
@@ -388,6 +388,9 @@ async endGame(completedAllLevels = false) {
   clearInterval(this.timer.interval);
   this.hideModal('confirmExit');
 
+   // NEW: تشغيل صوت النهاية
+  this.audio?.play(completedAllLevels ? 'win' : 'loss', completedAllLevels ? 0.9 : 0.6); // 🔊
+
   const baseStats = this._calculateFinalStats(completedAllLevels);
   try {
     const perf = await this.ratePerformance(baseStats);
@@ -481,39 +484,44 @@ displayQuestion(questionData) {
 
   // NEW: انتقال ناعم قبل/بعد تحديث السؤال
 transitionQuestion(renderFn) {
-  const box  = this.getEl('.question-box');
-  const grid = this.dom.optionsGrid;
-  if (!box || !grid) { renderFn(); return; }
+  const box  = this.getEl('.question-box');
+  const grid = this.dom.optionsGrid;
+  if (!box || !grid) { renderFn(); return; }
 
-  box.classList.add('fade-out'); grid.classList.add('fade-out');
-  setTimeout(() => {
-    renderFn();
-    box.classList.remove('fade-out'); grid.classList.remove('fade-out');
-    box.classList.add('fade-in'); grid.classList.add('fade-in');
-    this.audio?.play('whoosh', 0.2); // 🔊 انتقال ناعم بعد تبديل المحتوى
-    setTimeout(() => { box.classList.remove('fade-in'); grid.classList.remove('fade-in'); }, 150);
-  }, 150);
+  box.classList.add('fade-out'); grid.classList.add('fade-out');
+  setTimeout(() => {
+    renderFn();
+    box.classList.remove('fade-out'); grid.classList.remove('fade-out');
+    box.classList.add('fade-in'); grid.classList.add('fade-in');
+    this.audio?.play('whoosh', 0.2); // 🔊 NEW: انتقال ناعم بعد تبديل المحتوى
+    setTimeout(() => { box.classList.remove('fade-in'); grid.classList.remove('fade-in'); }, 150);
+  }, 150);
 }
 
-  checkAnswer(selectedButton = null) {
-    if (this.answerSubmitted) return;
-    this.answerSubmitted = true;
-    clearInterval(this.timer.interval);
+  checkAnswer(selectedButton = null) {
+    if (this.answerSubmitted) return;
+    this.answerSubmitted = true;
+    clearInterval(this.timer.interval);
 
-    this.getAllEl('.option-btn').forEach(b => b.classList.add('disabled'));
+    this.getAllEl('.option-btn').forEach(b => b.classList.add('disabled'));
 
-    let isCorrect = false;
-    if (selectedButton && selectedButton.dataset) {
-      isCorrect = selectedButton.dataset.correct === 'true';
-    }
+    let isCorrect = false;
+    if (selectedButton && selectedButton.dataset) {
+      isCorrect = selectedButton.dataset.correct === 'true';
+    }
 
-  // داخل transitionQuestion(renderFn)
-  setTimeout(() => {
-    renderFn();
-    // ...
-    this.audio?.play('whoosh', 0.2); // 🔊 انتقال ناعم بعد تبديل المحتوى
-    ...
-  }, 150);
+    // NEW: تشغيل الأصوات حسب نتيجة الإجابة
+    if (isCorrect) {
+      selectedButton?.classList.add('correct');
+      this.gameState.correctAnswers++;
+      this.audio?.play('correct');
+      this.audio?.play('coin', 0.35);
+    } else {
+      selectedButton?.classList.add('wrong');
+      this.getAllEl('.option-btn[data-correct="true"]').forEach(b => b.classList.add('correct-highlight'));
+      this.gameState.wrongAnswers++;
+      this.audio?.play('wrong', 0.6);
+    }
 
     this.gameState.questionIndex++;
     this.updateGameStatsUI();
@@ -748,17 +756,19 @@ async loadQuestions() {
     this.updateGameStatsUI();
 
     if (type === 'fiftyFifty') {
-      const wrongOptions = this.getAllEl('.option-btn:not([data-correct="true"])');
-      this.shuffleArray(Array.from(wrongOptions)).slice(0, 2).forEach(b => b.classList.add('hidden'));
-    } else if (type === 'freezeTime') {
-      this.timer.isFrozen = true;
-      this.getEl('.timer-bar').classList.add('frozen');
-      setTimeout(() => {
-        this.timer.isFrozen = false;
-        this.getEl('.timer-bar').classList.remove('frozen');
-      }, 10000);
-    }
-  }
+    if (type === 'fiftyFifty') {
+      const wrongOptions = this.getAllEl('.option-btn:not([data-correct="true"])');
+      this.shuffleArray(Array.from(wrongOptions)).slice(0, 2).forEach(b => b.classList.add('hidden'));
+    } else if (type === 'freezeTime') { // <--- هنا بداية الكتلة
+      this.timer.isFrozen = true;
+      this.getEl('.timer-bar').classList.add('frozen');
+      this.audio?.play('notify', 0.8); // 🔊 NEW: صوت تنبيه لتجميد الوقت
+      setTimeout(() => {
+        this.timer.isFrozen = false;
+        this.getEl('.timer-bar').classList.remove('frozen'); // 🌟 هذا هو السطر الناقص
+      }, 10000);
+    } // <--- هنا نهاية الـ else if
+  }
  
   // ===================================================
   // Timer (JS-driven so freeze works visually)
