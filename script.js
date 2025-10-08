@@ -1,3 +1,41 @@
+// NEW: مدير صوتيات خفيف بالـ WebAudio API
+class AudioManager {
+  constructor(map) {
+    this.map = map || {};
+    this.buffers = new Map();
+    this.ctx = null;
+    this.enabled = true;
+    // تهيئة مبكرة: أول نقرة تفعّل الصوت في iOS/أندرويد
+    document.addEventListener('click', () => {
+      if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    }, { once: true });
+  }
+  async load(name) {
+    const url = this.map[name];
+    if (!url || this.buffers.has(name)) return;
+    const res = await fetch(url);
+    const arr = await res.arrayBuffer();
+    if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const buf = await this.ctx.decodeAudioData(arr);
+    this.buffers.set(name, buf);
+  }
+  async play(name, volume = 0.7) {
+    if (!this.enabled) return;
+    try {
+      await this.load(name);
+      if (!this.ctx) return;
+      const src = this.ctx.createBufferSource();
+      const buf = this.buffers.get(name);
+      if (!buf) return;
+      src.buffer = buf;
+      const gain = this.ctx.createGain();
+      gain.gain.value = volume;
+      src.connect(gain).connect(this.ctx.destination);
+      src.start(0);
+    } catch (_) { /* تجاهل */ }
+  }
+}
+
 const ICON_SUN  = '\u2600\uFE0F';  // ☀️
 const ICON_MOON = '\uD83C\uDF19';  // 🌙
 
@@ -26,6 +64,8 @@ class QuizGame {
         { name: "hard", label: "صعب" },
         { name: "impossible", label: "مستحيل" }
       ],
+
+      LEVEL_QUESTION_LIMITS: { easy: null, medium: null, hard: null, impossible: null },
 
       HELPER_COSTS: {
         fiftyFifty: 100,
@@ -64,6 +104,20 @@ class QuizGame {
       });
       this.recentErrors = this.recentErrors.slice(-10);
     });
+
+    this.audio = new AudioManager({
+  click:   '/audio/ui-click.mp3',
+  start:   '/audio/start.mp3',
+  whoosh:  '/audio/whoosh.mp3',
+  correct: '/audio/correct.mp3',
+  wrong:   '/audio/wrong.mp3',
+  coin:    '/audio/coin.mp3',
+  levelup: '/audio/levelup.mp3',
+  win:     '/audio/win.mp3',
+  loss:    '/audio/loss.mp3',
+  notify:  '/audio/notify.mp3',
+  fadeout: '/audio/fadeout.mp3'
+});
 
     this.init();
   }
@@ -142,6 +196,8 @@ class QuizGame {
     document.body.addEventListener('click', (e) => {
       const target = e.target.closest('[data-action]');
       if (!target) return;
+
+      this.audio?.play('click', 0.3);  // 🔊 كل نقرة زر واجهة
 
       const action = target.dataset.action;
       const actionHandlers = {
@@ -233,6 +289,7 @@ class QuizGame {
   // Game Flow
   // ===================================================
   postInstructionsStart() {
+    this.audio?.play('start');   // 🔊 بدء اللعبة
     this.setupInitialGameState();
     this.startGameFlow(0);
   }
@@ -262,20 +319,25 @@ class QuizGame {
     this.startLevel();
   }
 
-  startLevel() {
-    const currentLevel = this.config.LEVELS[this.gameState.level];
-    this.gameState.helpersUsed = { fiftyFifty: false, freezeTime: false };
-    document.body.dataset.level = currentLevel.name;
-    this.getEl('#currentLevelBadge').textContent = currentLevel.label;
+startLevel() {
+  const currentLevel = this.config.LEVELS[this.gameState.level];
+  this.gameState.helpersUsed = { fiftyFifty: false, freezeTime: false };
+  document.body.dataset.level = currentLevel.name;
+  this.getEl('#currentLevelBadge').textContent = currentLevel.label;
 
-    const levelQuestions = this.getLevelQuestions(currentLevel.name);
-    if (this.config.RANDOMIZE_QUESTIONS) this.shuffleArray(levelQuestions);
-    this.gameState.shuffledQuestions = levelQuestions;
-
-    this.updateLevelProgressUI();
-    this.gameState.questionIndex = 0;
-    this.fetchQuestion();
+  let levelQuestions = this.getLevelQuestions(currentLevel.name);
+  // قص حسب الحد الاختياري إن وُجد
+  const limit = this.config.LEVEL_QUESTION_LIMITS[currentLevel.name];
+  if (typeof limit === 'number' && limit > 0) {
+    levelQuestions = levelQuestions.slice(0, Math.min(limit, levelQuestions.length));
   }
+  if (this.config.RANDOMIZE_QUESTIONS) this.shuffleArray(levelQuestions);
+
+  this.gameState.shuffledQuestions = levelQuestions;
+  this.updateLevelProgressUI();
+  this.gameState.questionIndex = 0;
+  this.fetchQuestion();
+}
 
   fetchQuestion() {
     const questions = this.gameState.shuffledQuestions || [];
@@ -311,31 +373,43 @@ class QuizGame {
     }
   }
 
-  async endGame(completedAllLevels = false) {
-    clearInterval(this.timer.interval);
-    this.hideModal('confirmExit');
+// NEW: تنظيف سريع للحالة المؤقتة بعد الحفظ
+clearEphemeralState() {
+  try {
+    clearInterval(this.timer?.interval);
+  } catch(_) {}
+  this.timer = { interval: null, isFrozen: false, total: 0 };
+  this.gameState.shuffledQuestions = [];
+  this.gameState.questionIndex = 0;
+  if (this.dom?.optionsGrid) this.dom.optionsGrid.innerHTML = '';
+}
 
-    const baseStats = this._calculateFinalStats(completedAllLevels);
+async endGame(completedAllLevels = false) {
+  clearInterval(this.timer.interval);
+  this.hideModal('confirmExit');
 
-    try {
-        const perf = await this.ratePerformance(baseStats);
-        baseStats.performance_rating = perf.label;
-        baseStats.performance_score  = perf.score;
-    } catch (_) {
-        const acc = Number(baseStats.accuracy || 0);
-        baseStats.performance_rating = (acc >= 90) ? "ممتاز 🏆" :
-                                        (acc >= 75) ? "جيد جدًا ⭐" :
-                                        (acc >= 60) ? "جيد 👍" :
-                                        (acc >= 40) ? "مقبول 👌" : "يحتاج إلى تحسين 📈";
-    }
-
-    const { attemptNumber, error } = await this.saveResultsToSupabase(baseStats);
-    if (error) this.showToast("فشل إرسال النتائج إلى السيرفر", "error");
-    baseStats.attempt_number = attemptNumber ?? 'N/A';
-
-    this._displayFinalStats(baseStats);
-    this.showScreen('end');
+  const baseStats = this._calculateFinalStats(completedAllLevels);
+  try {
+    const perf = await this.ratePerformance(baseStats);
+    baseStats.performance_rating = perf.label;
+    baseStats.performance_score  = perf.score;
+  } catch (_) {
+    const acc = Number(baseStats.accuracy || 0);
+    baseStats.performance_rating = (acc >= 90) ? "ممتاز 🏆" :
+                                   (acc >= 75) ? "جيد جدًا ⭐" :
+                                   (acc >= 60) ? "جيد 👍" :
+                                   (acc >= 40) ? "مقبول 👌" : "يحتاج إلى تحسين 📈";
   }
+
+  const { attemptNumber } = await this.saveResultsToSupabase(baseStats);
+  baseStats.attempt_number = attemptNumber ?? 'N/A';
+
+  this._displayFinalStats(baseStats);
+  this.showScreen('end');
+
+  // NEW: نظّف الحالة المؤقتة بعد ما تُعرض شاشة النهاية
+  setTimeout(() => this.clearEphemeralState(), 500);
+}
 
   _calculateFinalStats(completedAll) {
     const totalTimeSeconds = (new Date() - this.gameState.startTime) / 1000;
@@ -373,32 +447,53 @@ class QuizGame {
   // ===================================================
   // Display / Questions
   // ===================================================
-  displayQuestion(questionData) {
-    this.answerSubmitted = false;
+displayQuestion(questionData) {
+  this.answerSubmitted = false;
 
-    const { text, options, correctText } = this.resolveQuestionFields(questionData);
+  const { text, options, correctIndex } = this.resolveQuestionFields(questionData);
+  const totalQuestions = (this.gameState.shuffledQuestions || []).length;
 
-    const totalQuestions = (this.gameState.shuffledQuestions || []).length;
-    this.getEl('#questionCounter').textContent = `السؤال ${this.gameState.questionIndex + 1} من ${totalQuestions}`;
+  // تحريك بسيط قبل التبديل (راجع بند الحركة أسفل)
+  this.transitionQuestion(() => {
+    this.getEl('#questionCounter').textContent =
+      `السؤال ${this.gameState.questionIndex + 1} من ${totalQuestions}`;
     this.dom.questionText.textContent = text;
     this.dom.optionsGrid.innerHTML = '';
 
-    let displayOptions = [...options];
+    // هيكل واضح: {text, isCorrect}
+    let displayOptions = options.map((t, i) => ({ text: t, isCorrect: i === correctIndex }));
     if (this.config.RANDOMIZE_ANSWERS) this.shuffleArray(displayOptions);
 
     const frag = document.createDocumentFragment();
-    displayOptions.forEach(opt => {
+    displayOptions.forEach(({ text, isCorrect }) => {
       const btn = document.createElement('button');
       btn.className = 'option-btn';
-      btn.textContent = opt;
-      btn.dataset.correct = (this.normalize(opt) === this.normalize(correctText));
+      btn.textContent = text;
+      btn.dataset.correct = isCorrect ? 'true' : 'false';
       frag.appendChild(btn);
     });
     this.dom.optionsGrid.appendChild(frag);
 
     this.updateGameStatsUI();
     this.startTimer();
-  }
+  });
+}
+
+  // NEW: انتقال ناعم قبل/بعد تحديث السؤال
+transitionQuestion(renderFn) {
+  const box  = this.getEl('.question-box');
+  const grid = this.dom.optionsGrid;
+  if (!box || !grid) { renderFn(); return; }
+
+  box.classList.add('fade-out'); grid.classList.add('fade-out');
+  setTimeout(() => {
+    renderFn();
+    box.classList.remove('fade-out'); grid.classList.remove('fade-out');
+    box.classList.add('fade-in'); grid.classList.add('fade-in');
+    this.audio?.play('whoosh', 0.2); // 🔊 انتقال ناعم بعد تبديل المحتوى
+    setTimeout(() => { box.classList.remove('fade-in'); grid.classList.remove('fade-in'); }, 150);
+  }, 150);
+}
 
   checkAnswer(selectedButton = null) {
     if (this.answerSubmitted) return;
@@ -412,19 +507,13 @@ class QuizGame {
       isCorrect = selectedButton.dataset.correct === 'true';
     }
 
-    if (isCorrect) {
-      selectedButton.classList.add('correct');
-      this.updateScore(this.gameState.currentScore + 100);
-      this.gameState.correctAnswers++;
-      this.showToast("إجابة صحيحة! +100 نقطة", "success");
-    } else {
-      if (selectedButton && selectedButton.classList) selectedButton.classList.add('wrong');
-      const correctButton = this.dom.optionsGrid.querySelector('[data-correct="true"]');
-      if (correctButton) correctButton.classList.add('correct');
-      this.gameState.wrongAnswers++;
-      this.updateScore(this.gameState.currentScore - 100);
-      this.showToast("إجابة خاطئة! -100 نقطة", "error");
-    }
+  // داخل transitionQuestion(renderFn)
+  setTimeout(() => {
+    renderFn();
+    // ...
+    this.audio?.play('whoosh', 0.2); // 🔊 انتقال ناعم بعد تبديل المحتوى
+    ...
+  }, 150);
 
     this.gameState.questionIndex++;
     this.updateGameStatsUI();
@@ -480,17 +569,23 @@ class QuizGame {
   // ===================================================
   // Data & API
   // ===================================================
-  async loadQuestions() {
-    try {
-      const response = await fetch(this.config.QUESTIONS_URL, { cache: 'no-cache' });
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      this.questions = await response.json();
-      return true;
-    } catch (error) {
-      console.error("Failed to load questions file:", error);
-      return false;
-    }
+async loadQuestions() {
+  try {
+    const response = await fetch(this.config.QUESTIONS_URL, { cache: 'no-cache' });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    this.questions = await response.json();
+
+    // NEW: لوج شامل بالأعداد لكل مستوى
+    const L = ['easy','medium','hard','impossible'];
+    const counts = Object.fromEntries(L.map(k => [k, (this.questions?.[k] || []).length]));
+    console.info('[Questions] Loaded:', counts);
+
+    return true;
+  } catch (error) {
+    console.error("Failed to load questions file:", error);
+    return false;
   }
+}
 
   async saveResultsToSupabase(resultsData) {
     try {
@@ -911,91 +1006,160 @@ class QuizGame {
     return { score, label, details: { accScore, speedScore, levelBonus, cpmBonus, historyBonus, penalty } };
   }
 
-  // ===================================================
-  // UI Helpers
-  // ===================================================
-  showScreen(screenName) {
-    Object.values(this.dom.screens).forEach(screen => screen.classList.remove('active'));
-    if (this.dom.screens[screenName]) this.dom.screens[screenName].classList.add('active');
-  }
-  showModal(nameOrId) {
-    const el = this.dom.modals[nameOrId] || document.getElementById(nameOrId);
-    if (el) el.classList.add('active');
+// ===================================================
+// UI Helpers
+// ===================================================
+showScreen(screenName) {
+  Object.values(this.dom.screens).forEach(screen => screen.classList.remove('active'));
+  if (this.dom.screens[screenName]) this.dom.screens[screenName].classList.add('active');
+}
+showModal(nameOrId) {
+  const el = this.dom.modals[nameOrId] || document.getElementById(nameOrId);
+  if (el) el.classList.add('active');
+}
+
+hideModal(nameOrId) {
+  const el = this.dom.modals[nameOrId] || document.getElementById(nameOrId);
+  if (el) el.classList.remove('active');
+}
+
+showToast(message, type = 'info') {
+  const toastContainer = this.getEl('#toast-container');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = message;
+  toast.setAttribute('role', 'alert');
+  toastContainer.appendChild(toast);
+  setTimeout(() => toast.remove(), 3000);
+}
+
+toggleTheme() {
+  const newTheme = document.body.dataset.theme === 'dark' ? 'light' : 'dark';
+  document.body.dataset.theme = newTheme;
+  localStorage.setItem('theme', newTheme);
+  this.getEl('.theme-toggle-btn').textContent = (newTheme === 'dark') ? ICON_SUN : ICON_MOON;
+}
+
+updateLevelProgressUI() {
+  this.getAllEl('.level-indicator').forEach((indicator, index) => {
+    indicator.classList.toggle('active', index === this.gameState.level);
+    indicator.classList.toggle('completed', index < this.gameState.level);
+  });
+}
+
+// NEW: إعداد واجهة اللاعب مع fallback آمن للصورة الرمزية
+async setupGameUI() {
+  const avatarEl = this.getEl('#playerAvatar');
+  const src = this.gameState.avatar || '';
+
+  if (avatarEl) {
+    const ok = src ? await this.preloadImage(src, 2500) : false;
+    avatarEl.src = ok
+      ? src
+      : 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128"><rect width="100%" height="100%" fill="%23ddd"/><text x="50%" y="54%" font-family="sans-serif" font-size="22" fill="%23666" text-anchor="middle">Avatar</text></svg>';
   }
 
-  hideModal(nameOrId) {
-    const el = this.dom.modals[nameOrId] || document.getElementById(nameOrId);
-    if (el) el.classList.remove('active');
-  }
+  this.getEl('#playerName').textContent = this.gameState.name || '';
+  this.getEl('#playerId').textContent   = this.gameState.playerId || '';
+}
 
-  showToast(message, type = 'info') {
-    const toastContainer = this.getEl('#toast-container');
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    toast.textContent = message;
-    toast.setAttribute('role', 'alert');
-    toastContainer.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
-  }
+// NEW: فحص تحميل الصورة خلال مهلة محددة
+preloadImage(url, timeout = 3000) {
+  return new Promise(res => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    const t = setTimeout(() => res(false), timeout);
+    img.onload  = () => { clearTimeout(t); res(true);  };
+    img.onerror = () => { clearTimeout(t); res(false); };
+    img.src = url;
+  });
+}
 
-  toggleTheme() {
-      const newTheme = document.body.dataset.theme === 'dark' ? 'light' : 'dark';
-      document.body.dataset.theme = newTheme;
-      localStorage.setItem('theme', newTheme);
-      this.getEl('.theme-toggle-btn').textContent = (newTheme === 'dark') ? ICON_SUN : ICON_MOON;
+handleNameConfirmation() {
+  if (!this.dom.confirmNameBtn.disabled) {
+    this.showScreen('instructions');
   }
+}
 
-  updateLevelProgressUI() {
-    this.getAllEl('.level-indicator').forEach((indicator, index) => {
-      indicator.classList.toggle('active', index === this.gameState.level);
-      indicator.classList.toggle('completed', index < this.gameState.level);
-    });
-  }
-
-  handleNameConfirmation() {
-    if (!this.dom.confirmNameBtn.disabled) {
-      this.showScreen('instructions');
-    }
-  }
-
-  validateNameInput() {
-    const name = (this.dom.nameInput.value || '').trim();
-    const isValid = name.length >= 3;
-    this.dom.nameError.textContent = isValid ? "" : "يجب أن يتراوح طول الاسم بين ٣ - ١٥ حرفًا";
-    this.dom.nameError.classList.toggle('show', !isValid);
-    this.dom.confirmNameBtn.disabled = !isValid;
-  }
+validateNameInput() {
+  const name = (this.dom.nameInput.value || '').trim();
+  const isValid = name.length >= 3;
+  this.dom.nameError.textContent = isValid ? "" : "يجب أن يتراوح طول الاسم بين ٣ - ١٥ حرفًا";
+  this.dom.nameError.classList.toggle('show', !isValid);
+  this.dom.confirmNameBtn.disabled = !isValid;
+}
 
   // ===================================================
   // Leaderboard
   // ===================================================
-  async displayLeaderboard() {
-    this.showScreen('leaderboard');
-    this.dom.leaderboardContent.innerHTML = '<div class="spinner"></div>';
 
-    const mode = this.dom.lbMode?.value || 'best';
-    let attemptN = Number(this.dom.lbAttempt?.value || 1);
-
+  // NEW: تحديث قائمة "رقم المحاولة" حسب الأجهزة الموجودة فعليًا في لوحة الصدارة
+  async refreshAttemptFilterOptions() {
     try {
-      // 🔹 تحديث قائمة المحاولات ديناميكيًا
-      const { data: attemptsData, error: attemptsErr } = await this.supabase
-        .from('log')
-        .select('attempt_number')
-        .order('attempt_number', { ascending: true });
+      const { data: lb, error: lbErr } = await this.supabase
+        .from('leaderboard')
+        .select('device_id');
 
-      if (!attemptsErr && Array.isArray(attemptsData)) {
-        const allAttempts = [...new Set(attemptsData.map(r => r.attempt_number).filter(n => n > 0))].sort((a,b)=>a-b);
-        const select = this.dom.lbAttempt;
-        if (select) {
-          select.innerHTML = allAttempts.map(n => `<option value="${n}">المحاولة ${n}</option>`).join('');
-          // إن لم يوجد الرقم الحالي، عدّل القيمة لأكبر محاولة متوفرة
-          if (!allAttempts.includes(attemptN)) attemptN = allAttempts.at(-1) || 1;
-          select.value = attemptN;
-        }
+      if (lbErr) throw lbErr;
+
+      const deviceIds = [...new Set((lb || []).map(r => r.device_id).filter(Boolean))];
+
+      if (!deviceIds.length) {
+        if (this.dom.lbAttempt) {
+        this.dom.lbAttempt.innerHTML = '<option value="1">المحاولة 1</option>';
       }
+      return;
+    }
 
+    const { data: attempts, error: atErr } = await this.supabase
+      .from('log')
+      .select('attempt_number, device_id')
+      .in('device_id', deviceIds)
+      .gt('attempt_number', 0)
+      .order('attempt_number', { ascending: true });
+
+    if (atErr) throw atErr;
+
+    const maxAttempt = Math.max(1, ...(attempts || []).map(r => Number(r.attempt_number || 0)));
+    const allAttempts = Array.from({ length: maxAttempt }, (_, i) => i + 1);
+
+    if (this.dom.lbAttempt) {
+      this.dom.lbAttempt.innerHTML = allAttempts
+        .map(n => `<option value="${n}">المحاولة ${n}</option>`)
+        .join('');
+    }
+  } catch (e) {
+    console.warn('Attempt filter refresh failed:', e?.message || e);
+  }
+}
+
+async displayLeaderboard() {
+  this.showScreen('leaderboard');
+  this.dom.leaderboardContent.innerHTML = '<div class="spinner"></div>';
+
+  // حدّث قائمة المحاولات أولاً
+  await this.refreshAttemptFilterOptions();
+
+  // وضع الترتيب الحالي
+  const mode = this.dom.lbMode?.value || 'best';
+
+  // فعّل/عطّل قائمة المحاولة بناءً على الوضع
+  if (this.dom.lbAttempt) this.dom.lbAttempt.disabled = (mode !== 'attempt');
+
+  // احصل على رقم المحاولة المختار بعد التحديث (أو اختر الأكبر تلقائياً)
+  let attemptN = 1;
+  if (this.dom.lbAttempt && this.dom.lbAttempt.options.length) {
+    const opts = this.dom.lbAttempt.options;
+    const current = this.dom.lbAttempt.value;
+    attemptN = Number(current || opts[opts.length - 1].value);
+    this.dom.lbAttempt.value = String(attemptN);
+  }
+
+  try {
     let rows = [];
+
     if (mode === 'attempt') {
+      // ترتيب حسب محاولة محددة
       const { data, error } = await this.supabase
         .from('log')
         .select('*')
@@ -1004,11 +1168,14 @@ class QuizGame {
         .order('accuracy', { ascending: false })
         .order('total_time', { ascending: true })
         .limit(500);
+
       if (error) throw error;
       rows = data || [];
+
     } else {
-      // باقي الأكواد كما هي (best/accuracy/time)
+      // الأوضاع الأخرى: best / accuracy / time من جدول leaderboard
       let q = this.supabase.from('leaderboard').select('*');
+
       if (mode === 'accuracy') {
         q = q.order('accuracy', { ascending: false })
              .order('score', { ascending: false })
@@ -1017,15 +1184,18 @@ class QuizGame {
         q = q.order('total_time', { ascending: true })
              .order('accuracy', { ascending: false })
              .order('score', { ascending: false });
-      } else {
+      } else { // best
         q = q.order('is_impossible_finisher', { ascending: false })
              .order('score', { ascending: false })
              .order('accuracy', { ascending: false })
              .order('total_time', { ascending: true });
       }
+
       const { data, error } = await q.limit(500);
       if (error) throw error;
       rows = data || [];
+
+      // في وضع "أفضل نتيجة": نُبقي سجلاً واحدًا لكل جهاز
       if (mode === 'best') {
         const seen = new Map();
         for (const r of rows) if (!seen.has(r.device_id)) seen.set(r.device_id, r);
@@ -1034,6 +1204,8 @@ class QuizGame {
     }
 
     this.renderLeaderboard(rows.slice(0, 100));
+
+    // اشترك بالتحديثات فقط في الأوضاع المجمّعة
     if (mode !== 'attempt') this.subscribeToLeaderboardChanges();
 
   } catch (error) {
@@ -1041,12 +1213,6 @@ class QuizGame {
     this.dom.leaderboardContent.innerHTML = '<p>حدث خطأ في تحميل لوحة الصدارة.</p>';
   }
 }
-  
-  renderLeaderboard(players) {
-    if (!players.length) {
-      this.dom.leaderboardContent.innerHTML = '<p>لوحة الصدارة فارغة حاليًا!</p>';
-      return;
-    }
     const list = document.createElement('ul');
     list.className = 'leaderboard-list';
     const medals = ['🥇', '🥈', '🥉'];
@@ -1302,27 +1468,25 @@ showPlayerDetails(player) {
   // ===================================================
   normalize(s) { return String(s || '').trim().toLowerCase(); }
 
-  resolveQuestionFields(q) {
-    const text = q.q || q.question || q.text || '';
-    const options = Array.isArray(q.options) ? q.options
-                    : Array.isArray(q.choices) ? q.choices
-                    : [];
-    let correctText = '';
+resolveQuestionFields(q) {
+  const text = q.q || q.question || q.text || '';
+  const options = Array.isArray(q.options) ? q.options
+                  : Array.isArray(q.choices) ? q.choices : [];
+  let correctIndex = -1;
 
-    if (typeof q.correct === 'number' && options[q.correct] !== undefined) {
-      correctText = options[q.correct];
-    } else if (typeof q.answer === 'string') {
-      correctText = q.answer;
-    } else if (typeof q.correctAnswer === 'string') {
-      correctText = q.correctAnswer;
-    } else if (typeof q.correct_option === 'string') {
-      correctText = q.correct_option;
-    } else if (typeof q.correctIndex === 'number' && options[q.correctIndex] !== undefined) {
-      correctText = options[q.correctIndex];
-    }
-
-    return { text, options, correctText };
+  if (typeof q.correct === 'number' && options[q.correct] !== undefined) {
+    correctIndex = q.correct;
+  } else if (typeof q.correctIndex === 'number' && options[q.correctIndex] !== undefined) {
+    correctIndex = q.correctIndex;
+  } else if (typeof q.answer === 'string') {
+    correctIndex = options.findIndex(x => this.normalize(x) === this.normalize(q.answer));
+  } else if (typeof q.correctAnswer === 'string') {
+    correctIndex = options.findIndex(x => this.normalize(x) === this.normalize(q.correctAnswer));
+  } else if (typeof q.correct_option === 'string') {
+    correctIndex = options.findIndex(x => this.normalize(x) === this.normalize(q.correct_option));
   }
+  return { text, options, correctIndex };
+}
 
   getLevelQuestions(levelName) {
     if (Array.isArray(this.questions)) {
