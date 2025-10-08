@@ -707,3 +707,7 @@ textarea { resize: vertical; min-height: 100px; }
     --size: 86px;
   }
 }
+
+/* NEW: انتقال خفيف للأسئلة */
+.fade-out { opacity: .0; transform: translateY(6px); transition: opacity .15s linear, transform .15s ease; }
+.fade-in  { opacity: 1;  transform: translateY(0);  transition: opacity .15s linear, transform .15s ease; }
