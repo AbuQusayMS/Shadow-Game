@@ -1104,20 +1104,23 @@ validateNameInput() {
   // ===================================================
   // Leaderboard
   // ===================================================
+// ===================================================
+// Leaderboard
+// ===================================================
 
-  // NEW: تحديث قائمة "رقم المحاولة" حسب الأجهزة الموجودة فعليًا في لوحة الصدارة
-  async refreshAttemptFilterOptions() {
-    try {
-      const { data: lb, error: lbErr } = await this.supabase
-        .from('leaderboard')
-        .select('device_id');
+// يُحدّث قائمة أرقام المحاولات حسب الموجود فعلاً
+async refreshAttemptFilterOptions() {
+  try {
+    const { data: lb, error: lbErr } = await this.supabase
+      .from('leaderboard')
+      .select('device_id');
 
-      if (lbErr) throw lbErr;
+    if (lbErr) throw lbErr;
 
-      const deviceIds = [...new Set((lb || []).map(r => r.device_id).filter(Boolean))];
+    const deviceIds = [...new Set((lb || []).map(r => r.device_id).filter(Boolean))];
 
-      if (!deviceIds.length) {
-        if (this.dom.lbAttempt) {
+    if (!deviceIds.length) {
+      if (this.dom.lbAttempt) {
         this.dom.lbAttempt.innerHTML = '<option value="1">المحاولة 1</option>';
       }
       return;
@@ -1171,7 +1174,6 @@ async displayLeaderboard() {
     let rows = [];
 
     if (mode === 'attempt') {
-      // ترتيب حسب محاولة محددة
       const { data, error } = await this.supabase
         .from('log')
         .select('*')
@@ -1183,9 +1185,7 @@ async displayLeaderboard() {
 
       if (error) throw error;
       rows = data || [];
-
     } else {
-      // الأوضاع الأخرى: best / accuracy / time من جدول leaderboard
       let q = this.supabase.from('leaderboard').select('*');
 
       if (mode === 'accuracy') {
@@ -1207,7 +1207,6 @@ async displayLeaderboard() {
       if (error) throw error;
       rows = data || [];
 
-      // في وضع "أفضل نتيجة": نُبقي سجلاً واحدًا لكل جهاز
       if (mode === 'best') {
         const seen = new Map();
         for (const r of rows) if (!seen.has(r.device_id)) seen.set(r.device_id, r);
@@ -1217,7 +1216,6 @@ async displayLeaderboard() {
 
     this.renderLeaderboard(rows.slice(0, 100));
 
-    // اشترك بالتحديثات فقط في الأوضاع المجمّعة
     if (mode !== 'attempt') this.subscribeToLeaderboardChanges();
 
   } catch (error) {
@@ -1225,59 +1223,59 @@ async displayLeaderboard() {
     this.dom.leaderboardContent.innerHTML = '<p>حدث خطأ في تحميل لوحة الصدارة.</p>';
   }
 }
-      
-  renderLeaderboard(players) {
-    if (!players || !players.length) {
-      this.dom.leaderboardContent.innerHTML = '<p>لوحة الصدارة فارغة حاليًا!</p>';
-      return;
+
+renderLeaderboard(players) {
+  if (!players || !players.length) {
+    this.dom.leaderboardContent.innerHTML = '<p>لوحة الصدارة فارغة حاليًا!</p>';
+    return;
+  }
+
+  const list = document.createElement('ul');
+  list.className = 'leaderboard-list';
+  const medals = ['🥇','🥈','🥉'];
+  let rankCounter = 1;
+
+  players.forEach(player => {
+    const item = document.createElement('li');
+    item.className = 'leaderboard-item';
+    let rankDisplay;
+
+    if (player.is_impossible_finisher) {
+      item.classList.add('impossible-finisher');
+      rankDisplay = '🎖️';
+    } else {
+      if (rankCounter <= 3) {
+        item.classList.add(`rank-${rankCounter}`);
+        rankDisplay = medals[rankCounter - 1];
+      } else {
+        rankDisplay = rankCounter;
+      }
+      rankCounter++;
     }
 
-    const list = document.createElement('ul');
-    list.className = 'leaderboard-list';
-    const medals = ['🥇','🥈','🥉'];
-    let rankCounter = 1;
+    item.innerHTML = `
+      <span class="leaderboard-rank">${rankDisplay}</span>
+      <img src="${player.avatar || ''}" alt="صورة ${player.name || ''}" class="leaderboard-avatar" loading="lazy" style="visibility:${player.avatar ? 'visible' : 'hidden'}">
+      <div class="leaderboard-details">
+        <span class="leaderboard-name">${player.name || 'غير معروف'}</span>
+        <span class="leaderboard-score">${this.formatNumber(player.score)}</span>
+      </div>`;
+    item.addEventListener('click', () => this.showPlayerDetails(player));
+    list.appendChild(item);
+  });
 
-    players.forEach(player => {
-      const item = document.createElement('li');
-      item.className = 'leaderboard-item';
-      let rankDisplay;
+  this.dom.leaderboardContent.innerHTML = '';
+  this.dom.leaderboardContent.appendChild(list);
+}
 
-      if (player.is_impossible_finisher) {
-        item.classList.add('impossible-finisher');
-        rankDisplay = '🎖️';
-      } else {
-        if (rankCounter <= 3) {
-          item.classList.add(`rank-${rankCounter}`);
-          rankDisplay = medals[rankCounter - 1];
-        } else {
-          rankDisplay = rankCounter;
-        }
-        rankCounter++;
-      }
-
-      item.innerHTML = `
-        <span class="leaderboard-rank">${rankDisplay}</span>
-        <img src="${player.avatar || ''}" alt="صورة ${player.name || ''}" class="leaderboard-avatar" loading="lazy" style="visibility:${player.avatar ? 'visible' : 'hidden'}">
-        <div class="leaderboard-details">
-          <span class="leaderboard-name">${player.name || 'غير معروف'}</span>
-          <span class="leaderboard-score">${this.formatNumber(player.score)}</span>
-        </div>`;
-      item.addEventListener('click', () => this.showPlayerDetails(player));
-      list.appendChild(item);
-    });
-
-    this.dom.leaderboardContent.innerHTML = '';
-    this.dom.leaderboardContent.appendChild(list);
-  }
-
-  subscribeToLeaderboardChanges() {
-    if (this.leaderboardSubscription) this.leaderboardSubscription.unsubscribe();
+subscribeToLeaderboardChanges() {
+  if (this.leaderboardSubscription) this.leaderboardSubscription.unsubscribe();
 
   this.leaderboardSubscription = this.supabase
-     .channel('public:leaderboard')
-     .on('postgres_changes', { event: '*', schema: 'public', table: 'leaderboard' }, () => this.displayLeaderboard())
-     .subscribe();
-  }
+    .channel('public:leaderboard')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'leaderboard' }, () => this.displayLeaderboard())
+    .subscribe();
+}
 
 getAccuracyBarColor(pct) {
   const p = Math.max(0, Math.min(100, Number(pct) || 0));
@@ -1347,7 +1345,7 @@ showPlayerDetails(player) {
   this.getEl('#playerDetailsContent').innerHTML = html;
   this.showModal('playerDetails');
 }
- 
+
   // ===================================================
   // Avatars
   // ===================================================
