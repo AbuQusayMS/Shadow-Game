@@ -399,7 +399,10 @@ textarea { resize: vertical; min-height: 100px; }
   height: 100%; background: linear-gradient(90deg, var(--accent-color), var(--gold-color));
   border-radius: var(--radius-full); transition: width 1s linear; width: 100%;
 }
-.timer-bar.frozen { background: #3b82f6; }
+.timer-bar.frozen {
+  background: #3b82f6;
+  filter: grayscale(0.4) contrast(1.1);
+ }
 .timer-text {
   position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
   color: var(--color-white); font-weight: 700; text-shadow: 1px 1px 2px var(--color-black);
@@ -440,6 +443,12 @@ textarea { resize: vertical; min-height: 100px; }
 .option-btn.wrong { background-color: var(--error-color); color: var(--color-white); border-color: var(--error-color); }
 .option-btn.disabled { cursor: not-allowed; opacity: .5; }
 .option-btn.hidden { visibility: hidden; opacity: 0; }
+
+/* إبراز الإجابة الصحيحة عند الخطأ (بدون تغيير الخلفية) */
+.option-btn.correct-highlight {
+  outline: 2px solid var(--success-color);
+  border-color: var(--success-color);
+}
 
 /* =========================
    📊 Level / Final Stats
