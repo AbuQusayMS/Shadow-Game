@@ -511,17 +511,19 @@ transitionQuestion(renderFn) {
     }
 
     // NEW: تشغيل الأصوات حسب نتيجة الإجابة
-    if (isCorrect) {
-      selectedButton?.classList.add('correct');
-      this.gameState.correctAnswers++;
-      this.audio?.play('correct');
-      this.audio?.play('coin', 0.35);
-    } else {
-      selectedButton?.classList.add('wrong');
-      this.getAllEl('.option-btn[data-correct="true"]').forEach(b => b.classList.add('correct-highlight'));
-      this.gameState.wrongAnswers++;
-      this.audio?.play('wrong', 0.6);
-    }
+    if (isCorrect) {
+      selectedButton?.classList.add('correct');
+      this.updateScore(this.gameState.currentScore + 100);  // ⬅️ رجّعنا الزيادة
+      this.gameState.correctAnswers++;
+      this.audio?.play('correct');
+      this.audio?.play('coin', 0.35);
+    } else {
+      selectedButton?.classList.add('wrong');
+      this.getAllEl('.option-btn[data-correct="true"]').forEach(b => b.classList.add('correct')); // أو استمر على correct-highlight مع CSS
+      this.updateScore(this.gameState.currentScore - 100);  // ⬅️ رجّعنا النقص
+      this.gameState.wrongAnswers++;
+      this.audio?.play('wrong', 0.6);
+    }
 
     this.gameState.questionIndex++;
     this.updateGameStatsUI();
@@ -756,19 +758,18 @@ async loadQuestions() {
     this.updateGameStatsUI();
 
     if (type === 'fiftyFifty') {
-    if (type === 'fiftyFifty') {
-      const wrongOptions = this.getAllEl('.option-btn:not([data-correct="true"])');
-      this.shuffleArray(Array.from(wrongOptions)).slice(0, 2).forEach(b => b.classList.add('hidden'));
-    } else if (type === 'freezeTime') { // <--- هنا بداية الكتلة
-      this.timer.isFrozen = true;
-      this.getEl('.timer-bar').classList.add('frozen');
-      this.audio?.play('notify', 0.8); // 🔊 NEW: صوت تنبيه لتجميد الوقت
-      setTimeout(() => {
-        this.timer.isFrozen = false;
-        this.getEl('.timer-bar').classList.remove('frozen'); // 🌟 هذا هو السطر الناقص
-      }, 10000);
-    } // <--- هنا نهاية الـ else if
-  }
+    if (type === 'fiftyFifty') {
+      const wrongOptions = this.getAllEl('.option-btn:not([data-correct="true"])');
+      this.shuffleArray(Array.from(wrongOptions)).slice(0, 2).forEach(b => b.classList.add('hidden'));
+    } else if (type === 'freezeTime') {
+      this.timer.isFrozen = true;
+      this.getEl('.timer-bar').classList.add('frozen');
+      this.audio?.play('notify', 0.8);
+      setTimeout(() => {
+        this.timer.isFrozen = false;
+        this.getEl('.timer-bar').classList.remove('frozen');
+      }, 10000);
+    }
  
   // ===================================================
   // Timer (JS-driven so freeze works visually)
@@ -1223,6 +1224,12 @@ async displayLeaderboard() {
     this.dom.leaderboardContent.innerHTML = '<p>حدث خطأ في تحميل لوحة الصدارة.</p>';
   }
 }
+  renderLeaderboard(players) {
+    if (!players || !players.length) {
+      this.dom.leaderboardContent.innerHTML = '<p>لوحة الصدارة فارغة حاليًا!</p>';
+      return;
+    }
+
     const list = document.createElement('ul');
     list.className = 'leaderboard-list';
     const medals = ['🥇', '🥈', '🥉'];
@@ -1256,6 +1263,7 @@ async displayLeaderboard() {
       item.addEventListener('click', () => this.showPlayerDetails(player));
       list.appendChild(item);
     });
+
     this.dom.leaderboardContent.innerHTML = '';
     this.dom.leaderboardContent.appendChild(list);
   }
