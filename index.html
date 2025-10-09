@@ -7,15 +7,12 @@
   <title>🧠 مسابقة المعلومات | Hybrid Edition</title>
 
   <link rel="icon" type="image/png" href="https://em-content.zobj.net/thumbs/120/apple/354/brain_1f9e0.png">
-
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
 
   <!-- Cropper.js CSS -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css">
-
-  <!-- External CSS -->
   <link rel="stylesheet" href="style.css">
 
   <!-- JSON-LD for SEO -->
@@ -167,12 +164,11 @@
       <div class="helpers" aria-label="خيارات المساعدة">
         <button class="helper-btn" data-type="fiftyFifty" aria-describedby="fiftyFiftyDesc"><span class="sr-only">مساعدة 50:50</span>50:50<span class="helper-cost">(100)</span></button>
         <button class="helper-btn" data-type="freezeTime" aria-describedby="freezeTimeDesc"><span class="sr-only">مساعدة تجميد الوقت</span>❄️ 10ث<span class="helper-cost">(100)</span></button>
-        <button class="helper-btn" data-type="skipQuestion" aria-describedby="skipQuestionDesc"><span class="sr-only">تخطي السؤال</span>⏭️ تخطي<span id="skipCost" class="helper-cost">(20)</span></button>
+        <button class="helper-btn" data-type="skipQuestion" aria-describedby="skipQuestionDesc"><span class="sr-only">تخطي السؤال</span>⏭️ تخطي<span id="skipCost" class="helper-cost">(مجانية)</span></button>
 
-        <!-- ✅ أوصاف مخفية مطابقة لـ aria-describedby -->
         <span id="fiftyFiftyDesc" class="sr-only">يزيل خيارين خاطئين. الاستخدام مرة واحدة لكل جولة. التكلفة 100 نقطة.</span>
         <span id="freezeTimeDesc" class="sr-only">يوقف المؤقت 10 ثوانٍ. الاستخدام مرة واحدة لكل جولة. التكلفة 100 نقطة.</span>
-        <span id="skipQuestionDesc" class="sr-only">تخطي السؤال الحالي. السعر يبدأ 20 نقطة ويزداد مع كل استخدام.</span>
+        <span id="skipQuestionDesc" class="sr-only">تخطي السؤال الحالي. مجانية تماماً.</span>
       </div>
     </header>
 
@@ -245,17 +241,13 @@
      
       <div class="lb-filters">
         <select id="lbMode" aria-label="نمط ترتيب اللوحة">
-          <option value="best" selected>أفضل نتيجة</option>
+          <option value="best" selected>أفضل نتيجة (لكل جهاز)</option>
           <option value="attempt">حسب رقم المحاولة…</option>
           <option value="accuracy">أعلى دقة</option>
           <option value="time">أقل وقت</option>
         </select>
         <select id="lbAttempt" disabled aria-label="اختر رقم المحاولة">
-          <option value="1">المحاولة 1</option>
-          <option value="2">المحاولة 2</option>
-          <option value="3">المحاولة 3</option>
-          <option value="4">المحاولة 4</option>
-          <option value="5">المحاولة 5</option>
+          <!-- سيتم تعبئته ديناميكياً -->
         </select>
       </div>
      
@@ -363,13 +355,11 @@
     </div>
   </div>
 
-  <!-- External Libraries (deferred to load before script.js) -->
+  <!-- External Libraries -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js" defer></script>
-
-  <!-- ✅ Supabase v2 UMD (يوفّر window.supabase بدون type=module) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" defer></script>
 
   <!-- App JS -->
-  <script src="script.js" defer></script>
+  <script src="script.js?v=19" defer></script>
 </body>
 </html>
