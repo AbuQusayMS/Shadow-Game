@@ -250,9 +250,7 @@ textarea { resize: vertical; min-height: 100px; }
    📋 Instructions
    ========================= */
 #instructionsScreen .content-box { text-align: initial; }
-
 #instructionsScreen .screen-header { text-align: center; }
-
 #instructionsScreen .instructions-content {
   direction: rtl;
   text-align: right;
@@ -298,7 +296,6 @@ textarea { resize: vertical; min-height: 100px; }
   opacity: 0.9;
   line-height: 1.8;
 }
-#instructionsScreen .inline-list strong { margin-bottom: 0; }
 
 #instructionsScreen .instruction-item a {
   text-decoration: none;
@@ -399,10 +396,7 @@ textarea { resize: vertical; min-height: 100px; }
   height: 100%; background: linear-gradient(90deg, var(--accent-color), var(--gold-color));
   border-radius: var(--radius-full); transition: width 1s linear; width: 100%;
 }
-.timer-bar.frozen {
-  background: #3b82f6;
-  filter: grayscale(0.4) contrast(1.1);
- }
+.timer-bar.frozen { background: #3b82f6; }
 .timer-text {
   position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
   color: var(--color-white); font-weight: 700; text-shadow: 1px 1px 2px var(--color-black);
@@ -443,12 +437,6 @@ textarea { resize: vertical; min-height: 100px; }
 .option-btn.wrong { background-color: var(--error-color); color: var(--color-white); border-color: var(--error-color); }
 .option-btn.disabled { cursor: not-allowed; opacity: .5; }
 .option-btn.hidden { visibility: hidden; opacity: 0; }
-
-/* إبراز الإجابة الصحيحة عند الخطأ (بدون تغيير الخلفية) */
-.option-btn.correct-highlight {
-  outline: 2px solid var(--success-color);
-  border-color: var(--success-color);
-}
 
 /* =========================
    📊 Level / Final Stats
@@ -562,6 +550,7 @@ textarea { resize: vertical; min-height: 100px; }
 .leaderboard-details { flex-grow: 1; display: flex; justify-content: space-between; align-items: center; gap: var(--space-4); min-width: 0; }
 .leaderboard-name { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .leaderboard-score { font-weight: 700; color: var(--gold-color); font-size: var(--font-size-lg); flex-shrink: 0; }
+
 .lb-filters{
   display:flex; gap:.5rem; justify-content:center; margin: .5rem 0 0.75rem;
 }
@@ -594,7 +583,7 @@ textarea { resize: vertical; min-height: 100px; }
 }
 
 /* =========================
-   Player Details (Final Version)
+   Player Details
    ========================= */
 #playerDetailsModal .modal-content {
   direction: rtl;
@@ -627,10 +616,12 @@ textarea { resize: vertical; min-height: 100px; }
 .stat-card .value.score {
   color: var(--gold-color);
 }
+
 .stat-card.accuracy {
   text-align: right;
   padding: .95rem .6rem 1.15rem;
 }
+
 .circle-progress {
   --size: 120px;
   --track: var(--border-color);
@@ -686,7 +677,6 @@ textarea { resize: vertical; min-height: 100px; }
   unicode-bidi: plaintext;
 }
 
-
 #playerDetailsModal .stats-grid {
   text-align: right;
   border-top: 1px solid var(--border-color);
@@ -716,7 +706,3 @@ textarea { resize: vertical; min-height: 100px; }
     --size: 86px;
   }
 }
-
-/* NEW: انتقال خفيف للأسئلة */
-.fade-out { opacity: .0; transform: translateY(6px); transition: opacity .15s linear, transform .15s ease; }
-.fade-in  { opacity: 1;  transform: translateY(0);  transition: opacity .15s linear, transform .15s ease; }
