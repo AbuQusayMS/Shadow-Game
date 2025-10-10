@@ -44,6 +44,7 @@ class QuizGame {
         this.pendingRequests = new Set();
 
         this.setupErrorHandling();
+        this.setupBackButtonHandler();
         this.init();
     }
 
@@ -70,11 +71,63 @@ class QuizGame {
         });
     }
 
+    setupBackButtonHandler() {
+        window.addEventListener('popstate', (event) => {
+            event.preventDefault();
+            this.handleBackButton();
+        });
+
+        this.originalPushState = history.pushState;
+        history.pushState = (...args) => {
+            this.originalPushState.apply(history, args);
+            this.currentState = args[0];
+        };
+    }
+
+    handleBackButton() {
+        const activeScreen = this.getEl('.screen.active');
+        if (!activeScreen) return;
+
+        const screenId = activeScreen.id;
+        
+        switch(screenId) {
+            case 'startScreen':
+                break;
+            case 'avatarScreen':
+            case 'nameEntryScreen':
+            case 'instructionsScreen':
+                if (screenId === 'instructionsScreen') {
+                    this.showScreen('nameEntryScreen');
+                } else if (screenId === 'nameEntryScreen') {
+                    this.showScreen('avatarScreen');
+                } else if (screenId === 'avatarScreen') {
+                    this.showScreen('start');
+                }
+                break;
+            case 'gameContainer':
+                this.showModal('confirmExit');
+                break;
+            case 'levelCompleteScreen':
+            case 'endScreen':
+            case 'leaderboardScreen':
+                this.showScreen('start');
+                break;
+            default:
+                const openModal = document.querySelector('.modal.active');
+                if (openModal) {
+                    this.hideModal(openModal.id);
+                } else {
+                    this.showScreen('start');
+                }
+        }
+    }
+
     async init() {
         this.cacheDomElements();
         this.bindEventListeners();
         this.populateAvatarGrid();
         await this.preloadAudio();
+        await this.retryFailedSubmissions();
 
         try {
             this.supabase = supabase.createClient(this.config.SUPABASE_URL, this.config.SUPABASE_KEY);
@@ -96,9 +149,147 @@ class QuizGame {
         this.dom.screens.loader.classList.remove('active');
     }
 
-    // ===================================================
-    // Audio System
-    // ===================================================
+    cacheDomElements() {
+        const byId = (id) => document.getElementById(id);
+        this.dom = {
+            screens: {
+                loader: byId('loader'),
+                start: byId('startScreen'),
+                avatar: byId('avatarScreen'),
+                nameEntry: byId('nameEntryScreen'),
+                instructions: byId('instructionsScreen'),
+                game: byId('gameContainer'),
+                levelComplete: byId('levelCompleteScreen'),
+                end: byId('endScreen'),
+                leaderboard: byId('leaderboardScreen')
+            },
+            modals: {
+                confirmExit: byId('confirmExitModal'),
+                advancedReport: byId('advancedReportModal'),
+                avatarEditor: byId('avatarEditorModal'),
+                playerDetails: byId('playerDetailsModal')
+            },
+            nameInput: byId('nameInput'),
+            nameError: byId('nameError'),
+            confirmNameBtn: byId('confirmNameBtn'),
+            confirmAvatarBtn: byId('confirmAvatarBtn'),
+            reportProblemForm: byId('reportProblemForm'),
+            imageToCrop: byId('image-to-crop'),
+            leaderboardContent: byId('leaderboardContent'),
+            questionText: byId('questionText'),
+            optionsGrid: this.getEl('.options-grid'),
+            scoreDisplay: byId('currentScore'),
+            reportFab: byId('reportErrorFab'),
+            problemScreenshot: byId('problemScreenshot'),
+            reportImagePreview: byId('reportImagePreview'),
+            includeAutoDiagnostics: byId('includeAutoDiagnostics'),
+            lbMode: byId('lbMode'),
+            lbAttempt: byId('lbAttempt')
+        };
+    }
+
+    getEl(selector, parent = document) {
+        return parent.querySelector(selector);
+    }
+
+    getAllEl(selector, parent = document) {
+        return Array.from(parent.querySelectorAll(selector));
+    }
+
+    bindEventListeners() {
+        document.body.addEventListener('click', (e) => {
+            const target = e.target.closest('[data-action]');
+            if (!target) return;
+
+            const action = target.dataset.action;
+            const actionHandlers = {
+                showAvatarScreen: () => this.showScreen('avatar'),
+                showNameEntryScreen: () => this.showScreen('nameEntry'),
+                confirmName: () => this.handleNameConfirmation(),
+                postInstructionsStart: () => this.postInstructionsStart(),
+                showLeaderboard: () => this.displayLeaderboard(),
+                showStartScreen: () => this.showScreen('start'),
+                toggleTheme: () => this.toggleTheme(),
+                showConfirmExitModal: () => this.showModal('confirmExit'),
+                closeModal: () => {
+                    const id = target.dataset.modalId || target.dataset.modalKey;
+                    if (id === 'avatarEditor' || id === 'avatarEditorModal') this.cleanupAvatarEditor();
+                    this.hideModal(id);
+                },
+                endGame: () => this.endGame(),
+                nextLevel: () => this.nextLevel(),
+                playAgain: () => this.playAgain(),
+                shareOnX: () => this.shareOnX(),
+                shareOnInstagram: () => this.shareOnInstagram(),
+                saveCroppedAvatar: () => this.saveCroppedAvatar()
+            };
+            
+            if (actionHandlers[action]) {
+                this.playSound('click');
+                actionHandlers[action]();
+            }
+        });
+
+        this.dom.nameInput.addEventListener('input', () => this.validateNameInput());
+        this.dom.nameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') this.handleNameConfirmation();
+        });
+        
+        this.dom.reportProblemForm.addEventListener('submit', (e) => this.handleReportSubmit(e));
+        
+        this.dom.optionsGrid.addEventListener('click', e => {
+            const btn = e.target.closest('.option-btn');
+            if (btn) this.checkAnswer(btn);
+        });
+
+        this.getEl('.helpers').addEventListener('click', e => {
+            const btn = e.target.closest('.helper-btn');
+            if (btn) this.useHelper(btn);
+        });
+
+        this.getEl('.avatar-grid').addEventListener('click', (e) => {
+            if (e.target.matches('.avatar-option')) this.selectAvatar(e.target);
+        });
+
+        this.dom.reportFab.addEventListener('click', () => this.showModal('advancedReport'));
+
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.addEventListener('click', (e) => {
+                if (e.target.classList.contains('modal')) {
+                    modal.classList.remove('active');
+                }
+            });
+        });
+
+        this.dom.problemScreenshot.addEventListener('change', (e) => {
+            const file = e.target.files?.[0];
+            const prev = this.dom.reportImagePreview;
+            if (!file) {
+                prev.style.display = 'none';
+                prev.querySelector('img').src = '';
+                return;
+            }
+            const url = URL.createObjectURL(file);
+            prev.style.display = 'block';
+            prev.querySelector('img').src = url;
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const open = document.querySelector('.modal.active');
+                if (open) open.classList.remove('active');
+            }
+        });
+
+        this.dom.lbMode?.addEventListener('change', () => {
+            const m = this.dom.lbMode.value;
+            if (this.dom.lbAttempt) this.dom.lbAttempt.disabled = (m !== 'attempt');
+            this.displayLeaderboard();
+        });
+        
+        this.dom.lbAttempt?.addEventListener('change', () => this.displayLeaderboard());
+    }
+
     async preloadAudio() {
         const audioFiles = {
             correct: '/Shadow-Game/audio/correct.mp3',
@@ -139,9 +330,6 @@ class QuizGame {
         }
     }
 
-    // ===================================================
-    // Session Management & Cleanup
-    // ===================================================
     generateSessionId() {
         return `S${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
     }
@@ -249,156 +437,6 @@ class QuizGame {
         this.cleanupQueue = [];
     }
 
-    // ===================================================
-    // DOM Helpers
-    // ===================================================
-    cacheDomElements() {
-        const byId = (id) => document.getElementById(id);
-        this.dom = {
-            screens: {
-                loader: byId('loader'),
-                start: byId('startScreen'),
-                avatar: byId('avatarScreen'),
-                nameEntry: byId('nameEntryScreen'),
-                instructions: byId('instructionsScreen'),
-                game: byId('gameContainer'),
-                levelComplete: byId('levelCompleteScreen'),
-                end: byId('endScreen'),
-                leaderboard: byId('leaderboardScreen')
-            },
-            modals: {
-                confirmExit: byId('confirmExitModal'),
-                advancedReport: byId('advancedReportModal'),
-                avatarEditor: byId('avatarEditorModal'),
-                playerDetails: byId('playerDetailsModal')
-            },
-            nameInput: byId('nameInput'),
-            nameError: byId('nameError'),
-            confirmNameBtn: byId('confirmNameBtn'),
-            confirmAvatarBtn: byId('confirmAvatarBtn'),
-            reportProblemForm: byId('reportProblemForm'),
-            imageToCrop: byId('image-to-crop'),
-            leaderboardContent: byId('leaderboardContent'),
-            questionText: byId('questionText'),
-            optionsGrid: this.getEl('.options-grid'),
-            scoreDisplay: byId('currentScore'),
-            reportFab: byId('reportErrorFab'),
-            problemScreenshot: byId('problemScreenshot'),
-            reportImagePreview: byId('reportImagePreview'),
-            includeAutoDiagnostics: byId('includeAutoDiagnostics'),
-            lbMode: byId('lbMode'),
-            lbAttempt: byId('lbAttempt')
-        };
-    }
-
-    getEl(selector, parent = document) {
-        return parent.querySelector(selector);
-    }
-
-    getAllEl(selector, parent = document) {
-        return Array.from(parent.querySelectorAll(selector));
-    }
-
-    // ===================================================
-    // Events
-    // ===================================================
-    bindEventListeners() {
-        document.body.addEventListener('click', (e) => {
-            const target = e.target.closest('[data-action]');
-            if (!target) return;
-
-            const action = target.dataset.action;
-            const actionHandlers = {
-                showAvatarScreen: () => this.showScreen('avatar'),
-                showNameEntryScreen: () => this.showScreen('nameEntry'),
-                confirmName: () => this.handleNameConfirmation(),
-                postInstructionsStart: () => this.postInstructionsStart(),
-                showLeaderboard: () => this.displayLeaderboard(),
-                showStartScreen: () => this.showScreen('start'),
-                toggleTheme: () => this.toggleTheme(),
-                showConfirmExitModal: () => this.showModal('confirmExit'),
-                closeModal: () => {
-                    const id = target.dataset.modalId || target.dataset.modalKey;
-                    if (id === 'avatarEditor' || id === 'avatarEditorModal') this.cleanupAvatarEditor();
-                    this.hideModal(id);
-                },
-                endGame: () => this.endGame(),
-                nextLevel: () => this.nextLevel(),
-                playAgain: () => this.playAgain(),
-                shareOnX: () => this.shareOnX(),
-                shareOnInstagram: () => this.shareOnInstagram(),
-                saveCroppedAvatar: () => this.saveCroppedAvatar()
-            };
-            
-            if (actionHandlers[action]) {
-                this.playSound('click');
-                actionHandlers[action]();
-            }
-        });
-
-        this.dom.nameInput.addEventListener('input', () => this.validateNameInput());
-        this.dom.nameInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') this.handleNameConfirmation();
-        });
-        
-        this.dom.reportProblemForm.addEventListener('submit', (e) => this.handleReportSubmit(e));
-        
-        this.dom.optionsGrid.addEventListener('click', e => {
-            const btn = e.target.closest('.option-btn');
-            if (btn) this.checkAnswer(btn);
-        });
-
-        this.getEl('.helpers').addEventListener('click', e => {
-            const btn = e.target.closest('.helper-btn');
-            if (btn) this.useHelper(btn);
-        });
-
-        this.getEl('.avatar-grid').addEventListener('click', (e) => {
-            if (e.target.matches('.avatar-option')) this.selectAvatar(e.target);
-        });
-
-        this.dom.reportFab.addEventListener('click', () => this.showModal('advancedReport'));
-
-        document.querySelectorAll('.modal').forEach(modal => {
-            modal.addEventListener('click', (e) => {
-                if (e.target.classList.contains('modal')) {
-                    modal.classList.remove('active');
-                }
-            });
-        });
-
-        this.dom.problemScreenshot.addEventListener('change', (e) => {
-            const file = e.target.files?.[0];
-            const prev = this.dom.reportImagePreview;
-            if (!file) {
-                prev.style.display = 'none';
-                prev.querySelector('img').src = '';
-                return;
-            }
-            const url = URL.createObjectURL(file);
-            prev.style.display = 'block';
-            prev.querySelector('img').src = url;
-        });
-
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                const open = document.querySelector('.modal.active');
-                if (open) open.classList.remove('active');
-            }
-        });
-
-        this.dom.lbMode?.addEventListener('change', () => {
-            const m = this.dom.lbMode.value;
-            if (this.dom.lbAttempt) this.dom.lbAttempt.disabled = (m !== 'attempt');
-            this.displayLeaderboard();
-        });
-        
-        this.dom.lbAttempt?.addEventListener('change', () => this.displayLeaderboard());
-    }
-
-    // ===================================================
-    // Game Flow
-    // ===================================================
     async postInstructionsStart() {
         await this.cleanupSession();
         this.setupInitialGameState();
@@ -648,9 +686,6 @@ class QuizGame {
         };
     }
 
-    // ===================================================
-    // Data & API
-    // ===================================================
     async loadQuestions() {
         try {
             const response = await fetch(this.config.QUESTIONS_URL, { 
@@ -681,74 +716,162 @@ class QuizGame {
         this.pendingRequests.add(controller);
 
         try {
+            // الحصول على رقم المحاولة التالي
             const { count, error: countError } = await this.supabase
                 .from('log')
                 .select('id', { count: 'exact', head: true })
                 .eq('device_id', resultsData.device_id);
 
-            if (countError) throw countError;
+            if (countError) {
+                console.error('Error counting attempts:', countError);
+                throw countError;
+            }
+            
             const attemptNumber = (count || 0) + 1;
 
-            const { error: logError } = await this.supabase.from('log')
-                .insert({ 
-                    ...resultsData, 
-                    attempt_number: attemptNumber, 
-                    performance_score: resultsData.performance_score ?? null 
-                });
+            // تحضير البيانات للإدخال في log
+            const logInsertData = {
+                attempt_number: attemptNumber,
+                device_id: resultsData.device_id,
+                player_id: resultsData.player_id,
+                session_id: resultsData.session_id,
+                name: resultsData.name,
+                avatar: resultsData.avatar,
+                correct_answers: resultsData.correct_answers,
+                wrong_answers: resultsData.wrong_answers,
+                accuracy: resultsData.accuracy,
+                skips: resultsData.skips,
+                used_fifty_fifty: resultsData.used_fifty_fifty,
+                used_freeze_time: resultsData.used_freeze_time,
+                score: resultsData.score,
+                total_time: resultsData.total_time,
+                avg_time: resultsData.avg_time,
+                level: resultsData.level,
+                completed_all: resultsData.completed_all,
+                performance_rating: resultsData.performance_rating,
+                performance_score: resultsData.performance_score
+            };
 
-            if (logError) throw logError;
+            // إدراج في جدول log
+            const { data: logData, error: logError } = await this.supabase
+                .from('log')
+                .insert(logInsertData)
+                .select();
 
+            if (logError) {
+                console.error('Error inserting into log:', logError);
+                throw logError;
+            }
+
+            // تحضير البيانات لجدول leaderboard
             const leaderboardData = {
                 device_id: resultsData.device_id,
                 player_id: resultsData.player_id,
-                name: resultsData.name, 
-                avatar: resultsData.avatar, 
+                name: resultsData.name,
+                avatar: resultsData.avatar,
                 score: resultsData.score,
-                level: resultsData.level, 
-                accuracy: resultsData.accuracy, 
+                level: resultsData.level,
+                accuracy: resultsData.accuracy,
                 total_time: resultsData.total_time,
-                avg_time: resultsData.avg_time, 
+                avg_time: resultsData.avg_time,
                 correct_answers: resultsData.correct_answers,
-                wrong_answers: resultsData.wrong_answers, 
+                wrong_answers: resultsData.wrong_answers,
                 skips: resultsData.skips,
-                attempt_number: attemptNumber, 
+                attempt_number: attemptNumber,
                 performance_rating: resultsData.performance_rating,
-                performance_score: resultsData.performance_score ?? null,
-                is_impossible_finisher: resultsData.completed_all && resultsData.level === 'مستحيل',
-                last_updated: new Date().toISOString()
+                performance_score: resultsData.performance_score,
+                is_impossible_finisher: resultsData.completed_all && resultsData.level === 'مستحيل'
             };
-            
-            const { error: leaderboardError } = await this.supabase.from('leaderboard')
+
+            // إدراج/تحديث في leaderboard
+            const { error: leaderboardError } = await this.supabase
+                .from('leaderboard')
                 .upsert(leaderboardData, { 
-                    onConflict: 'device_id',
-                    ignoreDuplicates: false 
+                    onConflict: 'device_id, player_id, attempt_number'
                 });
-                
-            if (leaderboardError) throw leaderboardError;
+
+            if (leaderboardError) {
+                console.error('Error upserting into leaderboard:', leaderboardError);
+                throw leaderboardError;
+            }
 
             this.showToast("تم حفظ نتيجتك بنجاح!", "success");
             this.playSound('coin');
             
-            this.sendTelegramNotification('gameResult', { ...resultsData, attempt_number: attemptNumber });
+            // إرسال إشعار تيليجرام
+            await this.sendTelegramNotification('gameResult', { 
+                ...resultsData, 
+                attempt_number: attemptNumber 
+            });
             
             return { attemptNumber, error: null };
 
         } catch (error) {
-            console.error("Failed to send results to Supabase:", error);
-            return { attemptNumber: null, error: error.message };
+            console.error("Failed to save results to Supabase:", error);
+            
+            // محاولة حفظ محلية للبيانات لإعادة المحاولة لاحقاً
+            this.queueFailedSubmission(resultsData);
+            
+            return { 
+                attemptNumber: null, 
+                error: error.message 
+            };
         } finally {
             this.pendingRequests.delete(controller);
         }
     }
 
-    // ===================================================
-    // Leaderboard with Dynamic Attempts Filter
-    // ===================================================
+    queueFailedSubmission(data) {
+        try {
+            const failedSubmissions = JSON.parse(localStorage.getItem('failedSubmissions') || '[]');
+            failedSubmissions.push({
+                data: data,
+                timestamp: new Date().toISOString(),
+                type: 'gameResult'
+            });
+            localStorage.setItem('failedSubmissions', JSON.stringify(failedSubmissions.slice(-10)));
+        } catch (e) {
+            console.error('Failed to queue submission:', e);
+        }
+    }
+
+    async retryFailedSubmissions() {
+        try {
+            const failedSubmissions = JSON.parse(localStorage.getItem('failedSubmissions') || '[]');
+            if (failedSubmissions.length === 0) return;
+
+            const successful = [];
+            
+            for (const submission of failedSubmissions) {
+                try {
+                    if (submission.type === 'gameResult') {
+                        const result = await this.saveResultsToSupabase(submission.data);
+                        if (!result.error) {
+                            successful.push(submission);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Retry failed for submission:', error);
+                }
+            }
+
+            // إزالة البيانات التي تم إرسالها بنجاح
+            if (successful.length > 0) {
+                const remaining = failedSubmissions.filter(sub => 
+                    !successful.includes(sub)
+                );
+                localStorage.setItem('failedSubmissions', JSON.stringify(remaining));
+            }
+        } catch (e) {
+            console.error('Error retrying failed submissions:', e);
+        }
+    }
+
     async displayLeaderboard() {
         this.showScreen('leaderboard');
         this.dom.leaderboardContent.innerHTML = '<div class="spinner"></div>';
 
-        const mode = this.dom.lbMode?.value || 'best';
+        const mode = this.dom.lbMode?.value || 'all';
         const attemptN = Number(this.dom.lbAttempt?.value || 1);
 
         try {
@@ -769,27 +892,40 @@ class QuizGame {
                 if (error) throw error;
                 rows = data || [];
             } else {
-                let query = this.supabase.from('leaderboard').select('*');
+                let query;
                 
-                if (mode === 'accuracy') {
-                    query = query.order('accuracy', { ascending: false })
-                                 .order('score', { ascending: false })
-                                 .order('total_time', { ascending: true });
-                } else if (mode === 'time') {
-                    query = query.order('total_time', { ascending: true })
-                                 .order('accuracy', { ascending: false })
-                                 .order('score', { ascending: false });
+                if (mode === 'all') {
+                    // جلب جميع النتائج من جدول log مع ترتيب شامل
+                    query = this.supabase
+                        .from('log')
+                        .select('*')
+                        .order('score', { ascending: false })
+                        .order('accuracy', { ascending: false })
+                        .order('total_time', { ascending: true });
                 } else {
-                    query = query.order('is_impossible_finisher', { ascending: false })
-                                 .order('score', { ascending: false })
-                                 .order('accuracy', { ascending: false })
-                                 .order('total_time', { ascending: true });
+                    query = this.supabase.from('leaderboard').select('*');
+                    
+                    if (mode === 'accuracy') {
+                        query = query.order('accuracy', { ascending: false })
+                                     .order('score', { ascending: false })
+                                     .order('total_time', { ascending: true });
+                    } else if (mode === 'time') {
+                        query = query.order('total_time', { ascending: true })
+                                     .order('accuracy', { ascending: false })
+                                     .order('score', { ascending: false });
+                    } else { // best
+                        query = query.order('is_impossible_finisher', { ascending: false })
+                                     .order('score', { ascending: false })
+                                     .order('accuracy', { ascending: false })
+                                     .order('total_time', { ascending: true });
+                    }
                 }
                 
                 const { data, error } = await query.limit(100);
                 if (error) throw error;
                 rows = data || [];
 
+                // منع التكرار في وضع best
                 if (mode === 'best') {
                     const seen = new Map();
                     for (const r of rows) if (!seen.has(r.device_id)) seen.set(r.device_id, r);
@@ -799,7 +935,7 @@ class QuizGame {
 
             this.renderLeaderboard(rows.slice(0, 50));
             
-            if (mode !== 'attempt') {
+            if (mode !== 'attempt' && mode !== 'all') {
                 this.subscribeToLeaderboardChanges();
             }
 
@@ -891,9 +1027,6 @@ class QuizGame {
             .subscribe();
     }
 
-    // ===================================================
-    // Helpers System
-    // ===================================================
     useHelper(btn) {
         const type = btn.dataset.type;
         const isSkip = type === 'skipQuestion';
@@ -972,9 +1105,6 @@ class QuizGame {
         });
     }
 
-    // ===================================================
-    // Timer System
-    // ===================================================
     startTimer() {
         clearInterval(this.timer.interval);
         this.timer.total = this.config.QUESTION_TIME;
@@ -1016,12 +1146,16 @@ class QuizGame {
         this.updateGameStatsUI();
     }
 
-    // ===================================================
-    // UI Helpers
-    // ===================================================
     showScreen(screenName) {
         Object.values(this.dom.screens).forEach(screen => screen.classList.remove('active'));
-        if (this.dom.screens[screenName]) this.dom.screens[screenName].classList.add('active');
+        if (this.dom.screens[screenName]) {
+            this.dom.screens[screenName].classList.add('active');
+            
+            // إضافة حالة في التاريخ للشاشات المهمة
+            if (['gameContainer', 'leaderboardScreen', 'endScreen'].includes(screenName)) {
+                history.pushState({ screen: screenName }, '', `#${screenName}`);
+            }
+        }
     }
 
     showModal(nameOrId) {
@@ -1072,9 +1206,6 @@ class QuizGame {
         this.dom.confirmNameBtn.disabled = !isValid;
     }
 
-    // ===================================================
-    // Player Details & Reporting
-    // ===================================================
     showPlayerDetails(player) {
         this.getEl('#detailsName').textContent = player.name || 'غير معروف';
         this.getEl('#detailsPlayerId').textContent = player.player_id || 'N/A';
@@ -1211,9 +1342,6 @@ class QuizGame {
         }
     }
 
-    // ===================================================
-    // Utilities
-    // ===================================================
     shuffleArray(array) {
         for (let i = array.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
@@ -1254,9 +1382,6 @@ class QuizGame {
         return String(s || '').trim().toLowerCase();
     }
 
-    // ===================================================
-    // Question Management
-    // ===================================================
     resolveQuestionFields(q) {
         const text = q.q || q.question || q.text || '';
         const options = Array.isArray(q.options) ? q.options
@@ -1302,9 +1427,6 @@ class QuizGame {
         return merged.length ? merged : [];
     }
 
-    // ===================================================
-    // Performance Rating System
-    // ===================================================
     normalizeTo100(value, min, max) {
         const v = Math.max(min, Math.min(max, Number(value) || 0));
         return Math.round(((max - v) / (max - min)) * 100);
@@ -1404,9 +1526,6 @@ class QuizGame {
         return { score, label, details: { accScore, speedScore, levelBonus, cpmBonus, historyBonus, penalty } };
     }
 
-    // ===================================================
-    // Avatars System
-    // ===================================================
     populateAvatarGrid() {
         const grid = this.getEl('.avatar-grid');
         grid.innerHTML = '';
@@ -1492,9 +1611,6 @@ class QuizGame {
         if (input) input.value = '';
     }
 
-    // ===================================================
-    // Sharing System
-    // ===================================================
     getShareTextForX() {
         const name = this.getEl('#finalName').textContent || '';
         const attempt = this.getEl('#finalAttemptNumber').textContent || '';
@@ -1557,9 +1673,6 @@ class QuizGame {
         this.getEl('#performanceText').textContent = stats.performance_rating;
     }
 
-    // ===================================================
-    // Diagnostic & Reporting
-    // ===================================================
     getAutoDiagnostics() {
         try {
             const nav = navigator || {};
@@ -1649,9 +1762,6 @@ class QuizGame {
     }
 }
 
-// =======================================================
-// Boot
-// =======================================================
 document.addEventListener('DOMContentLoaded', () => {
     const savedTheme = localStorage.getItem('theme') || 'dark';
     document.body.dataset.theme = savedTheme;
