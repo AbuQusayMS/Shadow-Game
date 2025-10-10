@@ -6,7 +6,10 @@ class QuizGame {
         this.config = {
             SUPABASE_URL: 'https://qffcnljopolajeufkrah.supabase.co',
             SUPABASE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFmZmNubGpvcG9sYWpldWZrcmFoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkwNzkzNjMsImV4cCI6MjA3NDY1NTM2M30.0vst_km_pweyF2IslQ24JzMF281oYeaaeIEQM0aKkUg',
-            APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbx0cVV4vnwhYtB1__nYjKRvIpBC9lILEgyfgYomlb7pJh266i7QAItNo5BVPUvFCyLq4A/exec',
+            EDGE_SAVE_URL: 'https://qffcnljopolajeufkrah.functions.supabase.co/saveResult',
+            EDGE_REPORT_URL: 'https://qffcnljopolajeufkrah.functions.supabase.co/report',
+            EDGE_LOG_URL: 'https://qffcnljopolajeufkrah.functions.supabase.co/clientLog',
+            APP_KEY: 'AbuQusay', // حماية خفيفة مع الواجهة الخلفية
             QUESTIONS_URL: 'https://abuqusayms.github.io/Shadow-Game/questions.json',
 
             QUESTION_TIME: 30,
@@ -59,6 +62,7 @@ class QuizGame {
                 time: new Date().toISOString()
             });
             this.recentErrors = this.recentErrors.slice(-10);
+            this.sendClientLog && this.sendClientLog('client-error', this.recentErrors[this.recentErrors.length - 1]);
         });
 
         window.addEventListener('unhandledrejection', (ev) => {
@@ -68,6 +72,7 @@ class QuizGame {
                 time: new Date().toISOString()
             });
             this.recentErrors = this.recentErrors.slice(-10);
+            this.sendClientLog && this.sendClientLog('client-error', this.recentErrors[this.recentErrors.length - 1]);
         });
     }
 
@@ -728,83 +733,35 @@ async init() {
         }
     }
 
-   async saveResultsToSupabase(resultsData) {
+    async saveResultsToSupabase(resultsData) {
       try {
-          // 1) تأكيد تهيئة Supabase
-          if (!this.supabase) {
-              this.supabase = supabase.createClient(this.config.SUPABASE_URL, this.config.SUPABASE_KEY);
-          }
-  
-          // 2) جلب رقم المحاولة التالي لهذا الجهاز
-          const { count, error: countError } = await this.supabase
-              .from('log')
-              .select('id', { count: 'exact', head: true })
-              .eq('device_id', resultsData.device_id);
+        // نرسل للـ Edge Function — هي التي تتكفل بإدراج log + leaderboard وحساب attempt_number
+        const res = await fetch(this.config.EDGE_SAVE_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-App-Key': this.config.APP_KEY
+          },
+          body: JSON.stringify(resultsData)
+        });
 
-          if (countError) throw countError;
-          const attemptNumber = (count || 0) + 1;
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = await res.json();
 
-          // 3) إدراج السجل في جدول log (بنفس أسلوب النسخة القديمة)
-          const payloadLog = {
-              ...resultsData,
-              attempt_number: attemptNumber,
-              // تأكيد وجود القيمة حتى لو undefined
-              performance_score: resultsData.performance_score ?? null
-          };
+        this.showToast("تم حفظ نتيجتك بنجاح!", "success");
+        this.playSound('coin');
 
-          const { error: logError } = await this.supabase
-              .from('log')
-              .insert(payloadLog);
-
-          if (logError) throw logError;
-
-          // 4) تجهيز بيانات leaderboard
-          const leaderboardData = {
-              device_id: resultsData.device_id,
-              player_id: resultsData.player_id,
-              name: resultsData.name,
-              avatar: resultsData.avatar,
-              score: resultsData.score,
-              level: resultsData.level,
-              accuracy: resultsData.accuracy,
-              total_time: resultsData.total_time,
-              avg_time: resultsData.avg_time,
-              correct_answers: resultsData.correct_answers,
-              wrong_answers: resultsData.wrong_answers,
-              skips: resultsData.skips,
-              attempt_number: attemptNumber,
-              performance_rating: resultsData.performance_rating,
-              performance_score: resultsData.performance_score ?? null,
-              is_impossible_finisher: resultsData.completed_all && (resultsData.level === 'مستحيل' || resultsData.level === 'impossible')
-          };
-
-          // 5) upsert بدون onConflict (مثل النسخة القديمة التي كانت تعمل)
-          const { error: leaderboardError } = await this.supabase
-              .from('leaderboard')
-              .upsert(leaderboardData);
-
-          if (leaderboardError) throw leaderboardError;
-
-          // 6) نجاح: نعرض Toast + صوت + نرسل إشعار Apps Script
-          this.showToast("تم حفظ نتيجتك بنجاح!", "success");
-          this.playSound('coin');
-
-          await this.sendTelegramNotification('gameResult', {
-              ...resultsData,
-              attempt_number: attemptNumber
-          });
-
-          return { attemptNumber, error: null };
-
+        // نُرجع attemptNumber بصيغة متوافقة مع الكود الحالي
+        return { attemptNumber: json.attempt_number || json.attemptNumber || null, error: null };
       } catch (error) {
-          console.error("Failed to save results to Supabase:", error);
-          // لو تستخدم طابور الإرسال لاحقًا
-          if (typeof this.queueFailedSubmission === 'function') {
-              try { this.queueFailedSubmission(resultsData); } catch (_) {}
-          }
-          return { attemptNumber: null, error: error.message };
+        console.error("Failed to save results via Edge Function:", error);
+        // احتياط: خزّنها في الطابور لإعادة الإرسال لاحقًا
+        if (typeof this.queueFailedSubmission === 'function') {
+          try { this.queueFailedSubmission(resultsData); } catch (_) {}
+        }
+        return { attemptNumber: null, error: String(error) };
       }
-  }
+    }
 
     queueFailedSubmission(data) {
         try {
@@ -856,11 +813,11 @@ async init() {
         this.showScreen('leaderboard');
         this.dom.leaderboardContent.innerHTML = '<div class="spinner"></div>';
 
-        // ✅ تعيين "الكل" كخيار افتراضي في كل مرة
-        let mode = 'all';
-        if (this.dom.lbMode) {
-            this.dom.lbMode.value = 'all';
+        // اجعل "الكل" الافتراضي فقط إذا ما فيه قيمة حالية
+        if (this.dom.lbMode && !this.dom.lbMode.value) {
+          this.dom.lbMode.value = 'all';
         }
+        const mode = this.dom.lbMode?.value || 'all';
 
         const attemptN = Number(this.dom.lbAttempt?.value || 1);
 
@@ -1310,18 +1267,23 @@ async init() {
                 image_url = pub?.publicUrl || null;
             }
 
-            const payloadDB = {
+            const payload = {
                 ...reportData,
                 image_url,
                 meta: { ...(meta || {}), context: ctx }
             };
-            const { error } = await this.supabase.from('reports').insert(payloadDB);
-            if (error) throw error;
+
+            const resp = await fetch(this.config.EDGE_REPORT_URL, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-App-Key': this.config.APP_KEY
+              },
+              body: JSON.stringify(payload)
+            });
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
 
             this.showToast("تم إرسال بلاغك بنجاح. شكراً لك!", "success");
-
-            const payloadMsg = { ...reportData, image_url, meta, context: ctx };
-            this.sendTelegramNotification('report', payloadMsg);
 
         } catch (err) {
             console.error("Supabase report error:", err);
@@ -1736,22 +1698,23 @@ async init() {
         return String(Math.abs(h));
     }
 
-    async sendTelegramNotification(type, data) {
-        if (!this.config.APPS_SCRIPT_URL) {
-            console.warn("Apps Script URL is not configured. Skipping notification.");
-            return;
-        }
-        try {
-            await fetch(this.config.APPS_SCRIPT_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                cache: 'no-cache',
-                headers: { 'Content-Type': 'text/plain' },
-                body: JSON.stringify({ type, data })
-            });
-        } catch (error) {
-            console.error('Error sending notification request to Apps Script:', error.message);
-        }
+    async sendClientLog(event = 'log', payload = {}) {
+      try {
+        await fetch(this.config.EDGE_LOG_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-App-Key': this.config.APP_KEY
+          },
+          body: JSON.stringify({
+            event,
+            payload,
+            session_id: this.gameState?.sessionId || this.currentSessionId || '',
+            device_id: this.gameState?.deviceId || this.getOrSetDeviceId(),
+            time: new Date().toISOString()
+          })
+        });
+      } catch (_) { /* تجاهل */ }
     }
 }
 
