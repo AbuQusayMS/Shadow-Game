@@ -711,115 +711,83 @@ class QuizGame {
         }
     }
 
-    async saveResultsToSupabase(resultsData) {
-        const controller = new AbortController();
-        this.pendingRequests.add(controller);
+   async saveResultsToSupabase(resultsData) {
+      try {
+          // 1) تأكيد تهيئة Supabase
+          if (!this.supabase) {
+              this.supabase = supabase.createClient(this.config.SUPABASE_URL, this.config.SUPABASE_KEY);
+          }
+  
+          // 2) جلب رقم المحاولة التالي لهذا الجهاز
+          const { count, error: countError } = await this.supabase
+              .from('log')
+              .select('id', { count: 'exact', head: true })
+              .eq('device_id', resultsData.device_id);
 
-        try {
-            // الحصول على رقم المحاولة التالي
-            const { count, error: countError } = await this.supabase
-                .from('log')
-                .select('id', { count: 'exact', head: true })
-                .eq('device_id', resultsData.device_id);
+          if (countError) throw countError;
+          const attemptNumber = (count || 0) + 1;
 
-            if (countError) {
-                console.error('Error counting attempts:', countError);
-                throw countError;
-            }
-            
-            const attemptNumber = (count || 0) + 1;
+          // 3) إدراج السجل في جدول log (بنفس أسلوب النسخة القديمة)
+          const payloadLog = {
+              ...resultsData,
+              attempt_number: attemptNumber,
+              // تأكيد وجود القيمة حتى لو undefined
+              performance_score: resultsData.performance_score ?? null
+          };
 
-            // تحضير البيانات للإدخال في log
-            const logInsertData = {
-                attempt_number: attemptNumber,
-                device_id: resultsData.device_id,
-                player_id: resultsData.player_id,
-                session_id: resultsData.session_id,
-                name: resultsData.name,
-                avatar: resultsData.avatar,
-                correct_answers: resultsData.correct_answers,
-                wrong_answers: resultsData.wrong_answers,
-                accuracy: resultsData.accuracy,
-                skips: resultsData.skips,
-                used_fifty_fifty: resultsData.used_fifty_fifty,
-                used_freeze_time: resultsData.used_freeze_time,
-                score: resultsData.score,
-                total_time: resultsData.total_time,
-                avg_time: resultsData.avg_time,
-                level: resultsData.level,
-                completed_all: resultsData.completed_all,
-                performance_rating: resultsData.performance_rating,
-                performance_score: resultsData.performance_score
-            };
+          const { error: logError } = await this.supabase
+              .from('log')
+              .insert(payloadLog);
 
-            // إدراج في جدول log
-            const { data: logData, error: logError } = await this.supabase
-                .from('log')
-                .insert(logInsertData)
-                .select();
+          if (logError) throw logError;
 
-            if (logError) {
-                console.error('Error inserting into log:', logError);
-                throw logError;
-            }
+          // 4) تجهيز بيانات leaderboard
+          const leaderboardData = {
+              device_id: resultsData.device_id,
+              player_id: resultsData.player_id,
+              name: resultsData.name,
+              avatar: resultsData.avatar,
+              score: resultsData.score,
+              level: resultsData.level,
+              accuracy: resultsData.accuracy,
+              total_time: resultsData.total_time,
+              avg_time: resultsData.avg_time,
+              correct_answers: resultsData.correct_answers,
+              wrong_answers: resultsData.wrong_answers,
+              skips: resultsData.skips,
+              attempt_number: attemptNumber,
+              performance_rating: resultsData.performance_rating,
+              performance_score: resultsData.performance_score ?? null,
+              is_impossible_finisher: resultsData.completed_all && (resultsData.level === 'مستحيل' || resultsData.level === 'impossible')
+          };
 
-            // تحضير البيانات لجدول leaderboard
-            const leaderboardData = {
-                device_id: resultsData.device_id,
-                player_id: resultsData.player_id,
-                name: resultsData.name,
-                avatar: resultsData.avatar,
-                score: resultsData.score,
-                level: resultsData.level,
-                accuracy: resultsData.accuracy,
-                total_time: resultsData.total_time,
-                avg_time: resultsData.avg_time,
-                correct_answers: resultsData.correct_answers,
-                wrong_answers: resultsData.wrong_answers,
-                skips: resultsData.skips,
-                attempt_number: attemptNumber,
-                performance_rating: resultsData.performance_rating,
-                performance_score: resultsData.performance_score,
-                is_impossible_finisher: resultsData.completed_all && resultsData.level === 'مستحيل'
-            };
+          // 5) upsert بدون onConflict (مثل النسخة القديمة التي كانت تعمل)
+          const { error: leaderboardError } = await this.supabase
+              .from('leaderboard')
+              .upsert(leaderboardData);
 
-            // إدراج/تحديث في leaderboard
-            const { error: leaderboardError } = await this.supabase
-                .from('leaderboard')
-                .upsert(leaderboardData, { 
-                    onConflict: 'device_id, player_id, attempt_number'
-                });
+          if (leaderboardError) throw leaderboardError;
 
-            if (leaderboardError) {
-                console.error('Error upserting into leaderboard:', leaderboardError);
-                throw leaderboardError;
-            }
+          // 6) نجاح: نعرض Toast + صوت + نرسل إشعار Apps Script
+          this.showToast("تم حفظ نتيجتك بنجاح!", "success");
+          this.playSound('coin');
 
-            this.showToast("تم حفظ نتيجتك بنجاح!", "success");
-            this.playSound('coin');
-            
-            // إرسال إشعار تيليجرام
-            await this.sendTelegramNotification('gameResult', { 
-                ...resultsData, 
-                attempt_number: attemptNumber 
-            });
-            
-            return { attemptNumber, error: null };
+          await this.sendTelegramNotification('gameResult', {
+              ...resultsData,
+              attempt_number: attemptNumber
+          });
 
-        } catch (error) {
-            console.error("Failed to save results to Supabase:", error);
-            
-            // محاولة حفظ محلية للبيانات لإعادة المحاولة لاحقاً
-            this.queueFailedSubmission(resultsData);
-            
-            return { 
-                attemptNumber: null, 
-                error: error.message 
-            };
-        } finally {
-            this.pendingRequests.delete(controller);
-        }
-    }
+          return { attemptNumber, error: null };
+
+      } catch (error) {
+          console.error("Failed to save results to Supabase:", error);
+          // لو تستخدم طابور الإرسال لاحقًا
+          if (typeof this.queueFailedSubmission === 'function') {
+              try { this.queueFailedSubmission(resultsData); } catch (_) {}
+          }
+          return { attemptNumber: null, error: error.message };
+      }
+  }
 
     queueFailedSubmission(data) {
         try {
