@@ -72,8 +72,7 @@ class QuizGame {
     }
 
     setupBackButtonHandler() {
-        window.addEventListener('popstate', (event) => {
-            event.preventDefault();
+        window.addEventListener('popstate', () => {
             this.handleBackButton();
         });
 
@@ -122,32 +121,35 @@ class QuizGame {
         }
     }
 
-    async init() {
-        this.cacheDomElements();
-        this.bindEventListeners();
-        this.populateAvatarGrid();
-        await this.preloadAudio();
-        await this.retryFailedSubmissions();
+async init() {
+  this.cacheDomElements();
+  this.bindEventListeners();
+  this.populateAvatarGrid();
+  await this.preloadAudio();
 
-        try {
-            this.supabase = supabase.createClient(this.config.SUPABASE_URL, this.config.SUPABASE_KEY);
-            if (!this.supabase) throw new Error("Supabase client failed to initialize.");
-        } catch (error) {
-            console.error("Error initializing Supabase:", error);
-            this.showToast("خطأ في الاتصال بقاعدة البيانات", "error");
-            this.getEl('#loaderText').textContent = "خطأ في الاتصال بالخادم.";
-            return;
-        }
+  // 👇 1) أنشئ Supabase أولاً
+  try {
+    this.supabase = supabase.createClient(this.config.SUPABASE_URL, this.config.SUPABASE_KEY);
+    if (!this.supabase) throw new Error("Supabase client failed to initialize.");
+  } catch (error) {
+    console.error("Error initializing Supabase:", error);
+    this.showToast("خطأ في الاتصال بقاعدة البيانات", "error");
+    this.getEl('#loaderText').textContent = "خطأ في الاتصال بالخادم.";
+    return;
+  }
 
-        const questionsLoaded = await this.loadQuestions();
+  // 👇 2) ثم جرّب إعادة الإرسال الفاشل بعد نجاح الإنشاء
+  await this.retryFailedSubmissions();
 
-        if (questionsLoaded) {
-            this.showScreen('start');
-        } else {
-            this.getEl('#loaderText').textContent = "حدث خطأ في تحميل الأسئلة. الرجاء تحديث الصفحة.";
-        }
-        this.dom.screens.loader.classList.remove('active');
-    }
+  // 👇 3) حمّل الأسئلة
+  const questionsLoaded = await this.loadQuestions();
+  if (questionsLoaded) {
+    this.showScreen('start');
+  } else {
+    this.getEl('#loaderText').textContent = "حدث خطأ في تحميل الأسئلة. الرجاء تحديث الصفحة.";
+  }
+  this.dom.screens.loader.classList.remove('active');
+}
 
     cacheDomElements() {
         const byId = (id) => document.getElementById(id);
@@ -237,21 +239,31 @@ class QuizGame {
         
         this.dom.reportProblemForm.addEventListener('submit', (e) => this.handleReportSubmit(e));
         
-        this.dom.optionsGrid.addEventListener('click', e => {
-            const btn = e.target.closest('.option-btn');
-            if (btn) this.checkAnswer(btn);
-        });
+        if (this.dom.optionsGrid) {
+         this.dom.optionsGrid.addEventListener('click', e => {
+           const btn = e.target.closest('.option-btn');
+           if (btn) this.checkAnswer(btn);
+         });
+       }
 
-        this.getEl('.helpers').addEventListener('click', e => {
+        const helpersEl = this.getEl('.helpers');
+        if (helpersEl) {
+          helpersEl.addEventListener('click', e => {
             const btn = e.target.closest('.helper-btn');
             if (btn) this.useHelper(btn);
-        });
+          });
+        }
 
-        this.getEl('.avatar-grid').addEventListener('click', (e) => {
+        const avatarGrid = this.getEl('.avatar-grid');
+        if (avatarGrid) {
+          avatarGrid.addEventListener('click', (e) => {
             if (e.target.matches('.avatar-option')) this.selectAvatar(e.target);
-        });
+          });
+        }
 
-        this.dom.reportFab.addEventListener('click', () => this.showModal('advancedReport'));
+        if (this.dom.reportFab) {
+          this.dom.reportFab.addEventListener('click', () => this.showModal('advancedReport'));
+        }
 
         document.querySelectorAll('.modal').forEach(modal => {
             modal.addEventListener('click', (e) => {
@@ -334,19 +346,20 @@ class QuizGame {
         return `S${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
     }
 
-    async cleanupSession() {
+    async cleanupSession(opts = {}) {
+        const { keepEndScreen = false } = opts;
         console.log(`[Cleanup] Starting cleanup for session ${this.currentSessionId}`);
-        
+    
         this.clearAllTimers();
         this.abortPendingRequests();
         this.removeTemporaryListeners();
         this.clearSessionStorage();
         this.resetGameState();
-        this.resetUI();
+        this.resetUI(keepEndScreen);
+
         await this.processCleanupQueue();
-        
         console.log(`[Cleanup] Completed for session ${this.currentSessionId}`);
-    }
+     }
 
     clearAllTimers() {
         if (this.timer.interval) {
@@ -412,20 +425,21 @@ class QuizGame {
         this.answerSubmitted = false;
     }
 
-    resetUI() {
-        this.getAllEl('.level-indicator').forEach(indicator => {
-            indicator.classList.remove('active', 'completed');
-        });
-        
-        this.getEl('#currentScore').textContent = '100';
-        this.getEl('#wrongAnswersCount').textContent = '0 / 3';
-        this.getEl('#skipCount').textContent = '0';
-        
-        this.getAllEl('.screen.active').forEach(screen => {
-            if (screen.id !== 'startScreen') {
-                screen.classList.remove('active');
-            }
-        });
+    resetUI(keepEndScreen = false) {
+      // تفريغ مؤشرات المستويات
+      this.getAllEl('.level-indicator').forEach(indicator => {
+        indicator.classList.remove('active', 'completed');
+      });
+
+      // إعادة قيم العداد
+      this.getEl('#currentScore').textContent = '100';
+      this.getEl('#wrongAnswersCount').textContent = '0 / 3';
+      this.getEl('#skipCount').textContent = '0';
+
+      // التحكّم في الشاشات
+      Object.values(this.dom.screens).forEach(screen => screen.classList.remove('active'));
+      const target = keepEndScreen ? this.dom.screens.end : this.dom.screens.start;
+      if (target) target.classList.add('active');
     }
 
     async processCleanupQueue() {
@@ -642,7 +656,10 @@ class QuizGame {
 
         this.showScreen('end');
         
-        setTimeout(() => this.cleanupSession(), 1000);
+        setTimeout(() => {
+          this.cleanupSession({ keepEndScreen: true });
+          console.log("✅ Cleanup executed after 1s (end screen kept).");
+        }, 1000);
     }
 
     async playAgain() {
@@ -1115,15 +1132,18 @@ class QuizGame {
     }
 
     showScreen(screenName) {
-        Object.values(this.dom.screens).forEach(screen => screen.classList.remove('active'));
-        if (this.dom.screens[screenName]) {
-            this.dom.screens[screenName].classList.add('active');
-            
-            // إضافة حالة في التاريخ للشاشات المهمة
-            if (['gameContainer', 'leaderboardScreen', 'endScreen'].includes(screenName)) {
-                history.pushState({ screen: screenName }, '', `#${screenName}`);
-            }
+      Object.values(this.dom.screens).forEach(screen => screen.classList.remove('active'));
+
+      const el = this.dom.screens[screenName];
+      if (el) {
+        el.classList.add('active');
+
+        // ادفع الحالة باستخدام id الحقيقي للعنصر
+        const id = el.id; // أمثلة: gameContainer, leaderboardScreen, endScreen
+        if (['gameContainer', 'leaderboardScreen', 'endScreen'].includes(id)) {
+          history.pushState({ screen: id }, '', `#${id}`);
         }
+      }
     }
 
     showModal(nameOrId) {
