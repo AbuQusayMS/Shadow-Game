@@ -856,7 +856,12 @@ async init() {
         this.showScreen('leaderboard');
         this.dom.leaderboardContent.innerHTML = '<div class="spinner"></div>';
 
-        const mode = this.dom.lbMode?.value || 'all';
+        // ✅ تعيين "الكل" كخيار افتراضي في كل مرة
+        let mode = 'all';
+        if (this.dom.lbMode) {
+            this.dom.lbMode.value = 'all';
+        }
+
         const attemptN = Number(this.dom.lbAttempt?.value || 1);
 
         try {
